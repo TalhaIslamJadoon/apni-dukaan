@@ -178,9 +178,9 @@ function GuidelineIndex({ onSelect }: { onSelect: (key: GuidelineKey) => void })
   return (
     <div data-testid="guideline-index">
       <div className="mb-2 text-xs font-black uppercase tracking-widest text-stone-400">Staff aur Customer Tabs</div>
-      <div className="grid gap-2 sm:grid-cols-2">{staffKeys.map(renderButton)}</div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{staffKeys.map(renderButton)}</div>
       <div className="mb-2 mt-5 text-xs font-black uppercase tracking-widest text-stone-400">Owner Dashboard — Tabs Wise</div>
-      <div className="grid gap-2 sm:grid-cols-2">{ownerKeys.map(renderButton)}</div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{ownerKeys.map(renderButton)}</div>
     </div>
   );
 }
