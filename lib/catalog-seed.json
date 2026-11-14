@@ -292,7 +292,8 @@
        "wholesalePrice": 420,
        "stock": 117,
        "unit": "kg",
-       "emoji": "🍚"
+       "emoji": "🍚",
+       "image": "/images/products/02104.jpg"
       },
       {
        "id": "p-02105",
@@ -335,7 +336,8 @@
        "wholesalePrice": 360,
        "stock": 52,
        "unit": "kg",
-       "emoji": "🍚"
+       "emoji": "🍚",
+       "image": "/images/products/02108.jpg"
       },
       {
        "id": "p-02109",
@@ -476,7 +478,8 @@
        "emoji": "🍚",
        "image": "/images/products/02210.jpg"
       }
-     ]
+     ],
+     "image": "/images/subs/other-rice.jpg"
     }
    ],
    "image": "/images/heads/rice-chawal.jpg"
@@ -720,7 +723,8 @@
      ],
      "image": "/images/subs/dhuli-daal.jpg"
     }
-   ]
+   ],
+   "image": "/images/heads/daalain-pulses.jpg"
   },
   {
    "id": "ghee-cooking-oil",
@@ -800,7 +804,8 @@
        "stock": 70,
        "unit": "piece",
        "emoji": "🫙",
-       "barcode": "8960000004106"
+       "barcode": "8960000004106",
+       "image": "/images/products/04106.jpg"
       },
       {
        "id": "p-04107",
@@ -1753,9 +1758,11 @@
        "barcode": "8960000007210",
        "image": "/images/products/07210.jpg"
       }
-     ]
+     ],
+     "image": "/images/subs/powder-masalay.jpg"
     }
-   ]
+   ],
+   "image": "/images/heads/spices-masalay.jpg"
   },
   {
    "id": "biscuits-bakery",
@@ -1998,7 +2005,8 @@
        "stock": 70,
        "unit": "piece",
        "emoji": "🍪",
-       "barcode": "8960000008209"
+       "barcode": "8960000008209",
+       "image": "/images/products/08209.jpg"
       },
       {
        "id": "p-08210",
@@ -2781,7 +2789,8 @@
        "stock": 22,
        "unit": "piece",
        "emoji": "🥛",
-       "barcode": "8960000011206"
+       "barcode": "8960000011206",
+       "image": "/images/products/11206.jpg"
       },
       {
        "id": "p-11207",
@@ -3096,7 +3105,8 @@
      ],
      "image": "/images/subs/candies.jpg"
     }
-   ]
+   ],
+   "image": "/images/heads/chocolates-candies.jpg"
   },
   {
    "id": "household-items",
@@ -3227,7 +3237,8 @@
        "barcode": "8960000013110",
        "image": "/images/products/13110.jpg"
       }
-     ]
+     ],
+     "image": "/images/subs/kitchen-items.jpg"
     },
     {
      "id": "general-household",
@@ -3356,7 +3367,8 @@
      ],
      "image": "/images/subs/general-household.jpg"
     }
-   ]
+   ],
+   "image": "/images/heads/household-items.jpg"
   },
   {
    "id": "washing-cleaning-items",
@@ -4196,7 +4208,8 @@
        "stock": 24,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017101"
+       "barcode": "8960000017101",
+       "image": "/images/products/17101.jpg"
       },
       {
        "id": "p-17102",
@@ -4207,7 +4220,8 @@
        "stock": 89,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017102"
+       "barcode": "8960000017102",
+       "image": "/images/products/17102.jpg"
       },
       {
        "id": "p-17103",
@@ -4218,7 +4232,8 @@
        "stock": 93,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017103"
+       "barcode": "8960000017103",
+       "image": "/images/products/17103.jpg"
       },
       {
        "id": "p-17104",
@@ -4229,7 +4244,8 @@
        "stock": 22,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017104"
+       "barcode": "8960000017104",
+       "image": "/images/products/17104.jpg"
       },
       {
        "id": "p-17105",
@@ -4240,7 +4256,8 @@
        "stock": 68,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017105"
+       "barcode": "8960000017105",
+       "image": "/images/products/17105.jpg"
       },
       {
        "id": "p-17106",
@@ -4251,7 +4268,8 @@
        "stock": 67,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017106"
+       "barcode": "8960000017106",
+       "image": "/images/products/17106.jpg"
       },
       {
        "id": "p-17107",
@@ -4262,7 +4280,8 @@
        "stock": 78,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017107"
+       "barcode": "8960000017107",
+       "image": "/images/products/17107.jpg"
       },
       {
        "id": "p-17108",
@@ -4273,7 +4292,8 @@
        "stock": 21,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017108"
+       "barcode": "8960000017108",
+       "image": "/images/products/17108.jpg"
       },
       {
        "id": "p-17109",
@@ -4284,7 +4304,8 @@
        "stock": 38,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017109"
+       "barcode": "8960000017109",
+       "image": "/images/products/17109.jpg"
       },
       {
        "id": "p-17110",
@@ -4295,9 +4316,11 @@
        "stock": 51,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017110"
+       "barcode": "8960000017110",
+       "image": "/images/products/17110.jpg"
       }
-     ]
+     ],
+     "image": "/images/subs/frozen-snacks.jpg"
     },
     {
      "id": "frozen-dairy-desserts",
@@ -4312,7 +4335,8 @@
        "stock": 63,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017201"
+       "barcode": "8960000017201",
+       "image": "/images/products/17201.jpg"
       },
       {
        "id": "p-17202",
@@ -4323,7 +4347,8 @@
        "stock": 49,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017202"
+       "barcode": "8960000017202",
+       "image": "/images/products/17202.jpg"
       },
       {
        "id": "p-17203",
@@ -4334,7 +4359,8 @@
        "stock": 67,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017203"
+       "barcode": "8960000017203",
+       "image": "/images/products/17203.jpg"
       },
       {
        "id": "p-17204",
@@ -4345,7 +4371,8 @@
        "stock": 37,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017204"
+       "barcode": "8960000017204",
+       "image": "/images/products/17204.jpg"
       },
       {
        "id": "p-17205",
@@ -4356,7 +4383,8 @@
        "stock": 77,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017205"
+       "barcode": "8960000017205",
+       "image": "/images/products/17205.jpg"
       },
       {
        "id": "p-17206",
@@ -4367,7 +4395,8 @@
        "stock": 73,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017206"
+       "barcode": "8960000017206",
+       "image": "/images/products/17206.jpg"
       },
       {
        "id": "p-17207",
@@ -4378,7 +4407,8 @@
        "stock": 80,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017207"
+       "barcode": "8960000017207",
+       "image": "/images/products/17207.jpg"
       },
       {
        "id": "p-17208",
@@ -4389,7 +4419,8 @@
        "stock": 20,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017208"
+       "barcode": "8960000017208",
+       "image": "/images/products/17208.jpg"
       },
       {
        "id": "p-17209",
@@ -4400,7 +4431,8 @@
        "stock": 93,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017209"
+       "barcode": "8960000017209",
+       "image": "/images/products/17209.jpg"
       },
       {
        "id": "p-17210",
@@ -4411,11 +4443,14 @@
        "stock": 52,
        "unit": "piece",
        "emoji": "🧊",
-       "barcode": "8960000017210"
+       "barcode": "8960000017210",
+       "image": "/images/products/17210.jpg"
       }
-     ]
+     ],
+     "image": "/images/subs/frozen-dairy-desserts.jpg"
     }
-   ]
+   ],
+   "image": "/images/heads/frozen-foods.jpg"
   },
   {
    "id": "dry-fruits",
@@ -4434,7 +4469,8 @@
        "wholesalePrice": 2795,
        "stock": 69,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18101.jpg"
       },
       {
        "id": "p-18102",
@@ -4444,7 +4480,8 @@
        "wholesalePrice": 1155,
        "stock": 49,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18102.jpg"
       },
       {
        "id": "p-18103",
@@ -4454,7 +4491,8 @@
        "wholesalePrice": 3295,
        "stock": 62,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18103.jpg"
       },
       {
        "id": "p-18104",
@@ -4464,7 +4502,8 @@
        "wholesalePrice": 785,
        "stock": 95,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18104.jpg"
       },
       {
        "id": "p-18105",
@@ -4474,7 +4513,8 @@
        "wholesalePrice": 3620,
        "stock": 78,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18105.jpg"
       },
       {
        "id": "p-18106",
@@ -4484,7 +4524,8 @@
        "wholesalePrice": 1855,
        "stock": 99,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18106.jpg"
       },
       {
        "id": "p-18107",
@@ -4494,7 +4535,8 @@
        "wholesalePrice": 775,
        "stock": 60,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18107.jpg"
       },
       {
        "id": "p-18108",
@@ -4504,7 +4546,8 @@
        "wholesalePrice": 2660,
        "stock": 111,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18108.jpg"
       },
       {
        "id": "p-18109",
@@ -4514,7 +4557,8 @@
        "wholesalePrice": 1180,
        "stock": 50,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18109.jpg"
       },
       {
        "id": "p-18110",
@@ -4524,9 +4568,11 @@
        "wholesalePrice": 3610,
        "stock": 118,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18110.jpg"
       }
-     ]
+     ],
+     "image": "/images/subs/nuts.jpg"
     },
     {
      "id": "dry-fruits",
@@ -4540,7 +4586,8 @@
        "wholesalePrice": 3140,
        "stock": 56,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18201.jpg"
       },
       {
        "id": "p-18202",
@@ -4550,7 +4597,8 @@
        "wholesalePrice": 1390,
        "stock": 84,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18202.jpg"
       },
       {
        "id": "p-18203",
@@ -4560,7 +4608,8 @@
        "wholesalePrice": 1260,
        "stock": 79,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18203.jpg"
       },
       {
        "id": "p-18204",
@@ -4570,7 +4619,8 @@
        "wholesalePrice": 3420,
        "stock": 64,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18204.jpg"
       },
       {
        "id": "p-18205",
@@ -4580,7 +4630,8 @@
        "wholesalePrice": 3610,
        "stock": 115,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18205.jpg"
       },
       {
        "id": "p-18206",
@@ -4590,7 +4641,8 @@
        "wholesalePrice": 1310,
        "stock": 37,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18206.jpg"
       },
       {
        "id": "p-18207",
@@ -4600,7 +4652,8 @@
        "wholesalePrice": 1590,
        "stock": 33,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18207.jpg"
       },
       {
        "id": "p-18208",
@@ -4610,7 +4663,8 @@
        "wholesalePrice": 3195,
        "stock": 37,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18208.jpg"
       },
       {
        "id": "p-18209",
@@ -4620,7 +4674,8 @@
        "wholesalePrice": 2715,
        "stock": 82,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18209.jpg"
       },
       {
        "id": "p-18210",
@@ -4630,11 +4685,14 @@
        "wholesalePrice": 2390,
        "stock": 110,
        "unit": "kg",
-       "emoji": "🥜"
+       "emoji": "🥜",
+       "image": "/images/products/18210.jpg"
       }
-     ]
+     ],
+     "image": "/images/subs/dry-fruits.jpg"
     }
-   ]
+   ],
+   "image": "/images/heads/dry-fruits.jpg"
   },
   {
    "id": "sauces-ketchup",
@@ -4654,7 +4712,8 @@
        "stock": 58,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019101"
+       "barcode": "8960000019101",
+       "image": "/images/products/19101.jpg"
       },
       {
        "id": "p-19102",
@@ -4665,7 +4724,8 @@
        "stock": 40,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019102"
+       "barcode": "8960000019102",
+       "image": "/images/products/19102.jpg"
       },
       {
        "id": "p-19103",
@@ -4676,7 +4736,8 @@
        "stock": 51,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019103"
+       "barcode": "8960000019103",
+       "image": "/images/products/19103.jpg"
       },
       {
        "id": "p-19104",
@@ -4687,7 +4748,8 @@
        "stock": 84,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019104"
+       "barcode": "8960000019104",
+       "image": "/images/products/19104.jpg"
       },
       {
        "id": "p-19105",
@@ -4698,7 +4760,8 @@
        "stock": 77,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019105"
+       "barcode": "8960000019105",
+       "image": "/images/products/19105.jpg"
       },
       {
        "id": "p-19106",
@@ -4709,7 +4772,8 @@
        "stock": 48,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019106"
+       "barcode": "8960000019106",
+       "image": "/images/products/19106.jpg"
       },
       {
        "id": "p-19107",
@@ -4720,7 +4784,8 @@
        "stock": 52,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019107"
+       "barcode": "8960000019107",
+       "image": "/images/products/19107.jpg"
       },
       {
        "id": "p-19108",
@@ -4731,7 +4796,8 @@
        "stock": 45,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019108"
+       "barcode": "8960000019108",
+       "image": "/images/products/19108.jpg"
       },
       {
        "id": "p-19109",
@@ -4742,7 +4808,8 @@
        "stock": 87,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019109"
+       "barcode": "8960000019109",
+       "image": "/images/products/19109.jpg"
       },
       {
        "id": "p-19110",
@@ -4753,9 +4820,11 @@
        "stock": 69,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019110"
+       "barcode": "8960000019110",
+       "image": "/images/products/19110.jpg"
       }
-     ]
+     ],
+     "image": "/images/subs/sauces.jpg"
     },
     {
      "id": "pickles-spreads",
@@ -4770,7 +4839,8 @@
        "stock": 45,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019201"
+       "barcode": "8960000019201",
+       "image": "/images/products/19201.jpg"
       },
       {
        "id": "p-19202",
@@ -4781,7 +4851,8 @@
        "stock": 49,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019202"
+       "barcode": "8960000019202",
+       "image": "/images/products/19202.jpg"
       },
       {
        "id": "p-19203",
@@ -4792,7 +4863,8 @@
        "stock": 92,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019203"
+       "barcode": "8960000019203",
+       "image": "/images/products/19203.jpg"
       },
       {
        "id": "p-19204",
@@ -4803,7 +4875,8 @@
        "stock": 59,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019204"
+       "barcode": "8960000019204",
+       "image": "/images/products/19204.jpg"
       },
       {
        "id": "p-19205",
@@ -4814,7 +4887,8 @@
        "stock": 72,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019205"
+       "barcode": "8960000019205",
+       "image": "/images/products/19205.jpg"
       },
       {
        "id": "p-19206",
@@ -4825,7 +4899,8 @@
        "stock": 73,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019206"
+       "barcode": "8960000019206",
+       "image": "/images/products/19206.jpg"
       },
       {
        "id": "p-19207",
@@ -4836,7 +4911,8 @@
        "stock": 79,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019207"
+       "barcode": "8960000019207",
+       "image": "/images/products/19207.jpg"
       },
       {
        "id": "p-19208",
@@ -4847,7 +4923,8 @@
        "stock": 59,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019208"
+       "barcode": "8960000019208",
+       "image": "/images/products/19208.jpg"
       },
       {
        "id": "p-19209",
@@ -4858,7 +4935,8 @@
        "stock": 25,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019209"
+       "barcode": "8960000019209",
+       "image": "/images/products/19209.jpg"
       },
       {
        "id": "p-19210",
@@ -4869,11 +4947,14 @@
        "stock": 31,
        "unit": "piece",
        "emoji": "🍅",
-       "barcode": "8960000019210"
+       "barcode": "8960000019210",
+       "image": "/images/products/19210.jpg"
       }
-     ]
+     ],
+     "image": "/images/subs/pickles-spreads.jpg"
     }
-   ]
+   ],
+   "image": "/images/heads/sauces-ketchup.jpg"
   },
   {
    "id": "general-items",
@@ -4893,7 +4974,8 @@
        "stock": 22,
        "unit": "piece",
        "emoji": "🛒",
-       "barcode": "8960000020101"
+       "barcode": "8960000020101",
+       "image": "/images/products/20101.jpg"
       },
       {
        "id": "p-20102",
@@ -4904,7 +4986,8 @@
        "stock": 56,
        "unit": "piece",
        "emoji": "🛒",
-       "barcode": "8960000020102"
+       "barcode": "8960000020102",
+       "image": "/images/products/20102.jpg"
       },
       {
        "id": "p-20103",
@@ -4915,7 +4998,8 @@
        "stock": 29,
        "unit": "piece",
        "emoji": "🛒",
-       "barcode": "8960000020103"
+       "barcode": "8960000020103",
+       "image": "/images/products/20103.jpg"
       },
       {
        "id": "p-20104",
@@ -4926,7 +5010,8 @@
        "stock": 56,
        "unit": "piece",
        "emoji": "🛒",
-       "barcode": "8960000020104"
+       "barcode": "8960000020104",
+       "image": "/images/products/20104.jpg"
       },
       {
        "id": "p-20105",
@@ -4937,7 +5022,8 @@
        "stock": 78,
        "unit": "piece",
        "emoji": "🛒",
-       "barcode": "8960000020105"
+       "barcode": "8960000020105",
+       "image": "/images/products/20105.jpg"
       },
       {
        "id": "p-20106",
@@ -4948,7 +5034,8 @@
        "stock": 84,
        "unit": "piece",
        "emoji": "🛒",
-       "barcode": "8960000020106"
+       "barcode": "8960000020106",
+       "image": "/images/products/20106.jpg"
       },
       {
        "id": "p-20107",
@@ -4959,7 +5046,8 @@
        "stock": 98,
        "unit": "piece",
        "emoji": "🛒",
-       "barcode": "8960000020107"
+       "barcode": "8960000020107",
+       "image": "/images/products/20107.jpg"
       },
       {
        "id": "p-20108",
@@ -4970,7 +5058,8 @@
        "stock": 60,
        "unit": "piece",
        "emoji": "🛒",
-       "barcode": "8960000020108"
+       "barcode": "8960000020108",
+       "image": "/images/products/20108.jpg"
       },
       {
        "id": "p-20109",
@@ -4981,7 +5070,8 @@
        "stock": 92,
        "unit": "piece",
        "emoji": "🛒",
-       "barcode": "8960000020109"
+       "barcode": "8960000020109",
+       "image": "/images/products/20109.jpg"
       },
       {
        "id": "p-20110",
@@ -4992,11 +5082,14 @@
        "stock": 85,
        "unit": "piece",
        "emoji": "🛒",
-       "barcode": "8960000020110"
+       "barcode": "8960000020110",
+       "image": "/images/products/20110.jpg"
       }
-     ]
+     ],
+     "image": "/images/subs/miscellaneous.jpg"
     }
-   ]
+   ],
+   "image": "/images/heads/general-items.jpg"
   }
  ]
 }
