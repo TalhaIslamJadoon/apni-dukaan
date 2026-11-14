@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  StaffMember, TabKey, TABS_META, loadStaff, setStaffSession, useStaffSession, useShop, firstTabHref,
+  StaffMember, TabKey, TABS_META, hasRetail, loadStaff, staffLogin, useStaffSession, useShop, firstTabHref,
 } from "@/lib/store";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,15 +32,26 @@ export function StaffLogin() {
   const [selId, setSelId] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => { setStaff(loadStaff()); }, []);
+  useEffect(() => {
+    setStaff(loadStaff());
+    // The staff list is server data (Phase 2) — refresh the cards when it lands.
+    const t = setTimeout(() => setStaff(loadStaff()), 1200);
+    return () => clearTimeout(t);
+  }, []);
 
-  function tryLogin() {
+  async function tryLogin() {
     const m = staff.find((s) => s.id === selId);
     if (!m) { setErr("Pehle apna naam chunein 👆"); return; }
-    if (pin !== m.pin) { setErr("❌ Ghalat PIN — dobara try karein"); setPin(""); return; }
+    setBusy(true);
+    // Phase 2: the PIN is verified on the SERVER (hashed credentials) —
+    // five wrong tries lock the account for five minutes.
+    const member = await staffLogin(m.id, pin);
+    setBusy(false);
+    if (!member) { setErr("❌ Ghalat PIN — dobara try karein"); setPin(""); return; }
     setErr("");
-    setStaffSession(m.id); // gate re-renders: allowed tab opens, wrong tab redirects
+    // gate re-renders from the session: allowed tab opens, wrong tab redirects
   }
 
   return (
@@ -50,7 +61,7 @@ export function StaffLogin() {
           <div className="text-2xl">🏪</div>
           <div>
             <div className="text-lg font-extrabold leading-tight">{shop.collegeName || "POS System"}</div>
-            <div className="text-xs opacity-70">{shop.canteenName} · {shop.groceryName}</div>
+            <div className="text-xs opacity-70">{[shop.hasCanteen ? shop.canteenName : null, hasRetail(shop) ? shop.groceryName : null].filter(Boolean).join(" · ")}</div>
           </div>
         </div>
       </header>
@@ -71,7 +82,7 @@ export function StaffLogin() {
                   <div className="flex items-center gap-3">
                     <span className="inline-flex items-center justify-center w-12 h-12 rounded-2xl text-2xl shadow-sm" style={{ background: sel ? "#F97316" : "#F5F5F4" }}>{roleEmoji(m)}</span>
                     <div className="min-w-0">
-                      <div className="font-black text-lg leading-tight truncate">{m.name}</div>
+                      <div className="font-black text-lg leading-tight line-clamp-2">{m.name}</div>
                       <div className="text-xs font-bold text-stone-500">{roleLabel(m)}</div>
                     </div>
                     {sel && <span className="ml-auto font-black" style={{ color: "#16A34A" }}>✓</span>}
@@ -88,7 +99,7 @@ export function StaffLogin() {
               placeholder="••••" autoComplete="off"
               className="w-full rounded-xl border-2 border-stone-200 px-4 py-3.5 text-center text-3xl tracking-[0.4em] font-black outline-none focus:border-orange-500" />
             {err && <p className="mt-2 text-center text-sm font-bold" style={{ color: "#DC2626" }}>{err}</p>}
-            <button onClick={tryLogin} className="mt-3 w-full rounded-2xl py-4 text-xl font-black text-white active:scale-[0.99]" style={{ background: "#F97316" }}>🔓 Login</button>
+            <button onClick={tryLogin} disabled={busy} className="mt-3 w-full rounded-2xl py-4 text-xl font-black text-white active:scale-[0.99] disabled:opacity-60" style={{ background: "#F97316" }}>{busy ? "⏳ Check ho raha hai…" : "🔓 Login"}</button>
             <p className="mt-3 text-center text-xs font-bold text-stone-400">Demo PINs — Owner <b>1234</b> · Canteen <b>1111</b> · Grocery <b>2222</b> · Kitchen <b>3333</b> · Stock <b>4444</b></p>
             <p className="mt-1 text-center text-xs text-stone-400">Customer hain? Table ka QR scan karein ya <b>Online Order</b> page kholein — customers ko login nahi chahiye.</p>
           </div>

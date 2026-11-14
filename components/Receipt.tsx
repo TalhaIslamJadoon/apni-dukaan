@@ -109,11 +109,27 @@ export default function Receipt({ order }: { order: Order }) {
       </div>
       <div className="receipt-rule-strong" />
       {order.lines.map((l, i) => (
-        <div key={i} className="grid grid-cols-[1fr_38px_58px_68px] gap-x-1 py-1.5 border-b border-stone-100">
-          <span className="font-semibold leading-tight">{l.name}</span>
-          <span className="text-right">{qty(l.qty)}</span>
-          <span className="text-right">{Math.round(l.price).toLocaleString()}</span>
-          <span className="text-right font-bold">{Math.round(l.price * l.qty).toLocaleString()}</span>
+        <div key={i}>
+          <div className="grid grid-cols-[1fr_38px_58px_68px] gap-x-1 py-1.5 border-b border-stone-100">
+            <span className="font-semibold leading-tight">{l.name}</span>
+            <span className="text-right">{qty(l.qty)}</span>
+            <span className="text-right">{Math.round(l.price).toLocaleString()}</span>
+            <span className="text-right font-bold">{Math.round(l.price * l.qty).toLocaleString()}</span>
+          </div>
+          {/* Deal ke andar ki cheezein — deal line ke neeche chhoti
+              sub-rows (qty = per-deal qty × line qty). */}
+          {l.components?.map((c, j) => (
+            <div key={`c${j}`} data-testid="receipt-deal-component" className="flex justify-between gap-2 pl-4 py-0.5 text-[11px] text-stone-500 border-b border-stone-50">
+              <span className="leading-tight">↳ {c.name}</span>
+              <span className="shrink-0 font-bold">× {qty(c.qty * l.qty)}</span>
+            </div>
+          ))}
+          {/* Serial-tracked items ke IMEI/serial — bill par lazmi print. */}
+          {l.serials?.map((s, j) => (
+            <div key={`s${j}`} data-testid="receipt-serial" className="flex justify-between gap-2 pl-4 py-0.5 text-[11px] text-stone-500 border-b border-stone-50">
+              <span className="leading-tight">↳ IMEI: {s}</span>
+            </div>
+          ))}
         </div>
       ))}
 
