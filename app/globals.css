@@ -145,19 +145,41 @@ button { touch-action: manipulation; }
 @media print {
   body * { visibility: hidden !important; }
   #thermal-bill, #thermal-bill * { visibility: visible !important; }
+  /* Receipt print isolation — the bill lives inside modal overlays (fixed,
+     scrollable) deep in the page. Rules for its ANCESTOR chain: un-fix and
+     un-scroll every wrapper, and display:none every sibling along the chain
+     so the bill is the ONLY content left in flow and prints exactly once,
+     from the top, fragmenting naturally across pages.
+     DO NOT go back to `position: fixed` on #thermal-bill: Chrome REPEATS
+     fixed elements on every printed page, so a bill taller than the paper
+     (A4/Letter in phone/desktop print dialogs) printed a second full copy
+     over its own overflow tail — the garbled, overlapping double receipt
+     Talha photographed on 14 Nov 2026. */
+  :has(#thermal-bill) {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    animation: none !important;
+  }
+  :has(#thermal-bill) > *:not(#thermal-bill):not(:has(#thermal-bill)) {
+    display: none !important;
+  }
   #thermal-bill {
-    position: fixed !important;
-    top: 0 !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
+    position: static !important;
     width: 80mm !important;
     max-width: 80mm !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
     max-height: none !important;
     overflow: visible !important;
     box-shadow: none !important;
     border: none !important;
     border-radius: 0 !important;
   }
+  /* Header QR is compact on screen (76px) — grow it on paper so it stays
+     comfortably scannable on the 80mm roll. */
+  #thermal-bill .receipt-qr svg { width: 26mm !important; height: 26mm !important; }
   #thermal-bill .receipt-rule,
   #thermal-bill .receipt-rule-strong { border-top: 1.5px dashed #000 !important; }
   #thermal-bill .receipt-rule-double {
@@ -177,14 +199,14 @@ button { touch-action: manipulation; }
     display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 6mm !important;
   }
 
-  /* Printing ONE merchant QR stand card (Owner → Settings → QR Stand) */
+  /* Printing a merchant QR stand instead of a bill */
   body.print-qrstand * { visibility: hidden !important; }
-  body.print-qrstand #qr-stand-area,
-  body.print-qrstand #qr-stand-area * { visibility: visible !important; }
-  body.print-qrstand #qr-stand-area {
-    position: fixed !important; top: 0 !important; left: 50% !important;
-    transform: translateX(-50%) !important;
-    width: 148mm !important; max-width: 148mm !important;
-    box-shadow: none !important;
+  body.print-qrstand #qr-stand-sheet,
+  body.print-qrstand #qr-stand-sheet * { visibility: visible !important; }
+  body.print-qrstand #qr-stand-sheet {
+    position: fixed !important;
+    top: 50% !important; left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 120mm !important;
   }
 }
