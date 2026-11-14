@@ -64,24 +64,41 @@ function AssistantDrawer({ audience, memberName, memberTabs, onClose }: { audien
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [msgs]);
 
-  function ask(text: string) {
+  async function ask(text: string) {
     const t = text.trim();
     if (!t) return;
-    const reply = answerQuery(t, {
+    const ctx = {
       audience,
       memberName,
       staffTabs: memberTabs,
       customerMobile: account?.mobile,
       customerName: account?.name,
-    });
-    setMsgs((m) => [...m, { from: "user", text: t }, { from: "bot", text: reply }]);
+    };
+    setMsgs((m) => [...m, { from: "user", text: t }]);
     setInput("");
+    // Phase 2: the assistant answers from a PERMISSION-SCOPED server
+    // snapshot (the server derives the audience from the session — a role
+    // can never be talked into data outside its grants). The local engine
+    // over the facade cache is the offline fallback.
+    try {
+      const res = await fetch("/api/v1/assistant/query", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ q: t }),
+      });
+      const data = await res.json();
+      if (!res.ok || typeof data?.answer !== "string") throw new Error("assistant unavailable");
+      setMsgs((m) => [...m, { from: "bot", text: data.answer as string }]);
+    } catch {
+      setMsgs((m) => [...m, { from: "bot", text: answerQuery(t, ctx) }]);
+    }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-label="AI Assistant">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-[400px] h-full flex flex-col shadow-2xl pop-in" data-testid="ai-drawer">
+      <div className="relative bg-white text-stone-800 w-full max-w-[400px] h-full flex flex-col shadow-2xl pop-in" data-testid="ai-drawer">
         <div className="flex items-center gap-2 px-4 py-3 text-white shrink-0" style={{ background: "#7C3AED" }}>
           <span className="text-2xl">🤖</span>
           <div className="flex-1 min-w-0">
@@ -94,7 +111,7 @@ function AssistantDrawer({ audience, memberName, memberTabs, onClose }: { audien
         <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-2 bg-[#F5F3FF]">
           {msgs.map((m, i) => (
             <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-line shadow-sm ${m.from === "user" ? "text-white" : "bg-white"}`}
+              <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-line shadow-sm ${m.from === "user" ? "text-white" : "bg-white text-stone-800"}`}
                 style={m.from === "user" ? { background: "#7C3AED" } : undefined}>
                 {m.text}
               </div>
