@@ -8,7 +8,7 @@ import Receipt, { paymentPayload } from "@/components/Receipt";
 import QRCode from "react-qr-code";
 import {
   GroceryItem, GroceryHead, GrocerySubHead, PackingOption, Order, PaymentMethod,
-  loadGrocery, saveGrocery, loadGroceryHeads, loadGrocerySubHeads, groceryImage, loadOrders, saveOrders, nextToken, nextBillNo, isToday, isPaymentCleared, getStaffSessionMember,
+  loadGrocery, saveGrocery, loadGroceryHeads, loadGrocerySubHeads, groceryImage, loadOrders, saveOrders, nextToken, nextBillNo, isToday, isPaymentCleared, getStaffSessionMember, useShop,
 } from "@/lib/store";
 
 // A cart line is one product — or one PACKING of a product. The line key
@@ -38,6 +38,13 @@ function GroceryScreen() {
   const [barcode, setBarcode] = useState("");
   // ── Barcode scanner (hardware HID + camera) ──
   const scanRef = useRef<HTMLInputElement>(null);
+  // Stepper guard: the tile's press animation shifts the tile mid-press, so a
+  // real press on a tile's −/+ can land its click on the TILE (which adds).
+  // Steppers therefore act on pointerdown (hit-tested correctly) and stamp
+  // this guard; tileTap ignores any tap right after a stepper press.
+  const stepperGuard = useRef<{ id: string; at: number }>({ id: "", at: 0 });
+  const stepperPressed = (id: string) => { stepperGuard.current = { id, at: Date.now() }; };
+  const stepperJustPressed = (id: string) => stepperGuard.current.id === id && Date.now() - stepperGuard.current.at < 700;
   const [scanToast, setScanToast] = useState<{ ok: boolean; text: string; key: number } | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [camOpen, setCamOpen] = useState(false);
@@ -47,6 +54,7 @@ function GroceryScreen() {
   const camTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastCamCodeRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
   const [priceType, setPriceType] = useState<"retail" | "wholesale">("retail");
+  const shop = useShop();
   const [cart, setCart] = useState<CartLine[]>([]);
   const [payOpen, setPayOpen] = useState(false);
   const [method, setMethod] = useState<PaymentMethod>("Cash");
@@ -211,6 +219,24 @@ function GroceryScreen() {
   // Total qty of a product across ALL its bill lines (used by packing tiles,
   // whose lines are per-packing).
   const cartQtyOf = (item: GroceryItem) => cart.filter((l) => l.item.id === item.id).reduce((s, l) => s + l.qty, 0);
+  // Wholesale minimums are PER BILL LINE. A product override wins; otherwise
+  // loose kg lines use the shop's kg default and every other line uses the
+  // pieces default. Packing lines count PACKS, so they always use the pieces
+  // default when the product has no override.
+  const effectiveWholesaleMin = (item: GroceryItem, hasPacking = false) => {
+    const fallback = hasPacking || item.unit === "piece" ? shop.wholesaleMinPieces : shop.wholesaleMinKg;
+    const min = item.wholesaleMinQty ?? fallback;
+    return Number.isFinite(min) && min > 0 ? min : 0;
+  };
+  const wholesaleShortfallByKey = new Map<string, number>();
+  if (priceType === "wholesale") {
+    cart.forEach((l) => {
+      const min = effectiveWholesaleMin(l.item, !!l.packing);
+      if (min > 0 && l.qty < min) wholesaleShortfallByKey.set(lineKey(l), min);
+    });
+  }
+  const hasWholesaleShortfall = wholesaleShortfallByKey.size > 0;
+  const wholesaleUnitLabel = (l: CartLine) => (l.packing ? "packs" : l.item.unit === "kg" ? "kg" : "pieces");
 
   function add(item: GroceryItem, packing?: PackingOption) {
     const step = packing ? 1 : item.unit === "kg" ? 0.5 : 1;
@@ -225,6 +251,7 @@ function GroceryScreen() {
   // Tile tap: products WITH packings open the packing chooser; everything
   // else adds straight away (same step rules as before).
   function tileTap(item: GroceryItem) {
+    if (stepperJustPressed(item.id)) return; // the tap was a stepper press, not a tile tap
     if (item.packings && item.packings.length) setChooserItem(item);
     else add(item);
   }
@@ -296,7 +323,7 @@ function GroceryScreen() {
   }
 
   const change = tendered - grand;
-  const canComplete = cart.length > 0 && (method !== "Cash" || tendered >= grand);
+  const canComplete = cart.length > 0 && !hasWholesaleShortfall && (method !== "Cash" || tendered >= grand);
 
   function complete() {
     if (!canComplete) return;
@@ -345,24 +372,17 @@ function GroceryScreen() {
 
       <div className="flex flex-1 min-h-0 flex-col lg:flex-row overflow-hidden">
         <main className="flex-1 p-3 lg:p-4 overflow-y-auto">
-          {/* Search + barcode + price toggle */}
-          <div className="flex flex-wrap gap-2 mb-3">
+          {/* Search + barcode only — the bill's price-type toggle lives in
+              the bill panel header, where it describes the current bill. */}
+          <div className="flex flex-wrap gap-2 mb-3" data-testid="grocery-top-toolbar">
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Search product name…"
-              className="rounded-xl border-2 border-stone-200 bg-white px-4 py-3 flex-1 min-w-[180px] text-base outline-none focus:border-orange-500" />
-            <form onSubmit={submitBarcode} className="flex gap-2 flex-1 min-w-[240px]">
+              className="rounded-xl border-2 border-stone-200 bg-white px-4 py-3 flex-1 min-w-[150px] sm:min-w-[180px] text-base outline-none focus:border-orange-500" />
+            <form onSubmit={submitBarcode} className="flex flex-wrap gap-2 flex-1 min-w-0 sm:min-w-[240px]">
               <input ref={scanRef} value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="🔫 Scan barcode ya SKU/PLU + Enter (try 8961000003001 ya 1001)"
-                className="rounded-xl border-2 border-dashed border-stone-300 bg-white px-4 py-3 flex-1 text-base outline-none focus:border-orange-500" />
+                className="rounded-xl border-2 border-dashed border-stone-300 bg-white px-4 py-3 flex-1 min-w-0 text-base outline-none focus:border-orange-500" />
               <button type="submit" className="rounded-xl px-4 font-extrabold text-white" style={{ background: "#0F172A" }}>Add</button>
               <button type="button" onClick={openCamera} className="rounded-xl px-4 font-extrabold text-white whitespace-nowrap" style={{ background: "#1976D2" }}>📷 Camera Scan</button>
             </form>
-            <div className="flex rounded-xl overflow-hidden border-2 border-stone-200">
-              {(["retail", "wholesale"] as const).map((t) => (
-                <button key={t} onClick={() => switchPriceType(t)} className="px-5 py-3 font-extrabold capitalize"
-                  style={priceType === t ? { background: "#F97316", color: "#fff" } : { background: "#fff", color: "#44403C" }}>
-                  {t === "retail" ? "🏷️ Retail" : "📦 Wholesale"}
-                </button>
-              ))}
-            </div>
           </div>
           {/* Head chips (row 1) — Main Head → Sub Head → Product. Only heads
               that HAVE products get a chip (empty heads stay owner-side
@@ -527,13 +547,15 @@ function GroceryScreen() {
                     )
                   ) : lineQty ? (
                     <>
-                      <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/90 shadow px-1 py-1" data-testid="tile-stepper">
+                      <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/90 shadow px-1 py-1" data-testid="tile-stepper" onClick={(e) => e.stopPropagation()}>
                         <button type="button" aria-label={`Remove one ${item.name}`}
-                          onClick={(e) => { e.stopPropagation(); changeQty(lineKey({ item }), -1); }}
+                          onPointerDown={(e) => { e.stopPropagation(); stepperPressed(item.id); changeQty(lineKey({ item }), -1); }}
+                          onClick={(e) => { e.stopPropagation(); if (e.detail === 0) changeQty(lineKey({ item }), -1); }}
                           className="w-8 h-8 rounded-full bg-white border-2 border-stone-300 text-base font-black leading-none active:scale-95">−</button>
                         <span className="min-w-6 text-center font-black text-[15px]" data-testid="tile-qty">{fmtQty(lineQty)}</span>
                         <button type="button" aria-label={`Add one ${item.name}`}
-                          onClick={(e) => { e.stopPropagation(); changeQty(lineKey({ item }), 1); }}
+                          onPointerDown={(e) => { e.stopPropagation(); stepperPressed(item.id); changeQty(lineKey({ item }), 1); }}
+                          onClick={(e) => { e.stopPropagation(); if (e.detail === 0) changeQty(lineKey({ item }), 1); }}
                           className="w-8 h-8 rounded-full text-white text-base font-black leading-none active:scale-95" style={{ background: "#F97316" }}>+</button>
                       </span>
                       <span className="absolute bottom-2 right-2 text-white text-sm font-extrabold rounded-full min-w-7 h-7 px-1 flex items-center justify-center" style={{ background: "#F97316" }}>{fmtQty(lineQty)}</span>
@@ -551,19 +573,38 @@ function GroceryScreen() {
 
         {/* RIGHT — bill panel, same pattern as canteen */}
         <aside className="lg:w-[340px] xl:w-[380px] shrink-0 bg-white border-t lg:border-t-0 lg:border-l border-orange-100 flex flex-col max-h-[52vh] lg:max-h-none">
-          <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-            <h2 className="font-extrabold text-lg">Current Bill <span className="text-xs font-bold text-stone-400">({priceType})</span></h2>
-            {cart.length > 0 && <button onClick={() => setCart([])} className="text-sm font-bold" style={{ color: "#DC2626" }}>Clear ✕</button>}
+          <div className="px-4 pt-3 pb-2 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-extrabold text-lg">Current Bill</h2>
+              {cart.length > 0 && <button onClick={() => setCart([])} className="text-sm font-bold" style={{ color: "#DC2626" }}>Clear ✕</button>}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-extrabold uppercase tracking-wide text-stone-500">Bill Price Type</span>
+              <div className="flex rounded-xl overflow-hidden border-2 border-stone-200" data-testid="bill-price-toggle" aria-label="Bill price type">
+                {(["retail", "wholesale"] as const).map((t) => (
+                  <button key={t} onClick={() => switchPriceType(t)} className="px-3.5 py-2 text-sm font-extrabold capitalize"
+                    style={priceType === t ? { background: "#F97316", color: "#fff" } : { background: "#fff", color: "#44403C" }}>
+                    {t === "retail" ? "🏷️ Retail" : "📦 Wholesale"}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto px-4 space-y-2 pb-2">
             {cart.length === 0 && <p className="text-stone-400 text-center py-8">Tap a product, search, or type a barcode 👈</p>}
             {cart.map((l) => {
               const key = lineKey(l);
+              const wholesaleMin = wholesaleShortfallByKey.get(key);
               return (
               <div key={key} className={`flex items-center gap-2 rounded-xl bg-orange-50/60 border border-orange-100 px-3 py-2 ${flashId === l.item.id ? "scan-flash" : ""}`}>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-sm truncate">{l.packing ? `${l.item.name} (${l.packing.label})` : l.item.name}</div>
                   <div className="text-xs text-stone-500">{money(l.price)}{l.item.unit === "kg" ? "/kg" : ""} × {fmtQty(l.qty)}{l.item.unit === "kg" ? " kg" : ""} = <b>{money(l.price * l.qty)}</b></div>
+                  {wholesaleMin !== undefined && (
+                    <div className="mt-1 rounded-lg bg-red-50 border border-red-200 px-2 py-1 text-[11px] font-extrabold text-red-700" data-testid={`wholesale-min-warning-${l.item.id}`}>
+                      ⚠️ Wholesale ke liye kam az kam {fmtQty(wholesaleMin)} {wholesaleUnitLabel(l)} lazmi hai
+                    </div>
+                  )}
                 </div>
                 <button onClick={() => changeQty(key, -1)} className="w-9 h-9 rounded-full bg-white border-2 border-stone-200 text-lg font-extrabold">−</button>
                 <span className="w-8 text-center font-extrabold">{fmtQty(l.qty)}</span>
@@ -586,10 +627,15 @@ function GroceryScreen() {
               <span className="font-black text-stone-600">GRAND TOTAL</span>
               <span className="text-4xl font-black" style={{ color: "#F97316" }}>{money(grand)}</span>
             </div>
-            <button disabled={cart.length === 0} onClick={() => { setMethod("Cash"); setTendered(0); setPendingBillNo(nextBillNo(loadOrders())); setPayOpen(true); }}
-              className="w-full rounded-2xl py-4 text-xl font-black text-white disabled:opacity-40 active:scale-[0.99]" style={{ background: "#F97316" }}>
+            <button disabled={cart.length === 0 || hasWholesaleShortfall} onClick={() => { setMethod("Cash"); setTendered(0); setPendingBillNo(nextBillNo(loadOrders())); setPayOpen(true); }}
+              className="w-full rounded-2xl py-4 text-xl font-black text-white disabled:opacity-40 active:scale-[0.99]" style={{ background: "#F97316" }} data-testid="complete-bill-button">
               PAY / Charge →
             </button>
+            {hasWholesaleShortfall && (
+              <p className="mt-2 text-center text-sm font-extrabold" style={{ color: "#DC2626" }} data-testid="wholesale-checkout-hint">
+                ⚠️ Wholesale minimum pura karein — bill tabhi complete hoga.
+              </p>
+            )}
           </div>
         </aside>
       </div>
@@ -605,15 +651,40 @@ function GroceryScreen() {
               <button onClick={() => setChooserItem(null)} className="text-2xl font-bold text-stone-400">✕</button>
             </div>
             <p className="text-sm text-stone-500 font-bold mb-3">Packing chunein — size isi product ki packing hai, alag item nahi. ({priceType === "retail" ? "🏷️ Retail" : "📦 Wholesale"} prices)</p>
+            {priceType === "wholesale" && (
+              <p className="text-sm font-extrabold rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 mb-3" style={{ color: "#92400E" }} data-testid="wholesale-packing-min-hint">
+                ⚠️ Wholesale minimum: kam az kam {fmtQty(effectiveWholesaleMin(chooserItem, true))} packs lazmi hain.
+              </p>
+            )}
             <div className="space-y-2">
-              {chooserItem.packings!.map((p) => (
-                <button key={p.label} onClick={() => { add(chooserItem, p); setChooserItem(null); setTimeout(() => scanRef.current?.focus(), 50); }}
-                  className="w-full flex items-center justify-between rounded-2xl border-[3px] border-stone-200 hover:border-orange-400 px-4 py-3.5 text-left active:scale-[0.99] transition">
-                  <span className="font-black text-lg">📦 {p.label}</span>
-                  <span className="font-black text-lg" style={{ color: "#F97316" }}>{money(priceOfPacking(p))}</span>
-                </button>
-              ))}
+              {chooserItem.packings!.map((p) => {
+                const key = lineKey({ item: chooserItem, packing: p });
+                const qty = cart.find((l) => lineKey(l) === key)?.qty ?? 0;
+                return (
+                  <div key={p.label} data-testid={`chooser-row-${p.label}`}
+                    className="w-full flex items-center gap-2 rounded-2xl border-[3px] px-4 py-3 transition"
+                    style={qty > 0 ? { borderColor: "#F97316", background: "#FFF7ED" } : { borderColor: "#E7E5E4", background: "#fff" }}>
+                    <button onClick={() => add(chooserItem, p)} className="flex-1 flex items-center justify-between gap-2 text-left active:scale-[0.99] transition" aria-label={`${p.label} add karein`}>
+                      <span className="font-black text-lg">📦 {p.label}</span>
+                      <span className="font-black text-lg" style={{ color: "#F97316" }}>{money(priceOfPacking(p))}</span>
+                    </button>
+                    {qty > 0 ? (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={() => changeQty(key, -1)} data-testid={`chooser-minus-${p.label}`} className="w-10 h-10 rounded-full font-black text-xl text-white" style={{ background: "#0F172A" }} aria-label="Quantity kam karein">−</button>
+                        <span className="w-8 text-center font-black text-lg" data-testid={`chooser-qty-${p.label}`}>{fmtQty(qty)}</span>
+                        <button onClick={() => changeQty(key, 1)} data-testid={`chooser-plus-${p.label}`} className="w-10 h-10 rounded-full font-black text-xl text-white" style={{ background: "#F97316" }} aria-label="Quantity barhayein">+</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => add(chooserItem, p)} data-testid={`chooser-plus-${p.label}`} className="w-10 h-10 rounded-full font-black text-xl text-white shrink-0" style={{ background: "#F97316" }} aria-label={`${p.label} add karein`}>+</button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+            <button onClick={() => { setChooserItem(null); setTimeout(() => scanRef.current?.focus(), 50); }}
+              className="w-full mt-3 rounded-2xl py-3.5 font-black text-lg text-white" style={{ background: "#16A34A" }}>
+              ✓ Ho gaya — Bill dekhein{cartQtyOf(chooserItem) > 0 ? ` (${fmtQty(cartQtyOf(chooserItem))} add ho gaye)` : ""}
+            </button>
           </div>
         </div>
       )}
