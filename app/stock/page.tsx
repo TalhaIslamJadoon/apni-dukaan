@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import TopBar from "@/components/TopBar";
 import StaffGate from "@/components/StaffGate";
 import {
-  GroceryItem, MenuItem, StockEntry,
+  GroceryItem, MenuItem, PackingOption, StockEntry,
   loadMenu, saveMenu, loadGrocery, saveGrocery, loadGroceryHeads, loadStockEntries, saveStockEntries, useStaffSession,
 } from "@/lib/store";
 
@@ -49,6 +49,15 @@ function StockScreen() {
   const [supplier, setSupplier] = useState("");
   const [reason, setReason] = useState("Expired");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // Barcode entry for stock: the scanner only SELECTS an existing grocery
+  // product into the shared entry form — it never creates a product and it
+  // never fills Quantity / Purchase Rate / Supplier.
+  const [scanCode, setScanCode] = useState("");
+  const [scanToast, setScanToast] = useState<{ ok: boolean; text: string; key: number } | null>(null);
+  const [scanFlashId, setScanFlashId] = useState<string | null>(null);
+  const scanRef = useRef<HTMLInputElement>(null);
+  const scanSelectRef = useRef<(code: string) => boolean>(() => false);
+  scanSelectRef.current = (code: string) => scanSelect(code);
 
   const views: StockView[] = useMemo(() => {
     if (inv === "canteen") {
@@ -91,6 +100,97 @@ function StockScreen() {
   }, [views, query, inv, grocery]);
 
   const selected = views.find((v) => v.id === selId) ?? null;
+
+  // The scan field is ready as soon as the Stock screen opens.
+  useEffect(() => { scanRef.current?.focus(); }, []);
+  useEffect(() => {
+    if (!scanToast) return;
+    const id = setTimeout(() => setScanToast(null), 3600);
+    return () => clearTimeout(id);
+  }, [scanToast]);
+  useEffect(() => {
+    if (!scanFlashId) return;
+    const id = setTimeout(() => setScanFlashId(null), 900);
+    return () => clearTimeout(id);
+  }, [scanFlashId]);
+
+  // If focus is lost, a hardware scanner's fast key burst + Enter is still
+  // captured at page level — the same pattern as Grocery POS. Typing inside
+  // ANY field is left completely alone, and an open guideline is respected.
+  useEffect(() => {
+    let buf = "";
+    let last = 0;
+    const onKey = (e: KeyboardEvent) => {
+      if (document.querySelector('[data-testid="guideline-modal"]')) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+      const now = performance.now();
+      if (now - last > 60) buf = "";
+      last = now;
+      if (e.key === "Enter") {
+        if (buf.length >= 3) scanSelectRef.current(buf);
+        buf = "";
+      } else if (e.key.length === 1) {
+        buf += e.key;
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Tiny WebAudio feedback, copied from Grocery POS: high blip = found,
+  // low buzz = not found. It is a nicety only and can never break an entry.
+  function beep(ok: boolean) {
+    try {
+      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = ok ? 880 : 180;
+      gain.gain.value = 0.08;
+      osc.start();
+      osc.stop(ctx.currentTime + (ok ? 0.07 : 0.15));
+      osc.onended = () => { ctx.close().catch(() => {}); };
+    } catch { /* ignore */ }
+  }
+  function showScanToast(ok: boolean, text: string) { setScanToast({ ok, text, key: Date.now() }); }
+
+  // Lookup order: a packing EAN when one is present in the saved data, then
+  // the product barcode, then SKU/PLU. (This Phase 1 catalogue stores EANs on
+  // products; the packing check also covers records that carry one.)
+  function scanSelect(raw: string): boolean {
+    const code = raw.trim();
+    if (!code) return false;
+    const packingBarcode = (p: PackingOption) => (p as PackingOption & { barcode?: string }).barcode;
+    const found =
+      grocery.find((it) => it.packings?.some((p) => packingBarcode(p) === code)) ||
+      grocery.find((it) => it.barcode && it.barcode === code) ||
+      grocery.find((it) => it.sku === code);
+    if (found) {
+      // The entry form has ONE shared selection, so this product is used by
+      // both Stock IN and Wastage — only the mode/fields differ.
+      setInv("grocery");
+      setSelId(found.id);
+      setQuery(found.name);
+      setMsg(null);
+      beep(true);
+      setScanFlashId(found.id);
+      showScanToast(true, `✓ Stock entry ke liye select ho gaya: ${found.name} — ab Quantity / Rate / Supplier bharein`);
+      return true;
+    }
+    beep(false);
+    showScanToast(false, `✕ Product system mein nahi hai — code ${code}. Owner se add karwayein.`);
+    return false;
+  }
+
+  function submitScan(e: React.FormEvent) {
+    e.preventDefault();
+    scanSelect(scanCode);
+    setScanCode("");
+    scanRef.current?.focus();
+  }
 
   function jumpToCode() {
     // Enter in the search box: an exact barcode/SKU selects the item directly.
@@ -168,6 +268,37 @@ function StockScreen() {
         <div className="grid lg:grid-cols-2 gap-4 items-start">
           {/* ── Entry form + item picker ── */}
           <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
+            {/* Barcode scan — selects an existing grocery product into this
+                ONE shared form (Stock IN and Wastage use the same selection).
+                Quantity / rate / supplier stay manual; unknown products are
+                NOT created here — the owner adds them. */}
+            <div className="mb-3 rounded-2xl border-2 border-dashed border-green-300 bg-green-50/70 p-3" data-testid="stock-scan-panel">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label htmlFor="stock-scan-input" className="font-extrabold text-sm" style={{ color: "#15803D" }}>🔫 Barcode Scan — Product Select Karein</label>
+                <span className="text-[11px] font-black text-stone-500">Stock IN + Wastage — shared selection</span>
+              </div>
+              <form onSubmit={submitScan} className="mt-2 flex gap-2">
+                <input id="stock-scan-input" ref={scanRef} value={scanCode} onChange={(e) => setScanCode(e.target.value)}
+                  placeholder="Packing EAN / barcode / SKU-PLU scan ya type karke Enter"
+                  data-testid="stock-scan-input"
+                  className="min-w-0 flex-1 rounded-xl border-2 border-green-200 bg-white px-4 py-3 text-base font-bold outline-none focus:border-green-500" />
+                <button type="submit" data-testid="stock-scan-submit"
+                  className="shrink-0 rounded-xl px-5 py-3 font-extrabold text-white active:scale-[0.98]" style={{ background: "#16A34A" }}>
+                  Select
+                </button>
+              </form>
+              <p className="mt-2 text-xs font-bold leading-relaxed text-stone-500">
+                Scan milte hi product select ho jayega — Quantity, Purchase Rate aur Supplier aap khud bhareinge. Product system mein na ho to yahan add nahi hota; Owner se add karwayein.
+              </p>
+            </div>
+            {scanToast && (
+              <div key={scanToast.key} data-testid="stock-scan-toast"
+                className={`fixed left-1/2 bottom-6 z-[70] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-2xl px-5 py-3 text-center text-base font-black text-white shadow-2xl pop-in ${scanToast.ok ? "" : "shake"}`}
+                style={{ background: scanToast.ok ? "#16A34A" : "#DC2626" }}>
+                {scanToast.text}
+              </div>
+            )}
+
             <div className="flex rounded-xl overflow-hidden border-2 border-stone-200 mb-3">
               <button onClick={() => setMode("add")} className="flex-1 py-3 font-extrabold"
                 style={mode === "add" ? { background: "#16A34A", color: "#fff" } : { background: "#fff", color: "#44403C" }}>➕ Stock IN (kharid)</button>
@@ -183,8 +314,8 @@ function StockScreen() {
               {filtered.map((v) => {
                 const sel = selId === v.id;
                 return (
-                  <button key={v.id} onClick={() => { setSelId(v.id); setMsg(null); }}
-                    className="w-full flex items-center gap-2.5 rounded-xl border-2 px-3 py-2 text-left transition active:scale-[0.99]"
+                  <button key={v.id} onClick={() => { setSelId(v.id); setMsg(null); }} data-testid={`stock-picker-${v.id}`}
+                    className={`w-full flex items-center gap-2.5 rounded-xl border-2 px-3 py-2 text-left transition active:scale-[0.99] ${scanFlashId === v.id ? "scan-flash" : ""}`}
                     style={sel ? { borderColor: "#F97316", background: "#FFF7ED" } : { borderColor: v.low ? "#F59E0B" : "#F5F5F4", background: v.low ? "#FFFBEB" : "#fff" }}>
                     <span className="text-2xl">{v.emoji}</span>
                     <span className="flex-1 min-w-0">
