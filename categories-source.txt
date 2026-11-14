@@ -1,0 +1,449 @@
+HEAD: Aata, Maida & Sooji
+SUB: Aata
+Chakki Aata
+Fine Aata
+Whole Wheat Aata
+Special Aata
+Super Aata
+Stone Ground Aata
+Multigrain Aata
+Organic Aata
+Bran Aata
+Premium Aata
+SUB: Maida & Sooji
+Maida
+Fine Maida
+Super Maida
+Sooji
+Bareek Sooji
+Moti Sooji
+Besan
+Corn Flour
+Rice Flour
+Custard Powder
+HEAD: Rice & Chawal
+SUB: Basmati Rice
+Super Kernel
+1121 Basmati
+1509 Basmati
+Kainat Basmati
+Sella Basmati
+Golden Sella
+Steam Rice
+Old Basmati
+New Basmati
+Premium Basmati
+SUB: Other Rice
+IRRI-6
+IRRI-9
+Short Grain Rice
+Broken Rice
+Brown Rice
+White Rice
+Chinese Rice
+Thai Rice
+Japonica Rice
+Parboiled Rice
+HEAD: Daalain & Pulses
+SUB: Sabut Daal
+Sabut Masoor
+Sabut Moong
+Sabut Mash
+Sabut Chana
+Kala Chana
+White Chana
+Rajma Red
+Rajma White
+Lobia White
+Lobia Red
+SUB: Dhuli Daal
+Daal Masoor
+Daal Moong
+Daal Mash
+Daal Chana
+Daal Arhar
+Daal Moong Chilka
+Daal Masoor Chilka
+Daal Mash Chilka
+Yellow Split Peas
+Green Split Peas
+HEAD: Ghee & Cooking Oil
+SUB: Cooking Oil
+Dalda Oil
+Soya Supreme Oil
+Canola Oil
+Sunflower Oil
+Corn Oil
+Olive Oil
+Mustard Oil
+Coconut Oil
+Blended Cooking Oil
+Premium Cooking Oil
+SUB: Ghee
+Dalda Banaspati
+Habib Banaspati
+Kashmir Banaspati
+Tallow Ghee
+Desi Ghee
+Cow Ghee
+Buffalo Ghee
+Butter Ghee
+Premium Desi Ghee
+Vegetable Ghee
+HEAD: Sugar & Salt
+SUB: Sugar
+White Sugar
+Brown Sugar
+Crystal Sugar
+Powder Sugar
+Icing Sugar
+Cube Sugar
+Jaggery
+Shakkar
+Gur
+Mishri
+SUB: Salt
+Table Salt
+Iodized Salt
+Himalayan Pink Salt
+Black Salt
+Rock Salt
+Sea Salt
+Powder Salt
+Coarse Salt
+Low Sodium Salt
+White Crystal Salt
+HEAD: Tea & Coffee
+SUB: Tea
+Tapal Danedar
+Tapal Family Mixture
+Lipton Yellow Label
+Supreme Tea
+Vital Tea
+Islamabad Tea
+Green Tea
+Elaichi Tea
+Kashmiri Chai
+Herbal Tea
+SUB: Coffee & Whitener
+Nescafe Classic
+Nescafe Gold
+Instant Coffee
+Coffee Mate
+Everyday Whitener
+Milk Powder
+Tea Whitener
+Cappuccino Mix
+Mocha Coffee
+Hot Chocolate Mix
+HEAD: Spices & Masalay
+SUB: Whole Spices
+Sabut Kali Mirch
+Zeera
+Sabut Dhania
+Laung
+Dar Cheeni
+Bari Elaichi
+Choti Elaichi
+Tez Patta
+Ajwain
+Saunf
+SUB: Powder Masalay
+Lal Mirch Powder
+Haldi Powder
+Dhania Powder
+Zeera Powder
+Kali Mirch Powder
+Garam Masala
+Chaat Masala
+Biryani Masala
+Qorma Masala
+Karahi Masala
+HEAD: Biscuits & Bakery
+SUB: Biscuits
+Oreo
+Prince
+Sooper
+Gala
+TUC
+Rio
+Peanut Pik
+Candi
+Chocolato
+Marie
+SUB: Bakery
+White Bread
+Brown Bread
+Milk Bread
+Burger Buns
+Pizza Bread
+Rusk
+Cake Rusk
+Plain Cake
+Cup Cakes
+Swiss Roll
+HEAD: Snacks & Nimko
+SUB: Chips
+Lays
+Kurkure
+Super Crisp
+Slanty
+Cheetos
+Oye Hoye
+Snackers
+Wavy Chips
+Potato Sticks
+Masala Chips
+SUB: Nimko
+Mix Nimko
+Daal Moth
+Peanuts
+Salted Peanuts
+Masala Peanuts
+Chanachur
+Daal Sev
+Corn Snacks
+Spicy Mix
+Fried Chana
+HEAD: Cold Drinks & Juices
+SUB: Cold Drinks
+Coca-Cola
+Pepsi
+Sprite
+7UP
+Fanta
+Mountain Dew
+Mirinda
+Pakola
+Marinda Lemon
+Sting
+SUB: Juices
+Apple Juice
+Mango Juice
+Orange Juice
+Guava Juice
+Red Grapes Juice
+Mixed Fruit Juice
+Pineapple Juice
+Pomegranate Juice
+Fruit Cocktail
+Lychee Juice
+HEAD: Milk & Dairy Products
+SUB: Milk
+Fresh Milk
+UHT Milk
+Full Cream Milk
+Low Fat Milk
+Powder Milk
+Flavoured Milk
+Chocolate Milk
+Strawberry Milk
+Condensed Milk
+Evaporated Milk
+SUB: Dairy
+Yogurt
+Butter
+Cheese
+Cream
+Fresh Cream
+Whipping Cream
+Desi Lassi
+Sweet Lassi
+Plain Dahi
+Cheese Slices
+HEAD: Chocolates & Candies
+SUB: Chocolates
+Dairy Milk
+KitKat
+Perk
+Bounty
+Snickers
+Mars
+Twix
+Munch
+Ferrero Rocher
+Galaxy
+SUB: Candies
+Eclairs
+Mentos
+Chupa Chups
+Polo
+Fox Candy
+Kopiko
+Jelly Candy
+Toffee
+Bubble Gum
+Mint Candy
+HEAD: Household Items
+SUB: Kitchen Items
+Aluminium Foil
+Cling Film
+Tissue Paper
+Kitchen Towels
+Disposable Plates
+Disposable Glasses
+Disposable Spoons
+Match Boxes
+Garbage Bags
+Toothpicks
+SUB: General Household
+Candles
+Batteries
+Mosquito Coil
+Mosquito Repellent
+Room Freshener
+Air Freshener
+Shoe Polish
+Shoe Brush
+Plastic Bags
+Packing Tape
+HEAD: Washing & Cleaning Items
+SUB: Washing
+Surf Excel
+Ariel
+Bonus
+Brite
+Express Power
+Wheel
+Rin
+Washing Powder
+Washing Liquid
+Fabric Softener
+SUB: Cleaning
+Harpic
+Vim
+Max
+Phenyl
+Bleach
+Floor Cleaner
+Toilet Cleaner
+Glass Cleaner
+Dishwashing Liquid
+Dishwashing Bar
+HEAD: Personal Care Products
+SUB: Hair Care
+Sunsilk Shampoo
+Head & Shoulders
+Pantene Shampoo
+Clear Shampoo
+Dove Shampoo
+Hair Oil
+Coconut Oil
+Hair Gel
+Hair Color
+Conditioner
+SUB: Body & Oral Care
+Lux Soap
+Lifebuoy Soap
+Dove Soap
+Dettol Soap
+Safeguard Soap
+Toothpaste
+Toothbrush
+Mouthwash
+Face Wash
+Hand Wash
+HEAD: Baby Products
+SUB: Baby Care
+Pampers
+Molfix
+Canbebe
+Baby Wipes
+Baby Powder
+Baby Lotion
+Baby Shampoo
+Baby Soap
+Baby Oil
+Baby Cream
+SUB: Baby Food
+Cerelac Wheat
+Cerelac Rice
+Cerelac Fruits
+Lactogen
+Nido
+Formula Milk
+Baby Biscuits
+Baby Cereal
+Fruit Puree
+Baby Snacks
+HEAD: Frozen Foods
+SUB: Frozen Snacks
+Frozen Samosa
+Frozen Spring Rolls
+Frozen Nuggets
+Frozen Fries
+Frozen Shami Kebab
+Frozen Paratha
+Frozen Chapli Kebab
+Frozen Chicken Strips
+Frozen Seekh Kebab
+Frozen Patties
+SUB: Frozen Dairy & Desserts
+Vanilla Ice Cream
+Chocolate Ice Cream
+Strawberry Ice Cream
+Kulfa
+Mango Ice Cream
+Ice Lollies
+Frozen Yogurt
+Ice Cream Sandwich
+Frozen Dessert
+Ice Cream Cups
+HEAD: Dry Fruits
+SUB: Nuts
+Almonds
+Cashews
+Pistachios
+Walnuts
+Peanuts
+Hazelnuts
+Macadamia
+Pine Nuts
+Roasted Almonds
+Salted Cashews
+SUB: Dry Fruits
+Raisins
+Dates
+Dried Figs
+Dried Apricots
+Dried Plums
+Dried Mango
+Dried Cranberries
+Dry Coconut
+Dried Berries
+Dry Fruit Mix
+HEAD: Sauces & Ketchup
+SUB: Sauces
+Tomato Ketchup
+Chilli Garlic Sauce
+Soy Sauce
+Chilli Sauce
+BBQ Sauce
+Mustard Sauce
+Mayonnaise
+Hot Sauce
+Worcestershire Sauce
+Pizza Sauce
+SUB: Pickles & Spreads
+Mango Pickle
+Mixed Pickle
+Lemon Pickle
+Garlic Pickle
+Green Chilli Pickle
+Jam
+Strawberry Jam
+Marmalade
+Peanut Butter
+Chocolate Spread
+HEAD: General Items
+SUB: Miscellaneous
+Eggs
+Match Sticks
+Drinking Straws
+Disposable Cups
+Rubber Bands
+Sewing Needles
+Thread
+Shoe Laces
+Lighters
+Water Bottles
