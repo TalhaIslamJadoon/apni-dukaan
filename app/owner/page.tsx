@@ -224,7 +224,7 @@ function PaymentVerificationSection({ orders, onDone }: { orders: Order[]; onDon
       <h2 className="font-extrabold mb-1">💳 Online Payment Verification — Tasdeeq Baqi ({pending.length})</h2>
       <p className="text-sm text-stone-500 mb-3">Online customers pehle payment karke <b>proof (screenshot)</b> bhejte hain. Jab tak aap confirm na karein, order <b>Kitchen / packing queue mein nahi jata</b> aur us ka token nahi banta. Proof check karke Confirm ya Reject karein.</p>
       {pending.length === 0 && <p className="font-bold" style={{ color: "#16A34A" }}>✅ Koi payment tasdeeq baqi nahi — sab clear hai.</p>}
-      <div className="grid md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {pending.map((o) => {
           const proof = o.paymentProof;
           const amountOk = proof ? proof.amount === o.total : false;
@@ -935,8 +935,8 @@ function OwnerScreen() {
         {ownerTab === "overview" && (<>
         <PaymentVerificationSection orders={orders} onDone={() => setOrders(loadOrders())} />
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <section className="min-w-0 bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
             <h2 className="font-extrabold mb-3">🏆 Best Sellers Today</h2>
             {best.length === 0 && <p className="text-stone-400">No sales yet today.</p>}
             <ul className="space-y-2.5">
