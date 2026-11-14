@@ -114,14 +114,7 @@ success/token screen, and sends the order to Kitchen.
 - Product grid with SKU, price and **live stock** on every card
 - **Weight items** (atta, cheeni, chawal, daal…) are priced **per kg** and
   added in 0.5 kg steps (+/− gives 0.5 / 1.0 / 1.5 kg…), price by weight
-- **Retail / Wholesale toggle** — now in the **bill panel header** as the
-  bill's price type; it reprices the grid and the current bill
-- **Wholesale minimum quantity** — in Wholesale mode, each bill line must
-  meet a minimum quantity before the bill can be completed. The shop-wide
-  defaults are **10 pieces/packs** and **5 kg** (Owner Dashboard → Shop
-  Settings); a product's own **Wholesale Min Qty** overrides the default.
-  Below-minimum lines are flagged in the bill and checkout stays disabled
-  until every line reaches its minimum. Retail bills have no minimum.
+- **Retail / Wholesale toggle** — reprices the grid and the current bill
 - Same 4 payment methods; **Udhaar records the customer's name** for the khata
 - On sale, **stock is deducted automatically**; grocery orders are handed
   over at the counter (they do NOT go to Kitchen)
@@ -655,16 +648,3 @@ WebGL scenes, header logo shine (looked gimmicky for a billing tool).
     flow for dine-in tables, and — only if the college ever wants it —
     **optional ID verification with the college**. There is no college
     software/LMS integration in this design.
-
----
-
-## Final Package (14 Nov 2026)
-
-Complete final state of the project:
-
-- **`final-package/Canteen-POS-Setup.zip`** — the full deployment bundle: Phase 2 server system source, Windows deployment pack, print agent, and all guides (START-HERE.txt inside).
-- **`final-package/Final-Handover.pdf`** — what is built, where things live, decisions, total cost, deployment-day steps.
-- **`final-package/Canteen-POS-Staff-Guide.pdf`** — 30-page staff guide (Roman Urdu).
-- **`final-package/Deployment-Inputs.pdf`** — one-page sheet to fill for go-live (merchant numbers + QR images, staff PINs, printer models).
-
-The code at the repo root is the Phase 1 test copy (live demo: https://canteen-pos.pages.dev). The production Phase 2 server system is inside the setup zip.
