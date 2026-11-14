@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+:root {
+  --slate: #0f172a;
+  --orange: #f97316;
+  --bg: #fff7ed;
+  --success: #16a34a;
+  --pending: #f59e0b;
+  --cancel: #dc2626;
+}
+
+html, body {
+  background: var(--bg);
+  color: #1c1917;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+button { touch-action: manipulation; }
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.97) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.pop-in { animation: popIn 0.18s ease-out; }
+
+/* ── Barcode scan feedback (Grocery POS) ────────────────────────────────────
+   scan-flash: the just-scanned bill line pulses green briefly.
+   shake: the "item not found" toast shakes side to side. */
+@keyframes scanFlash {
+  0% { background: #bbf7d0; box-shadow: 0 0 0 2px #16a34a inset; }
+  100% { background: transparent; box-shadow: none; }
+}
+.scan-flash { animation: scanFlash 0.9s ease-out; }
+
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+.shake { animation: shakeX 0.4s ease-in-out, popIn 0.18s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-flash, .shake { animation: none !important; }
+}
+
+/* ── Lightweight 3D touches (CSS transforms ONLY — no WebGL, no 3D library) ── */
+.tile-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.tile-3d:hover {
+  transform: perspective(600px) rotateX(3deg) rotateY(-2deg) translateY(-4px);
+  box-shadow: 0 16px 26px -12px rgba(15, 23, 42, 0.35);
+}
+.tile-3d:active {
+  transform: perspective(600px) rotateX(0deg) translateY(0) scale(0.98);
+  box-shadow: 0 4px 10px -6px rgba(15, 23, 42, 0.3);
+}
+
+@keyframes flipIn {
+  from { opacity: 0; transform: perspective(900px) rotateX(55deg) translateY(18px); }
+  to { opacity: 1; transform: perspective(900px) rotateX(0deg) translateY(0); }
+}
+.flip-in { animation: flipIn 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.05); transform-origin: top center; }
+
+.kpi-3d { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.kpi-3d:hover {
+  transform: perspective(700px) rotateX(2deg) translateY(-3px);
+  box-shadow: 0 14px 24px -12px rgba(15, 23, 42, 0.28);
+}
+
+/* Best-seller bars: subtle 3D-ish depth edge (solid colour, darker right edge) */
+.bar-3d {
+  box-shadow: inset -4px 0 0 rgba(0, 0, 0, 0.18), 0 2px 4px rgba(15, 23, 42, 0.15);
+  transition: width 0.6s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile-3d, .kpi-3d { transition: none !important; }
+  .tile-3d:hover, .tile-3d:active, .kpi-3d:hover { transform: none !important; box-shadow: none !important; }
+  .flip-in, .pop-in { animation: none !important; }
+  .bar-3d { transition: none !important; }
+}
+
+/* ── Online item PICTURE cards in 3D (CSS only — no WebGL, offline-safe) ────
+   The picture sits on a tinted "plate" that tilts in perspective on
+   hover/focus, the artwork pops forward (translateZ) with a deep soft
+   shadow so it looks lifted off the plate, and a glossy shine sweeps the
+   plate. On touch devices hover-tilt is disabled (taps stay accurate) —
+   only a gentle press tilt remains. */
+.pic-3d { perspective: 700px; }
+.pic-3d .pic-plate {
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12), 0 3px 6px rgba(15, 23, 42, 0.08);
+}
+.pic-3d:hover .pic-plate,
+.pic-3d:focus-visible .pic-plate {
+  transform: rotateX(6deg) rotateY(-6deg);
+  box-shadow: 0 22px 34px rgba(15, 23, 42, 0.18), 0 6px 12px rgba(15, 23, 42, 0.10);
+}
+.pic-3d:active .pic-plate { transform: rotateX(3deg) rotateY(-3deg) scale(0.985); }
+.pic-3d .pic-art {
+  display: block;
+  transform: translateZ(28px);
+  filter: drop-shadow(0 10px 10px rgba(15, 23, 42, 0.25));
+}
+.pic-3d .pic-plate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.45) 48%, transparent 62%);
+  transform: translateX(-130%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+.pic-3d:hover .pic-plate::after,
+.pic-3d:focus-visible .pic-plate::after { transform: translateX(130%); }
+@media (hover: none) {
+  .pic-3d:hover .pic-plate { transform: none; }
+  .pic-3d:hover .pic-plate::after { transform: translateX(-130%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pic-3d .pic-plate { transition: none !important; transform: none !important; }
+  .pic-3d .pic-art { transform: none !important; filter: none; }
+  .pic-3d .pic-plate::after { display: none; }
+}
+
+/* ── Bill / receipt line splits ─────────────────────────────────────────────
+   Screen: light solid hairlines. Print: classic dashed thermal dividers. */
+.receipt-rule { border-top: 1.5px solid #e7e5e4; }
+.receipt-rule-strong { border-top: 2px solid #0f172a; }
+.receipt-rule-double {
+  border-top: 4px double #0f172a;
+  border-bottom: 4px double #0f172a;
+}
+
+/* ── Thermal print (80mm) ───────────────────────────────────────────────────
+   Only the element with id="thermal-bill" is printed. */
+@media print {
+  body * { visibility: hidden !important; }
+  #thermal-bill, #thermal-bill * { visibility: visible !important; }
+  #thermal-bill {
+    position: fixed !important;
+    top: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+  #thermal-bill .receipt-rule,
+  #thermal-bill .receipt-rule-strong { border-top: 1.5px dashed #000 !important; }
+  #thermal-bill .receipt-rule-double {
+    border-top: 3px double #000 !important;
+    border-bottom: 3px double #000 !important;
+  }
+  #thermal-bill { animation: none !important; }
+  .no-print { display: none !important; }
+  @page { size: 80mm auto; margin: 2mm; }
+
+  /* Printing the table-QR sheet instead of a bill */
+  body.print-tables * { visibility: hidden !important; }
+  body.print-tables #table-qr-sheet,
+  body.print-tables #table-qr-sheet * { visibility: visible !important; }
+  body.print-tables #table-qr-sheet {
+    position: fixed !important; inset: 0 !important;
+    display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 6mm !important;
+  }
+}
