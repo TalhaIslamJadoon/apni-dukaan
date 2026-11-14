@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import TopBar from "@/components/TopBar";
 import StaffGate from "@/components/StaffGate";
 import OrderAlerts from "@/components/OrderAlerts";
@@ -30,6 +30,13 @@ function PosPage() {
   const [discountInput, setDiscountInput] = useState("");
   const [pendingBillNo, setPendingBillNo] = useState("");
   const [tendered, setTendered] = useState(0);
+  // Manual cash entry (Talha, 14 Nov): the cashier can also TYPE the amount.
+  // tenderedText mirrors `tendered` — typing sets Received directly, the
+  // quick-add / Exact / Clear buttons write through applyTendered so both
+  // stay in sync. Plain controlled input, same pattern as Discount above.
+  const [tenderedText, setTenderedText] = useState("");
+  const applyTendered = (n: number) => { setTendered(n); setTenderedText(n > 0 ? String(Math.round(n)) : ""); };
+  const typeTendered = (v: string) => { const d = v.replace(/\D/g, ""); setTenderedText(d); setTendered(d === "" ? 0 : parseInt(d, 10)); };
   const [udhaarName, setUdhaarName] = useState("");
   const [done, setDone] = useState<Order | null>(null);
   const [todayTotal, setTodayTotal] = useState(0);
@@ -63,6 +70,14 @@ function PosPage() {
   const discountAmt = Math.min(total, discountType === "Rs" ? discountVal : Math.round((total * discountVal) / 100));
   const grand = total - discountAmt;
   const visible = cat === "All" ? menu : menu.filter((m) => m.category === cat);
+
+  // Stepper guard: the tile's press animation shifts the tile mid-press, so a
+  // real press on a tile's −/+ can land its click on the TILE (which adds).
+  // Steppers therefore act on pointerdown (hit-tested correctly) and stamp
+  // this guard; the tile click ignores any click right after a stepper press.
+  const stepperGuard = useRef<{ id: string; at: number }>({ id: "", at: 0 });
+  const stepperPressed = (id: string) => { stepperGuard.current = { id, at: Date.now() }; };
+  const stepperJustPressed = (id: string) => stepperGuard.current.id === id && Date.now() - stepperGuard.current.at < 700;
 
   function add(item: MenuItem) {
     setCart((c) => {
@@ -112,7 +127,7 @@ function PosPage() {
     setDone(order);
     setCart([]);
     setPayOpen(false);
-    setTendered(0);
+    applyTendered(0);
     setUdhaarName("");
     setDiscountInput("");
     refreshToday();
@@ -164,7 +179,7 @@ function PosPage() {
               const st = CATEGORY_STYLE[item.category];
               const inCart = cart.find((l) => l.item.id === item.id)?.qty;
               return (
-                <div key={item.id} onClick={() => add(item)} data-testid="canteen-tile" data-name={item.name} role="button" aria-label={`Add ${item.name}`}
+                <div key={item.id} onClick={() => { if (!stepperJustPressed(item.id)) add(item); }} data-testid="canteen-tile" data-name={item.name} role="button" aria-label={`Add ${item.name}`}
                   className="tile-3d relative rounded-2xl p-4 text-left shadow-sm border-2 min-h-[118px] cursor-pointer select-none"
                   style={{ background: st.bg, borderColor: inCart ? st.ring : "transparent" }}>
                   <div className="mb-1">{item.image
@@ -179,13 +194,15 @@ function PosPage() {
                       never double-trigger the tile's own add. */}
                   {inCart ? (
                     <>
-                      <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/90 shadow px-1 py-1" data-testid="tile-stepper">
+                      <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/90 shadow px-1 py-1" data-testid="tile-stepper" onClick={(e) => e.stopPropagation()}>
                         <button type="button" aria-label={`Remove one ${item.name}`}
-                          onClick={(e) => { e.stopPropagation(); dec(item.id); }}
+                          onPointerDown={(e) => { e.stopPropagation(); stepperPressed(item.id); dec(item.id); }}
+                          onClick={(e) => { e.stopPropagation(); if (e.detail === 0) dec(item.id); }}
                           className="w-8 h-8 rounded-full bg-white border-2 border-stone-300 text-base font-black leading-none active:scale-95">−</button>
                         <span className="min-w-6 text-center font-black text-[15px]" data-testid="tile-qty">{inCart}</span>
                         <button type="button" aria-label={`Add one ${item.name}`}
-                          onClick={(e) => { e.stopPropagation(); inc(item.id); }}
+                          onPointerDown={(e) => { e.stopPropagation(); stepperPressed(item.id); inc(item.id); }}
+                          onClick={(e) => { e.stopPropagation(); if (e.detail === 0) inc(item.id); }}
                           className="w-8 h-8 rounded-full text-white text-base font-black leading-none active:scale-95" style={{ background: "#F97316" }}>+</button>
                       </span>
                       <span className="absolute bottom-2 right-2 text-white text-sm font-extrabold rounded-full w-7 h-7 flex items-center justify-center" style={{ background: "#F97316" }}>{inCart}</span>
@@ -236,7 +253,7 @@ function PosPage() {
               <span className="font-black text-stone-600">GRAND TOTAL</span>
               <span className="text-4xl font-black" style={{ color: "#F97316" }}>Rs {grand.toLocaleString()}</span>
             </div>
-            <button disabled={cart.length === 0} onClick={() => { setMethod("Cash"); setTendered(0); setPendingBillNo(nextBillNo(loadOrders())); setPayOpen(true); }}
+            <button disabled={cart.length === 0} onClick={() => { setMethod("Cash"); applyTendered(0); setPendingBillNo(nextBillNo(loadOrders())); setPayOpen(true); }}
               className="w-full rounded-2xl py-4 text-xl font-black text-white disabled:opacity-40 active:scale-[0.99]"
               style={{ background: "#F97316" }}>
               PAY / Charge →
@@ -292,12 +309,15 @@ function PosPage() {
             {method === "Cash" && (
               <div className="mb-4">
                 <div className="font-bold mb-2">Cash received:</div>
+                <label className="block text-sm font-bold text-stone-500 mb-1">✍️ Ya amount khud likhein:</label>
+                <input value={tenderedText} onChange={(e) => typeTendered(e.target.value)} inputMode="numeric" placeholder="Amount likhein (Rs)"
+                  className="w-full rounded-xl border-2 border-stone-200 px-4 py-3 text-lg font-black outline-none focus:border-green-600 mb-2" />
                 <div className="flex gap-2 mb-2">
                   {[100, 500, 1000].map((a) => (
-                    <button key={a} onClick={() => setTendered((t) => t + a)} className="flex-1 rounded-xl py-3 font-extrabold text-white" style={{ background: "#16A34A" }}>+ Rs {a}</button>
+                    <button key={a} onClick={() => applyTendered(tendered + a)} className="flex-1 rounded-xl py-3 font-extrabold text-white" style={{ background: "#16A34A" }}>+ Rs {a}</button>
                   ))}
-                  <button onClick={() => setTendered(grand)} className="flex-1 rounded-xl py-3 font-extrabold bg-stone-800 text-white">Exact</button>
-                  <button onClick={() => setTendered(0)} className="rounded-xl px-3 py-3 font-bold bg-stone-100">Clear</button>
+                  <button onClick={() => applyTendered(grand)} className="flex-1 rounded-xl py-3 font-extrabold bg-stone-800 text-white">Exact</button>
+                  <button onClick={() => applyTendered(0)} className="rounded-xl px-3 py-3 font-bold bg-stone-100">Clear</button>
                 </div>
                 <div className="flex justify-between text-lg"><span>Received:</span><b>Rs {tendered.toLocaleString()}</b></div>
                 <div className="flex justify-between text-xl mt-1">
