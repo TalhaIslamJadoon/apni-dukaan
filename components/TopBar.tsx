@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import AIAssistant from "@/components/AIAssistant";
 import { GuidelineButton } from "@/components/Guideline";
+import type { GuidelineKey } from "@/lib/guidelines";
 import { TABS_META, setStaffSession, useShop, useStaffSession } from "@/lib/store";
 import { audioArmed, setSoundOn, soundOn } from "@/lib/alerts";
 
@@ -50,10 +51,11 @@ export default function TopBar() {
   const onOnline = path === "/online";
 
   const visibleTabs = member ? TABS_META.filter((t) => member.tabs.includes(t.key)) : [];
+
   // Per-screen help lives beside the other TopBar actions. Owner gets its
   // richer tab-wise buttons inside the dashboard; /online gets a floating
   // button, so neither is duplicated here.
-  const guidelineEntry =
+  const guidelineEntry: GuidelineKey | null =
     path === "/" ? "canteen" :
     path === "/grocery" ? "grocery" :
     path === "/kitchen" ? "kitchen" :
@@ -73,6 +75,24 @@ export default function TopBar() {
         </div>
         {guidelineEntry && <GuidelineButton entry={guidelineEntry} variant="topbar" />}
         <AIAssistant variant="topbar" />
+        {member && (
+          <>
+            {/* Customer TV screens — view-only pages, opened in a new tab so
+                the counter tab stays put. The screens themselves need no PIN. */}
+            <a href="/display" target="_blank" rel="noreferrer"
+              title="Customer Order Screen (TV) — Ordered / Preparing / Taiyar tokens live"
+              className="rounded-full px-3.5 py-1.5 text-xs font-extrabold text-white transition hover:brightness-125 active:scale-[0.98] shrink-0 whitespace-nowrap"
+              style={{ background: "#334155" }}>
+              🖥️ <span className="hidden md:inline">Order Screen</span><span className="md:hidden">Screen</span>
+            </a>
+            <a href="/menu-board" target="_blank" rel="noreferrer"
+              title="Menu Board (TV) — poora menu har 10 second mein khud badalta hai"
+              className="rounded-full px-3.5 py-1.5 text-xs font-extrabold text-white transition hover:brightness-125 active:scale-[0.98] shrink-0 whitespace-nowrap"
+              style={{ background: "#334155" }}>
+              📺 <span className="hidden md:inline">Menu Board</span><span className="md:hidden">Menu TV</span>
+            </a>
+          </>
+        )}
         {member && <SoundToggle />}
         {member && (
           <div className="flex items-center gap-2 shrink-0">
