@@ -5,12 +5,15 @@ import TopBar from "@/components/TopBar";
 import StaffGate from "@/components/StaffGate";
 import OrderAlerts from "@/components/OrderAlerts";
 import Receipt from "@/components/Receipt";
+import { GuidelineButton, GuidelineIndexButton } from "@/components/Guideline";
 import QRCode from "react-qr-code";
 import Barcode128 from "@/components/Barcode128";
 import {
   CATEGORIES, Category, GroceryHead, GroceryItem, GrocerySubHead, MenuItem, Order, StaffMember, TabKey, TABS_META,
   loadMenu, saveMenu, loadOrders, saveOrders, isToday, nextToken, adjustStockForOrder, loadGrocery, saveGrocery, loadGroceryHeads, saveGroceryHeads, loadGrocerySubHeads, saveGrocerySubHeads, billNoOf,
   loadShop, saveShop, useShop, ShopSettings, SHOP_DEFAULTS, loadStaff, saveStaff,
+  ProofPaymentMethod, merchantNumber, QR_FIELD_OF, TITLE_FIELD_OF,
+  UdhaarWasooli, WasooliMethod, WASOOLI_METHODS, loadUdhaarWasooli, saveUdhaarWasooli, udhaarCustomerOf, useStaffSession,
 } from "@/lib/store";
 
 // Emoji choices for a NEW grocery head (owner picks one from this row).
@@ -19,6 +22,33 @@ const HEAD_EMOJIS = ["🌾", "🫙", "☕", "🥛", "🍪", "🧼", "🧴", "�
 const HEAD_TINTS = ["#FFFBEB", "#EFF6FF", "#F0FDF4", "#FDF2F8", "#F5F3FF", "#FFF7ED", "#ECFEFF", "#FEF2F2"];
 // URL-ish slug for owner-created head / sub-head ids.
 const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "item";
+
+// Merchant QR upload: downscale to max 512px and keep PNG (JPEG blur QR
+// ki lines kharab kar deta hai — scan mushkil ho jata hai). Data URL
+// ShopSettings mein save hoti hai, bilkul proof screenshots ki tarah.
+function compressQrImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const max = 512;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const c2d = canvas.getContext("2d");
+        if (!c2d) { URL.revokeObjectURL(url); reject(new Error("no canvas")); return; }
+        c2d.fillStyle = "#ffffff"; c2d.fillRect(0, 0, canvas.width, canvas.height);
+        c2d.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/png"));
+      } catch (e) { URL.revokeObjectURL(url); reject(e instanceof Error ? e : new Error("compress failed")); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image load failed")); };
+    img.src = url;
+  });
+}
 
 // Simple count-up feel for KPI numbers (plain JS rAF, no library).
 function AnimNum({ value, prefix = "" }: { value: number; prefix?: string }) {
@@ -97,8 +127,13 @@ function StaffAccessSection() {
 
   return (
     <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
-      <h2 className="font-extrabold mb-1">🔐 Staff Access — Kis Ko Konsa Tab Milega</h2>
-      <p className="text-sm text-stone-500 mb-3">Har banday ko <b>sirf usi ke tabs</b> nazar aayenge jo yahan tick hain. Ek banday ko kai tabs bhi de sakte hain (masalan Canteen + Grocery). Naam + PIN se woh login karega.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-extrabold mb-1">🔐 Staff Access — Kis Ko Konsa Tab Milega</h2>
+          <p className="text-sm text-stone-500 mb-3">Har banday ko <b>sirf usi ke tabs</b> nazar aayenge jo yahan tick hain. Ek banday ko kai tabs bhi de sakte hain (masalan Canteen + Grocery). Naam + PIN se woh login karega.</p>
+        </div>
+        <GuidelineButton entry="owner-staff" />
+      </div>
       <div className="space-y-1.5 mb-4">
         {staff.map((m) => (
           <div key={m.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-orange-50/60 border border-orange-100 px-3 py-2">
@@ -250,6 +285,282 @@ function PaymentVerificationSection({ orders, onDone }: { orders: Order[]; onDon
   );
 }
 
+// ── Udhaar Khata — customer credit accounts + WASOOLI (repayments) ─────────
+// Talha's missing screen: charges come from the BILLS themselves (every
+// order with payment "Udhaar") — customers are keyed by name+ID exactly as
+// stored on the charges (store.udhaarCustomerOf; no new identity model).
+// Wasooli entries are recorded HERE against the open account and persisted
+// in their own list (store.loadUdhaarWasooli) with entered-by = the
+// logged-in staff member. Rules: amount must be > 0 and must NOT exceed the
+// current baqaya. Every balance shown is DERIVED: charges − wasooli.
+// Billing itself is untouched — recording wasooli never edits an order.
+interface UdhaarAccount {
+  key: string;
+  name: string;
+  id?: string;
+  charges: Order[];
+  payments: UdhaarWasooli[];
+  totalUdhaar: number;
+  totalWasool: number;
+  baqaya: number;
+}
+
+function UdhaarKhataSection({ orders }: { orders: Order[] }) {
+  const me = useStaffSession();
+  const [wasooli, setWasooli] = useState<UdhaarWasooli[]>([]);
+  const [search, setSearch] = useState("");
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState<WasooliMethod>("Cash");
+  const [note, setNote] = useState("");
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    const read = () => setWasooli(loadUdhaarWasooli());
+    read();
+    window.addEventListener("udhaar-wasooli-changed", read);
+    window.addEventListener("storage", read);
+    return () => {
+      window.removeEventListener("udhaar-wasooli-changed", read);
+      window.removeEventListener("storage", read);
+    };
+  }, []);
+
+  const accounts = useMemo<UdhaarAccount[]>(() => {
+    const map = new Map<string, UdhaarAccount>();
+    const ensure = (key: string, name: string, id?: string) => {
+      let a = map.get(key);
+      if (!a) { a = { key, name, id, charges: [], payments: [], totalUdhaar: 0, totalWasool: 0, baqaya: 0 }; map.set(key, a); }
+      return a;
+    };
+    for (const o of orders) {
+      if (o.payment !== "Udhaar") continue;
+      const c = udhaarCustomerOf(o);
+      const a = ensure(c.key, c.name, c.id);
+      a.charges.push(o);
+      a.totalUdhaar += o.total;
+    }
+    for (const w of wasooli) {
+      const a = ensure(w.customerKey, w.customerName, w.customerId);
+      a.payments.push(w);
+      a.totalWasool += w.amount;
+    }
+    const list = [...map.values()];
+    for (const a of list) {
+      a.charges.sort((x, y) => x.createdAt.localeCompare(y.createdAt));
+      a.payments.sort((x, y) => x.at.localeCompare(y.at));
+      a.baqaya = a.totalUdhaar - a.totalWasool;
+    }
+    // Sab se zyada baqaya pehle — khata book ki tarteeb.
+    return list.sort((a, b) => b.baqaya - a.baqaya || a.name.localeCompare(b.name));
+  }, [orders, wasooli]);
+
+  const totals = useMemo(() => ({
+    udhaar: accounts.reduce((s, a) => s + a.totalUdhaar, 0),
+    wasool: accounts.reduce((s, a) => s + a.totalWasool, 0),
+    baqaya: accounts.reduce((s, a) => s + a.baqaya, 0),
+  }), [accounts]);
+
+  const q = search.trim().toLowerCase();
+  const visible = accounts.filter((a) => !q || a.name.toLowerCase().includes(q) || (a.id ?? "").toLowerCase().includes(q));
+  const selected = accounts.find((a) => a.key === selectedKey) ?? null;
+
+  // Ledger — charges + wasooli merged, oldest first, running balance.
+  const ledger = useMemo(() => {
+    if (!selected) return [] as { at: string; kind: "charge" | "wasooli"; label: string; detail: string; amount: number; balance: number }[];
+    const rows = [
+      ...selected.charges.map((o) => ({
+        at: o.createdAt, kind: "charge" as const,
+        label: `📒 Udhaar — ${billNoOf(o)}`,
+        detail: `${o.mode === "grocery" ? "🛒 Grocery" : "🍽️ Canteen"}${o.source === "online" ? " · 🌐 Online" : ""}${o.cashier ? ` · Cashier: ${o.cashier}` : ""}`,
+        amount: o.total, balance: 0,
+      })),
+      ...selected.payments.map((w) => ({
+        at: w.at, kind: "wasooli" as const,
+        label: `💰 Wasooli — ${w.method}`,
+        detail: `${w.note ? `${w.note} · ` : ""}Darj kiya: ${w.by}`,
+        amount: -w.amount, balance: 0,
+      })),
+    ].sort((a, b) => a.at.localeCompare(b.at));
+    let bal = 0;
+    for (const r of rows) { bal += r.amount; r.balance = bal; }
+    return rows;
+  }, [selected]);
+
+  function pick(a: UdhaarAccount) {
+    setSelectedKey(a.key === selectedKey ? null : a.key);
+    setMsg(""); setAmount(""); setNote(""); setMethod("Cash");
+  }
+
+  function recordWasooli() {
+    if (!selected) return;
+    const amt = parseInt(amount, 10);
+    if (isNaN(amt) || amt <= 0) { setMsg("⚠️ Wasooli ki raqam sahi likhein — Rs 0 se zyada honi chahiye"); return; }
+    if (amt > selected.baqaya) {
+      setMsg(`⛔ Wasooli Rs ${amt.toLocaleString()} hai lekin ${selected.name} ka baqaya sirf Rs ${selected.baqaya.toLocaleString()} hai — baqaya se zyada wasooli darj nahi ho sakti`);
+      return;
+    }
+    const entry: UdhaarWasooli = {
+      id: `wasooli-${Date.now()}`,
+      customerKey: selected.key,
+      customerName: selected.name,
+      customerId: selected.id,
+      amount: amt,
+      method,
+      note: note.trim() || undefined,
+      by: me?.name ?? "Owner",
+      at: new Date().toISOString(),
+    };
+    const next = [entry, ...loadUdhaarWasooli()];
+    saveUdhaarWasooli(next);
+    setWasooli(next);
+    setAmount(""); setNote("");
+    setMsg(`✓ Rs ${amt.toLocaleString()} wasooli darj ho gayi (${method}) — ${selected.name} ka naya baqaya Rs ${(selected.baqaya - amt).toLocaleString()} hai`);
+  }
+
+  const fmtDate = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.toLocaleDateString()} · ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  };
+
+  return (
+    <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4" data-testid="udhaar-khata">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-extrabold mb-1">💰 Udhaar Khata — Baqaya aur Wasooli</h2>
+          <p className="text-sm text-stone-500 mb-3">Jis customer ne <b>Udhaar</b> par bill banaya, us ka khata yahan khud banta hai — <b>naam + ID jaisa bill par likha tha</b>. Baqaya hamesha <b>Kul Udhaar − Kul Wasooli</b> se banta hai. Ye <b>all-time</b> hisaab hai (Overview wala Udhaar card sirf aaj ka hai).</p>
+        </div>
+        <GuidelineButton entry="owner-udhaar" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3 text-center">
+          <div className="text-xs font-black text-stone-500">📒 KUL UDHAAR</div>
+          <div className="text-xl font-black" style={{ color: "#F59E0B" }} data-testid="udhaar-total-udhaar">Rs {totals.udhaar.toLocaleString()}</div>
+        </div>
+        <div className="rounded-2xl border border-green-200 bg-green-50/60 p-3 text-center">
+          <div className="text-xs font-black text-stone-500">💰 KUL WASOOLI</div>
+          <div className="text-xl font-black" style={{ color: "#16A34A" }} data-testid="udhaar-total-wasool">Rs {totals.wasool.toLocaleString()}</div>
+        </div>
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 p-3 text-center">
+          <div className="text-xs font-black text-stone-500">🧮 KUL BAQAYA</div>
+          <div className="text-xl font-black" style={{ color: "#DC2626" }} data-testid="udhaar-total-baqaya">Rs {totals.baqaya.toLocaleString()}</div>
+        </div>
+      </div>
+
+      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Customer ka naam ya ID likhein…"
+        data-testid="udhaar-search"
+        className="w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 mb-3 outline-none focus:border-orange-500" />
+
+      {accounts.length === 0 && (
+        <p className="font-bold text-stone-400">Abhi kisi customer ka udhaar khata nahi hai — pehla Udhaar bill bante hi khata yahan khud aa jayega.</p>
+      )}
+      {accounts.length > 0 && visible.length === 0 && (
+        <p className="font-bold text-stone-400">Is naam / ID ka koi khata nahi mila.</p>
+      )}
+
+      <div className="space-y-1.5 mb-4">
+        {visible.map((a) => (
+          <button key={a.key} onClick={() => pick(a)} data-testid="udhaar-account-row" data-key={a.key}
+            className={`w-full flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border-2 px-3 py-2.5 text-left transition ${selectedKey === a.key ? "border-orange-500 bg-orange-50" : "border-orange-100 bg-orange-50/40 hover:bg-orange-50"}`}>
+            <span className="font-extrabold">👤 {a.name}</span>
+            {a.id && <span className="text-[10px] font-black rounded-full px-2 py-0.5 text-white" style={{ background: "#0F172A" }}>ID: {a.id}</span>}
+            <span className="text-xs font-bold text-stone-400">{a.charges.length} udhaar bill{a.charges.length === 1 ? "" : "s"}</span>
+            <span className="ml-auto flex items-center gap-3 text-sm">
+              <span className="font-bold text-stone-500">Udhaar <b style={{ color: "#F59E0B" }}>Rs {a.totalUdhaar.toLocaleString()}</b></span>
+              <span className="font-bold text-stone-500">Wasooli <b style={{ color: "#16A34A" }}>Rs {a.totalWasool.toLocaleString()}</b></span>
+              {a.baqaya > 0
+                ? <span className="font-black rounded-full px-2.5 py-1 text-white text-xs" style={{ background: "#DC2626" }}>Baqaya Rs {a.baqaya.toLocaleString()}</span>
+                : <span className="font-black rounded-full px-2.5 py-1 text-white text-xs" style={{ background: "#16A34A" }}>✅ Clear</span>}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {selected && (
+        <div className="rounded-2xl border-2 border-amber-200 bg-amber-50/40 p-3 pop-in" data-testid="udhaar-ledger">
+          <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+            <div>
+              <div className="font-black text-lg">👤 {selected.name}{selected.id ? <span className="ml-2 text-[11px] font-black rounded-full px-2 py-0.5 text-white align-middle" style={{ background: "#0F172A" }}>ID: {selected.id}</span> : null}</div>
+              <div className="text-sm font-bold text-stone-500">
+                Udhaar <b style={{ color: "#F59E0B" }}>Rs {selected.totalUdhaar.toLocaleString()}</b> · Wasooli <b style={{ color: "#16A34A" }}>Rs {selected.totalWasool.toLocaleString()}</b> · Baqaya <b style={{ color: selected.baqaya > 0 ? "#DC2626" : "#16A34A" }} data-testid="udhaar-selected-baqaya">Rs {selected.baqaya.toLocaleString()}</b>
+              </div>
+            </div>
+            <button onClick={() => setSelectedKey(null)} className="rounded-lg px-3 py-1.5 font-bold bg-white border border-stone-200 text-sm">✕ Band Karein</button>
+          </div>
+
+          {selected.baqaya > 0 ? (
+            <div className="rounded-2xl bg-white border border-amber-200 p-3 mb-2">
+              <div className="font-extrabold mb-2">💰 Wasooli Darj Karein</div>
+              <div className="flex flex-wrap gap-2 items-end">
+                <label className="block w-36">
+                  <span className="block text-xs font-extrabold text-stone-500">AMOUNT (RS)</span>
+                  <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ""))} placeholder="e.g. 500" inputMode="numeric"
+                    data-testid="wasooli-amount"
+                    className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-green-600" />
+                </label>
+                <label className="block w-40">
+                  <span className="block text-xs font-extrabold text-stone-500">METHOD</span>
+                  <select value={method} onChange={(e) => setMethod(e.target.value as WasooliMethod)}
+                    data-testid="wasooli-method"
+                    className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none bg-white">
+                    {WASOOLI_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </label>
+                <label className="block flex-1 min-w-[180px]">
+                  <span className="block text-xs font-extrabold text-stone-500">NOTE (OPTIONAL)</span>
+                  <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. aadhi raqam mili"
+                    data-testid="wasooli-note"
+                    className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-green-600" />
+                </label>
+                <button onClick={recordWasooli} data-testid="wasooli-save"
+                  className="rounded-xl px-5 py-2.5 font-extrabold text-white active:scale-[0.99]" style={{ background: "#16A34A" }}>
+                  💰 Wasooli Darj Karein
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="font-black mb-2" style={{ color: "#16A34A" }}>✅ Is customer ka khata clear hai — koi baqaya nahi.</p>
+          )}
+          {msg && (
+            <p className="font-bold text-sm mb-2" data-testid="wasooli-msg" style={{ color: msg.startsWith("✓") ? "#16A34A" : "#DC2626" }}>{msg}</p>
+          )}
+
+          <div className="rounded-xl border border-amber-100 bg-white overflow-x-auto">
+            <table className="w-full text-sm min-w-[620px] border-collapse">
+              <thead>
+                <tr className="bg-[#FFF7ED] text-left text-[11px] uppercase tracking-wide text-stone-500">
+                  <th className="font-extrabold px-3 py-2 w-44">Date</th>
+                  <th className="font-extrabold px-2 py-2">Entry</th>
+                  <th className="font-extrabold px-2 py-2">Tafseel</th>
+                  <th className="font-extrabold px-2 py-2 w-28 text-right">Raqam</th>
+                  <th className="font-extrabold px-3 py-2 w-28 text-right">Baqaya</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledger.map((r, i) => (
+                  <tr key={i} className={`h-10 border-t border-orange-100/70 ${i % 2 ? "bg-orange-50/40" : "bg-white"}`}>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-stone-500 font-semibold">{fmtDate(r.at)}</td>
+                    <td className="px-2 py-1.5 font-bold whitespace-nowrap">{r.label}</td>
+                    <td className="px-2 py-1.5 text-stone-500">{r.detail}</td>
+                    <td className="px-2 py-1.5 text-right font-black whitespace-nowrap" style={{ color: r.kind === "charge" ? "#F59E0B" : "#16A34A" }}>
+                      {r.kind === "charge" ? "+" : "−"} Rs {Math.abs(r.amount).toLocaleString()}
+                    </td>
+                    <td className="px-3 py-1.5 text-right font-black whitespace-nowrap">Rs {r.balance.toLocaleString()}</td>
+                  </tr>
+                ))}
+                {ledger.length === 0 && (
+                  <tr><td colSpan={5} className="px-3 py-4 text-center font-bold text-stone-400">Khata khali hai.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function OwnerScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
@@ -262,11 +573,44 @@ function OwnerScreen() {
   const [shopForm, setShopForm] = useState<ShopSettings>(SHOP_DEFAULTS);
   const [shopInit, setShopInit] = useState(false);
   const [shopSaved, setShopSaved] = useState(false);
+  const [tableCountSaved, setTableCountSaved] = useState(false);
   useEffect(() => {
     if (!shopInit) { setShopForm(loadShop()); setShopInit(true); }
   }, [shopInit]);
+  // Merchant QR (Settings): upload/remove FORAN save hota hai (Shop Status
+  // switch wali tarah) aur shopForm mein mirror bhi, taake baad wala
+  // Save Settings click QR ko wapas purana na kar de. Titles aam text
+  // fields hain — woh Save Settings se save hote hain.
+  const [qrStand, setQrStand] = useState<ProofPaymentMethod | null>(null);
+  async function onQrFile(m: ProofPaymentMethod, e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    try {
+      const url = await compressQrImage(f);
+      const field = QR_FIELD_OF[m];
+      saveShop({ ...loadShop(), [field]: url });
+      setShopForm((fm) => ({ ...fm, [field]: url }));
+    } catch { /* unreadable image — owner dobara try karega */ }
+  }
+  function removeQr(m: ProofPaymentMethod) {
+    const field = QR_FIELD_OF[m];
+    saveShop({ ...loadShop(), [field]: "" });
+    setShopForm((fm) => ({ ...fm, [field]: "" }));
+    setQrStand((s) => (s === m ? null : s));
+  }
+  function printQrStand(m: ProofPaymentMethod) {
+    setQrStand(m);
+    // Stand pehle render hone dein, phir print — table cards wale body
+    // class pattern par (globals.css: body.print-qrstand).
+    setTimeout(() => {
+      document.body.classList.add("print-qrstand");
+      window.print();
+      setTimeout(() => document.body.classList.remove("print-qrstand"), 500);
+    }, 400);
+  }
   const [grocery, setGrocery] = useState<GroceryItem[]>([]);
-  const [gForm, setGForm] = useState({ name: "", sku: "", barcode: "", retail: "", wholesale: "", stock: "", unit: "piece" as "piece" | "kg", emoji: "🛒", headId: "", subId: "", image: "" });
+  const [gForm, setGForm] = useState({ name: "", sku: "", barcode: "", retail: "", wholesale: "", wholesaleMinQty: "", stock: "", unit: "piece" as "piece" | "kg", emoji: "🛒", headId: "", subId: "", image: "" });
   const [gPackings, setGPackings] = useState<{ label: string; retail: string; wholesale: string }[]>([]);
   const [gEditId, setGEditId] = useState<string | null>(null);
   // Grocery heads manager state (3-level: heads + sub-heads; add / rename / delete-empty)
@@ -285,6 +629,12 @@ function OwnerScreen() {
   const [subHeadSel, setSubHeadSel] = useState("");
   const [subEditId, setSubEditId] = useState<string | null>(null);
   const [subEditName, setSubEditName] = useState("");
+  // Heads manager — which heads are expanded (sub-heads collapsed by default
+  // so 20 heads fit as compact one-line rows). Presentation only.
+  const [openHeads, setOpenHeads] = useState<Record<string, boolean>>({});
+  // Owner Dashboard section tabs — only the selected section renders, so the
+  // page is one section tall instead of one endless scroll. Presentation only.
+  const [ownerTab, setOwnerTab] = useState("overview");
   // Barcode label printing state — selection (id → sticker copies), filters,
   // and the open print sheet (product + copies entries).
   const [labelSel, setLabelSel] = useState<Record<string, number>>({});
@@ -292,6 +642,13 @@ function OwnerScreen() {
   const [labelSub, setLabelSub] = useState("all");
   const [labelSearch, setLabelSearch] = useState("");
   const [sheet, setSheet] = useState<{ item: GroceryItem; copies: number }[] | null>(null);
+  // Grocery products LIST controls — compact table: search / head / sub-head
+  // filters + pagination (50 per page). List windowing only; the product
+  // form and all handlers (editG / delG / label sheet) are unchanged.
+  const [gListSearch, setGListSearch] = useState("");
+  const [gListHead, setGListHead] = useState("all");
+  const [gListSub, setGListSub] = useState("all");
+  const [gListPage, setGListPage] = useState(1);
 
   // Orders refresh — the payment verification panel must never sit stale.
   useEffect(() => {
@@ -355,8 +712,9 @@ function OwnerScreen() {
   const subsOfHead = (hid: string) => subs.filter((s) => s.headId === hid);
   function saveGItem() {
     const retail = parseInt(gForm.retail, 10); const wholesale = parseInt(gForm.wholesale, 10) || retail;
+    const wholesaleMinQty = gForm.wholesaleMinQty.trim() === "" ? undefined : parseFloat(gForm.wholesaleMinQty);
     const stock = parseFloat(gForm.stock);
-    if (!gForm.name.trim() || !gForm.sku.trim() || isNaN(retail) || retail <= 0 || isNaN(stock)) return;
+    if (!gForm.name.trim() || !gForm.sku.trim() || isNaN(retail) || retail <= 0 || isNaN(stock) || (wholesaleMinQty !== undefined && (isNaN(wholesaleMinQty) || wholesaleMinQty < 0))) return;
     let next: GroceryItem[];
     // Head + Sub-Head: the form's choice — fall back to the first head / its
     // first sub-head if the chosen ones were deleted while the form was open
@@ -369,21 +727,21 @@ function OwnerScreen() {
     const packings = gPackings
       .filter((p) => p.label.trim() && parseInt(p.retail, 10) > 0)
       .map((p) => ({ label: p.label.trim(), retailPrice: parseInt(p.retail, 10), wholesalePrice: parseInt(p.wholesale, 10) || parseInt(p.retail, 10) }));
-    const base = { name: gForm.name.trim(), sku: gForm.sku.trim(), barcode: gForm.barcode.trim() || undefined, retailPrice: retail, wholesalePrice: wholesale, stock, unit: gForm.unit, emoji: gForm.emoji || "🛒", headId, subId, image: gForm.image.trim() || undefined, packings: packings.length ? packings : undefined };
+    const base = { name: gForm.name.trim(), sku: gForm.sku.trim(), barcode: gForm.barcode.trim() || undefined, retailPrice: retail, wholesalePrice: wholesale, wholesaleMinQty, stock, unit: gForm.unit, emoji: gForm.emoji || "🛒", headId, subId, image: gForm.image.trim() || undefined, packings: packings.length ? packings : undefined };
     if (gEditId) next = grocery.map((g) => (g.id === gEditId ? { ...g, ...base } : g));
     else next = [...grocery, { id: `g-${Date.now()}`, ...base }];
     setGrocery(next); saveGrocery(next);
-    setGForm({ name: "", sku: "", barcode: "", retail: "", wholesale: "", stock: "", unit: "piece", emoji: "🛒", headId, subId, image: "" }); setGPackings([]); setGEditId(null);
+    setGForm({ name: "", sku: "", barcode: "", retail: "", wholesale: "", wholesaleMinQty: "", stock: "", unit: "piece", emoji: "🛒", headId, subId, image: "" }); setGPackings([]); setGEditId(null);
   }
   function delG(id: string) { const next = grocery.filter((g) => g.id !== id); setGrocery(next); saveGrocery(next); }
   function editG(g: GroceryItem) {
     setGEditId(g.id);
-    setGForm({ name: g.name, sku: g.sku, barcode: g.barcode ?? "", retail: String(g.retailPrice), wholesale: String(g.wholesalePrice), stock: String(g.stock), unit: g.unit, emoji: g.emoji, headId: g.headId, subId: g.subId, image: g.image ?? "" });
+    setGForm({ name: g.name, sku: g.sku, barcode: g.barcode ?? "", retail: String(g.retailPrice), wholesale: String(g.wholesalePrice), wholesaleMinQty: g.wholesaleMinQty !== undefined ? String(g.wholesaleMinQty) : "", stock: String(g.stock), unit: g.unit, emoji: g.emoji, headId: g.headId, subId: g.subId, image: g.image ?? "" });
     setGPackings((g.packings ?? []).map((p) => ({ label: p.label, retail: String(p.retailPrice), wholesale: String(p.wholesalePrice) })));
   }
   function resetGForm() {
     setGEditId(null); setGPackings([]);
-    setGForm({ name: "", sku: "", barcode: "", retail: "", wholesale: "", stock: "", unit: "piece", emoji: "🛒", headId: heads[0]?.id ?? "", subId: subs.find((s) => s.headId === heads[0]?.id)?.id ?? "", image: "" });
+    setGForm({ name: "", sku: "", barcode: "", retail: "", wholesale: "", wholesaleMinQty: "", stock: "", unit: "piece", emoji: "🛒", headId: heads[0]?.id ?? "", subId: subs.find((s) => s.headId === heads[0]?.id)?.id ?? "", image: "" });
   }
 
   // ── Grocery heads manager (Main Head → Sub Head) ──
@@ -485,6 +843,24 @@ function OwnerScreen() {
     });
   }
 
+  // ── Grocery products list — filtered + paged for the compact table ──
+  // Search matches name / SKU / barcode; head + sub-head filters narrow it
+  // further. Changing any filter resets to page 1 (handlers below).
+  const G_PAGE_SIZE = 50;
+  const gFiltered = grocery.filter((g) => {
+    const q = gListSearch.trim().toLowerCase();
+    if (q && !(g.name.toLowerCase().includes(q) || g.sku.toLowerCase().includes(q) || (g.barcode ?? "").toLowerCase().includes(q))) return false;
+    if (gListHead !== "all" && g.headId !== gListHead) return false;
+    if (gListSub !== "all" && g.subId !== gListSub) return false;
+    return true;
+  });
+  const gTotalPages = Math.max(1, Math.ceil(gFiltered.length / G_PAGE_SIZE));
+  const gPageSafe = Math.min(gListPage, gTotalPages);
+  const gPageItems = gFiltered.slice((gPageSafe - 1) * G_PAGE_SIZE, gPageSafe * G_PAGE_SIZE);
+
+  // Pending online-payment verifications — shown as a badge on the Overview tab.
+  const pendingVerify = orders.filter((o) => o.paymentStatus === "proof_pending").length;
+
   const cards = [
     { label: "Today's Total Sales", num: totalSales, prefix: "Rs ", color: "#F97316", icon: "💰" },
     { label: "Orders Today", num: todays.length, prefix: "", color: "#0F172A", icon: "🧾" },
@@ -498,6 +874,40 @@ function OwnerScreen() {
       <TopBar />
       <OrderAlerts role="owner" />
       <main className="p-4 space-y-6 max-w-6xl mx-auto w-full">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm">
+          <div>
+            <div className="font-extrabold">📖 Owner Guidelines — Tabs Wise</div>
+            <p className="text-sm font-semibold text-stone-500">Har tab ki apni guideline usi tab mein hai; saari ek jaga dekhni hon to index kholein.</p>
+          </div>
+          <GuidelineIndexButton />
+        </div>
+        {/* Owner section tabs — sticky sub-nav; only the selected section renders */}
+        <div className="sticky top-2 z-30 bg-white rounded-2xl border border-orange-100 shadow-md p-2 flex gap-1.5 overflow-x-auto" data-testid="owner-tabs">
+          {([
+            { id: "overview", label: "📊 Overview" },
+            { id: "udhaar", label: "💰 Udhaar Khata" },
+            { id: "menu", label: "🍽️ Canteen Menu" },
+            { id: "grocery", label: "🛒 Grocery" },
+            { id: "heads", label: "🗂️ Heads" },
+            { id: "labels", label: "🏷️ Labels" },
+            { id: "staff", label: "🔐 Staff" },
+            { id: "settings", label: "⚙️ Settings" },
+            { id: "tables", label: "🪑 Tables QR" },
+          ] as const).map((t) => (
+            <button key={t.id} onClick={() => setOwnerTab(t.id)} data-testid={`owner-tab-${t.id}`}
+              className={`whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-extrabold transition ${ownerTab === t.id ? "text-white shadow" : "bg-orange-50 text-stone-600 hover:bg-orange-100"}`}
+              style={ownerTab === t.id ? { background: "#F97316" } : undefined}>
+              {t.label}
+              {t.id === "overview" && pendingVerify > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-[11px] font-black text-white align-middle" style={{ background: "#DC2626" }}>{pendingVerify}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        {ownerTab === "overview" && (<>
+        <div className="flex justify-end">
+          <GuidelineButton entry="owner-overview" />
+        </div>
         <div className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4 flex flex-wrap gap-x-8 gap-y-1 items-center">
           <span className="font-extrabold">📊 Today — {new Date().toLocaleDateString()}</span>
           <span>🍽️ Canteen Sales: <b style={{ color: "#F97316" }}>Rs {canteenSales.toLocaleString()}</b></span>
@@ -516,8 +926,13 @@ function OwnerScreen() {
           ))}
         </div>
 
-        <StaffAccessSection />
+        </>)}
 
+        {ownerTab === "staff" && <StaffAccessSection />}
+
+        {ownerTab === "udhaar" && <UdhaarKhataSection orders={orders} />}
+
+        {ownerTab === "overview" && (<>
         <PaymentVerificationSection orders={orders} onDone={() => setOrders(loadOrders())} />
 
         <div className="grid md:grid-cols-2 gap-4">
@@ -556,56 +971,148 @@ function OwnerScreen() {
             </ul>
           </section>
         </div>
+        </>)}
 
+        {ownerTab === "menu" && (
         <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
-          <h2 className="font-extrabold mb-1">🍽️ Menu Management</h2>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-extrabold mb-1">🍽️ Menu Management</h2>
+            <GuidelineButton entry="owner-menu" />
+          </div>
           <p className="text-sm mb-3 font-bold" style={{ color: "#F59E0B" }}>⚠️ Current menu is a SAMPLE — replace with Talha&apos;s real menu &amp; prices.</p>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Item name" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 flex-1 min-w-[160px] outline-none focus:border-orange-500" />
-            <input value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Price Rs" inputMode="numeric" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 w-28 outline-none focus:border-orange-500" />
-            <input value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} placeholder="🍔" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 w-16 text-center outline-none focus:border-orange-500" />
-            <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as Category })} className="rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none">
-              {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-            </select>
+          <div className="flex flex-wrap gap-2 mb-4 items-end">
+            <label className="block flex-1 min-w-[160px]">
+              <span className="block text-xs font-extrabold text-stone-500">ITEM NAME</span>
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Item name" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" />
+            </label>
+            <label className="block w-28">
+              <span className="block text-xs font-extrabold text-stone-500">PRICE RS</span>
+              <input value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Price Rs" inputMode="numeric" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" />
+            </label>
+            <label className="block w-16">
+              <span className="block text-xs font-extrabold text-stone-500">EMOJI</span>
+              <input value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} placeholder="🍔" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 text-center outline-none focus:border-orange-500" />
+            </label>
+            <label className="block">
+              <span className="block text-xs font-extrabold text-stone-500">CATEGORY</span>
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as Category })} className="mt-1 rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none">
+                {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </label>
             <button onClick={saveItem} className="rounded-xl px-5 py-2.5 font-extrabold text-white" style={{ background: "#16A34A" }}>{editId ? "Save Edit" : "+ Add Item"}</button>
             {editId && <button onClick={() => { setEditId(null); setForm({ name: "", price: "", category: "Snacks", emoji: "🍽️" }); }} className="rounded-xl px-4 py-2.5 font-bold bg-stone-100">Cancel</button>}
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {menu.map((m) => (
-              <div key={m.id} className="flex items-center gap-2 rounded-xl bg-orange-50/60 border border-orange-100 px-3 py-2">
-                <span className="text-2xl">{m.emoji}</span>
-                <div className="flex-1 min-w-0"><div className="font-bold text-sm truncate">{m.name}</div><div className="text-xs text-stone-500">{m.category} · Rs {m.price}</div></div>
-                <button onClick={() => edit(m)} className="font-bold text-sm px-2 py-1 rounded-lg bg-white border border-stone-200">Edit</button>
-                <button onClick={() => del(m.id)} className="font-bold text-sm px-2 py-1 rounded-lg text-white" style={{ background: "#DC2626" }}>✕</button>
-              </div>
-            ))}
+          <div className="rounded-xl border border-orange-100 overflow-x-auto" data-testid="canteen-menu-table">
+            <table className="w-full text-sm min-w-[560px] border-collapse">
+              <thead>
+                <tr className="bg-[#FFF7ED] text-left text-[11px] uppercase tracking-wide text-stone-500">
+                  <th className="font-extrabold px-3 py-2">Item</th>
+                  <th className="font-extrabold px-2 py-2 w-28">Category</th>
+                  <th className="font-extrabold px-2 py-2 w-24">Price</th>
+                  <th className="font-extrabold px-2 py-2 w-28">Stock</th>
+                  <th className="font-extrabold px-3 py-2 w-32 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {menu.map((m, i) => (
+                  <tr key={m.id} className={`h-11 border-t border-orange-100/70 hover:bg-orange-50 ${i % 2 ? "bg-orange-50/40" : "bg-white"}`}>
+                    <td className="px-3 py-1.5">
+                      <span className="flex items-center gap-2 min-w-0">
+                        {m.image
+                          ? <img src={m.image} alt="" className="w-7 h-7 rounded-md object-cover shrink-0" />
+                          : <span className="w-7 h-7 rounded-md bg-[#FFF7ED] border border-orange-100 flex items-center justify-center text-base shrink-0">{m.emoji}</span>}
+                        <span className="font-bold truncate" title={m.name}>{m.name}</span>
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5 text-stone-500 whitespace-nowrap">{m.category}</td>
+                    <td className="px-2 py-1.5 font-bold whitespace-nowrap">Rs {m.price}</td>
+                    <td className="px-2 py-1.5 whitespace-nowrap">
+                      {m.stock !== undefined
+                        ? <span style={{ color: m.stock <= (m.lowStock ?? 5) ? "#DC2626" : undefined }} className="font-bold">{m.stock} pcs{m.stock <= (m.lowStock ?? 5) ? " · Low" : ""}</span>
+                        : <span className="text-stone-400">—</span>}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-right">
+                      <button onClick={() => edit(m)} className="font-bold text-xs px-2.5 py-1.5 rounded-lg bg-white border border-stone-200">Edit</button>
+                      <button onClick={() => del(m.id)} className="font-bold text-xs px-2.5 py-1.5 rounded-lg text-white ml-1.5" style={{ background: "#DC2626" }}>✕</button>
+                    </td>
+                  </tr>
+                ))}
+                {menu.length === 0 && (
+                  <tr><td colSpan={5} className="px-3 py-4 text-center font-bold text-stone-400">Menu khali hai — upar se item add karein.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
 
+        )}
+
+        {(ownerTab === "grocery" || ownerTab === "heads" || ownerTab === "labels") && (
         <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
-          <h2 className="font-extrabold mb-1">🛒 Grocery Products Management</h2>
+          {ownerTab === "grocery" && (<>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-extrabold mb-1">🛒 Grocery Products Management</h2>
+            <GuidelineButton entry="owner-grocery" />
+          </div>
           <p className="text-sm mb-3 font-bold" style={{ color: "#F59E0B" }}>⚠️ Current products are SAMPLE — replace with the real grocery list, SKUs &amp; prices.</p>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <input value={gForm.name} onChange={(e) => setGForm({ ...gForm, name: e.target.value })} placeholder="Product name" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 flex-1 min-w-[150px] outline-none focus:border-orange-500" />
-            <input value={gForm.sku} onChange={(e) => setGForm({ ...gForm, sku: e.target.value })} placeholder="SKU/PLU" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 w-28 outline-none focus:border-orange-500" />
-            <input value={gForm.barcode} onChange={(e) => setGForm({ ...gForm, barcode: e.target.value })} placeholder="🏷️ EAN Barcode (packed items)" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 w-44 outline-none focus:border-orange-500" />
-            <input value={gForm.retail} onChange={(e) => setGForm({ ...gForm, retail: e.target.value })} placeholder="Retail Rs" inputMode="numeric" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 w-24 outline-none focus:border-orange-500" />
-            <input value={gForm.wholesale} onChange={(e) => setGForm({ ...gForm, wholesale: e.target.value })} placeholder="Wholesale Rs" inputMode="numeric" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 w-28 outline-none focus:border-orange-500" />
-            <input value={gForm.stock} onChange={(e) => setGForm({ ...gForm, stock: e.target.value })} placeholder="Stock" inputMode="decimal" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 w-20 outline-none focus:border-orange-500" />
-            <select value={gForm.unit} onChange={(e) => setGForm({ ...gForm, unit: e.target.value as "piece" | "kg" })} className="rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none">
-              <option value="piece">per piece</option>
-              <option value="kg">per kg</option>
-            </select>
-            <select value={gForm.headId} onChange={(e) => { const hid = e.target.value; setGForm({ ...gForm, headId: hid, subId: subs.find((s) => s.headId === hid)?.id ?? "" }); }} className="rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500 font-bold" aria-label="Head">
-              {heads.map((h) => <option key={h.id} value={h.id}>{h.emoji} {h.name}</option>)}
-            </select>
-            <select value={gForm.subId} onChange={(e) => setGForm({ ...gForm, subId: e.target.value })} className="rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500 font-bold" aria-label="Sub-Head" disabled={subsOfHead(gForm.headId).length === 0}>
-              {subsOfHead(gForm.headId).length
-                ? subsOfHead(gForm.headId).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)
-                : <option value="">— pehle is head mein sub-head add karein —</option>}
-            </select>
-            <input value={gForm.emoji} onChange={(e) => setGForm({ ...gForm, emoji: e.target.value })} className="rounded-xl border-2 border-stone-200 px-3 py-2.5 w-14 text-center outline-none focus:border-orange-500" />
-            <input value={gForm.image} onChange={(e) => setGForm({ ...gForm, image: e.target.value })} placeholder="🖼️ Image URL (optional — na ho to sub-head/head ki picture lagegi)" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 flex-1 min-w-[220px] outline-none focus:border-orange-500" aria-label="Product image URL" />
+          <div className="flex flex-wrap gap-2 mb-4 items-end">
+            <label className="block flex-1 min-w-[150px]">
+              <span className="block text-xs font-extrabold text-stone-500">PRODUCT NAME</span>
+              <input value={gForm.name} onChange={(e) => setGForm({ ...gForm, name: e.target.value })} placeholder="Product name" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" />
+            </label>
+            <label className="block w-28">
+              <span className="block text-xs font-extrabold text-stone-500">SKU</span>
+              <input value={gForm.sku} onChange={(e) => setGForm({ ...gForm, sku: e.target.value })} placeholder="SKU/PLU" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" />
+            </label>
+            <label className="block w-44">
+              <span className="block text-xs font-extrabold text-stone-500">EAN BARCODE</span>
+              <input value={gForm.barcode} onChange={(e) => setGForm({ ...gForm, barcode: e.target.value })} placeholder="🏷️ EAN Barcode (packed items)" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" />
+            </label>
+            <label className="block w-24">
+              <span className="block text-xs font-extrabold text-stone-500">RETAIL PRICE RS</span>
+              <input value={gForm.retail} onChange={(e) => setGForm({ ...gForm, retail: e.target.value })} placeholder="Retail Rs" inputMode="numeric" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" />
+            </label>
+            <label className="block w-28">
+              <span className="block text-xs font-extrabold text-stone-500">WHOLESALE PRICE RS</span>
+              <input value={gForm.wholesale} onChange={(e) => setGForm({ ...gForm, wholesale: e.target.value })} placeholder="Wholesale Rs" inputMode="numeric" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" />
+            </label>
+            <label className="block w-44">
+              <span className="block text-xs font-extrabold text-stone-500">WHOLESALE MIN QTY</span>
+              <input value={gForm.wholesaleMinQty} onChange={(e) => setGForm({ ...gForm, wholesaleMinQty: e.target.value })} placeholder="Wholesale Min Qty" title="Blank = shop default" inputMode="decimal" aria-label="Wholesale Min Qty" data-testid="wholesale-min-qty-input" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" />
+            </label>
+            <label className="block w-20">
+              <span className="block text-xs font-extrabold text-stone-500">STOCK QTY</span>
+              <input value={gForm.stock} onChange={(e) => setGForm({ ...gForm, stock: e.target.value })} placeholder="Stock" inputMode="decimal" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" />
+            </label>
+            <label className="block">
+              <span className="block text-xs font-extrabold text-stone-500">UNIT</span>
+              <select value={gForm.unit} onChange={(e) => setGForm({ ...gForm, unit: e.target.value as "piece" | "kg" })} className="mt-1 rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none">
+                <option value="piece">per piece</option>
+                <option value="kg">per kg</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="block text-xs font-extrabold text-stone-500">MAIN HEAD</span>
+              <select value={gForm.headId} onChange={(e) => { const hid = e.target.value; setGForm({ ...gForm, headId: hid, subId: subs.find((s) => s.headId === hid)?.id ?? "" }); }} className="mt-1 rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500 font-bold" aria-label="Head">
+                {heads.map((h) => <option key={h.id} value={h.id}>{h.emoji} {h.name}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="block text-xs font-extrabold text-stone-500">SUB-HEAD</span>
+              <select value={gForm.subId} onChange={(e) => setGForm({ ...gForm, subId: e.target.value })} className="mt-1 rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500 font-bold" aria-label="Sub-Head" disabled={subsOfHead(gForm.headId).length === 0}>
+                {subsOfHead(gForm.headId).length
+                  ? subsOfHead(gForm.headId).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)
+                  : <option value="">— pehle is head mein sub-head add karein —</option>}
+              </select>
+            </label>
+            <label className="block w-14">
+              <span className="block text-xs font-extrabold text-stone-500">EMOJI</span>
+              <input value={gForm.emoji} onChange={(e) => setGForm({ ...gForm, emoji: e.target.value })} className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 text-center outline-none focus:border-orange-500" />
+            </label>
+            <label className="block flex-1 min-w-[220px]">
+              <span className="block text-xs font-extrabold text-stone-500">IMAGE URL</span>
+              <input value={gForm.image} onChange={(e) => setGForm({ ...gForm, image: e.target.value })} placeholder="🖼️ Image URL (optional — na ho to sub-head/head ki picture lagegi)" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" aria-label="Product image URL" />
+            </label>
             <button onClick={saveGItem} className="rounded-xl px-5 py-2.5 font-extrabold text-white" style={{ background: "#16A34A" }}>{gEditId ? "Save Edit" : "+ Add Product"}</button>
             {gEditId && <button onClick={resetGForm} className="rounded-xl px-4 py-2.5 font-bold bg-stone-100">Cancel</button>}
             {/* Packings editor — sizes of THIS product (not separate items) */}
@@ -616,24 +1123,40 @@ function OwnerScreen() {
               </div>
               <p className="text-xs text-stone-500 mb-2">Size alag item NAHI hota — packing isi product ki hoti hai (e.g. Surf Excel: 500g / 1kg / 2kg). Khali chhor dein to product base price par bikega.</p>
               {gPackings.map((p, i) => (
-                <div key={i} className="flex flex-wrap gap-2 mb-2">
-                  <input placeholder="Label (e.g. 1kg)" className="w-36 rounded-xl border-2 border-stone-200 px-3 py-2" value={p.label} onChange={(e) => setGPackings((rows) => rows.map((r, j) => (j === i ? { ...r, label: e.target.value } : r)))} />
-                  <input placeholder="Retail Rs" inputMode="numeric" className="w-28 rounded-xl border-2 border-stone-200 px-3 py-2" value={p.retail} onChange={(e) => setGPackings((rows) => rows.map((r, j) => (j === i ? { ...r, retail: e.target.value } : r)))} />
-                  <input placeholder="Wholesale Rs" inputMode="numeric" className="w-32 rounded-xl border-2 border-stone-200 px-3 py-2" value={p.wholesale} onChange={(e) => setGPackings((rows) => rows.map((r, j) => (j === i ? { ...r, wholesale: e.target.value } : r)))} />
+                <div key={i} className="flex flex-wrap gap-2 mb-2 items-end">
+                  <label className="block w-36">
+                    <span className="block text-xs font-extrabold text-stone-500">PACKING SIZE</span>
+                    <input placeholder="Label (e.g. 1kg)" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2" value={p.label} onChange={(e) => setGPackings((rows) => rows.map((r, j) => (j === i ? { ...r, label: e.target.value } : r)))} />
+                  </label>
+                  <label className="block w-28">
+                    <span className="block text-xs font-extrabold text-stone-500">RETAIL PRICE RS</span>
+                    <input placeholder="Retail Rs" inputMode="numeric" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2" value={p.retail} onChange={(e) => setGPackings((rows) => rows.map((r, j) => (j === i ? { ...r, retail: e.target.value } : r)))} />
+                  </label>
+                  <label className="block w-32">
+                    <span className="block text-xs font-extrabold text-stone-500">WHOLESALE PRICE RS</span>
+                    <input placeholder="Wholesale Rs" inputMode="numeric" className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2" value={p.wholesale} onChange={(e) => setGPackings((rows) => rows.map((r, j) => (j === i ? { ...r, wholesale: e.target.value } : r)))} />
+                  </label>
                   <button onClick={() => setGPackings((rows) => rows.filter((_, j) => j !== i))} className="rounded-lg px-3 py-2 font-bold text-white" style={{ background: "#DC2626" }} aria-label="Remove packing">✕</button>
                 </div>
               ))}
             </div>
           </div>
+          </>)}
           {/* Grocery Heads manager — structure: Main Head → Sub Head → Product */}
+          {ownerTab === "heads" && (
           <div className="rounded-2xl border-2 border-dashed border-stone-200 p-3 mb-4" data-testid="heads-manager">
-            <div className="font-extrabold mb-1">🗂️ Grocery Heads — apna head khud banayein</div>
-            <p className="text-xs text-stone-500 mb-2">Structure: <b>Main Head → Sub Head → Product</b>. Har product ek sub-head ke andar rehta hai. <b>Naya head:</b> naam + emoji select karke <b>+ Add Head</b> dabayein, phir us ke andar <b>Sub-Head</b> add karein. Head / sub-head tab delete hoga jab us mein <b>0 products</b> hon — pehle products ko Edit karke doosre head/sub-head mein shift karein.</p>
-            <div className="space-y-2 mb-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="font-extrabold mb-1">🗂️ Grocery Heads — apna head khud banayein</div>
+              <GuidelineButton entry="owner-heads" />
+            </div>
+            <p className="text-xs text-stone-500 mb-2">Structure: <b>Main Head → Sub Head → Product</b> — head / sub-head tab delete hoga jab us mein <b>0 products</b> hon; pehle products shift karein. Head kholne ke liye ▶ dabayein.</p>
+            <div className="space-y-1.5 mb-3">
               {heads.map((h) => (
-                <div key={h.id} className="rounded-xl border border-stone-100 px-3 py-2" style={{ background: h.tint }}>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xl">{h.emoji}</span>
+                <div key={h.id} className="rounded-xl border border-stone-100 px-2.5 py-1" style={{ background: h.tint }}>
+                  <div className="flex flex-wrap items-center gap-2 min-h-[40px]">
+                    <button onClick={() => setOpenHeads((o) => ({ ...o, [h.id]: !o[h.id] }))} aria-label={openHeads[h.id] ? `Collapse ${h.name}` : `Expand ${h.name}`} data-testid={`head-toggle-${h.id}`}
+                      className="w-6 h-6 shrink-0 rounded-md bg-white/80 border border-stone-200 text-[11px] font-black leading-none">{openHeads[h.id] ? "▼" : "▶"}</button>
+                    <span className="text-lg">{h.emoji}</span>
                     {headEditId === h.id ? (
                       <>
                         <input value={headEditName} onChange={(e) => setHeadEditName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") renameHead(); }}
@@ -645,18 +1168,22 @@ function OwnerScreen() {
                       </>
                     ) : (
                       <>
-                        <span className="font-extrabold text-sm">{h.name}</span>
-                        <span className="text-xs font-bold text-stone-500">{headCount(h.id)} products</span>
-                        <span className="ml-auto flex gap-1.5">
-                          <button onClick={() => { setHeadEditId(h.id); setHeadEditName(h.name); setHeadEditImg(h.image ?? ""); setHeadMsg(""); }} className="font-bold text-sm px-2.5 py-1.5 rounded-lg bg-white border border-stone-200">Rename</button>
-                          <button onClick={() => deleteHead(h)} className="font-bold text-sm px-2.5 py-1.5 rounded-lg text-white" style={{ background: "#DC2626" }}>Delete</button>
+                        <span className="font-extrabold text-sm whitespace-nowrap">{h.name}</span>
+                        <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-white/80 border border-stone-200 text-stone-600 whitespace-nowrap">{headCount(h.id)} products</span>
+                        <span className="text-xs text-stone-500 truncate min-w-0" title={subsOfHead(h.id).map((s) => `${s.name} · ${subCount(s.id)}`).join(" | ")}>
+                          {subsOfHead(h.id).length ? subsOfHead(h.id).map((s) => `${s.name} · ${subCount(s.id)}`).join("  |  ") : "koi sub-head nahi"}
+                        </span>
+                        <span className="ml-auto flex gap-1.5 shrink-0">
+                          <button onClick={() => { setHeadEditId(h.id); setHeadEditName(h.name); setHeadEditImg(h.image ?? ""); setHeadMsg(""); }} className="font-bold text-xs px-2.5 py-1 rounded-lg bg-white border border-stone-200">Rename</button>
+                          <button onClick={() => deleteHead(h)} className="font-bold text-xs px-2.5 py-1 rounded-lg text-white" style={{ background: "#DC2626" }}>Delete</button>
                         </span>
                       </>
                     )}
                   </div>
-                  <div className="ml-6 mt-1.5 space-y-1">
+                  {openHeads[h.id] && (
+                  <div className="ml-7 mt-1 mb-0.5 rounded-lg bg-white/60 border border-stone-100 px-2 py-1.5 space-y-1">
                     {subsOfHead(h.id).map((s) => (
-                      <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-white/80 border border-stone-100 px-2.5 py-1.5">
+                      <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-white/80 border border-stone-100 px-2 py-1">
                         {subEditId === s.id ? (
                           <>
                             <input value={subEditName} onChange={(e) => setSubEditName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") renameSub(); }}
@@ -668,18 +1195,21 @@ function OwnerScreen() {
                           </>
                         ) : (
                           <>
-                            <span className="font-bold text-sm">↳ {s.name}</span>
-                            <span className="text-xs font-bold text-stone-500">{subCount(s.id)} products</span>
-                            <span className="ml-auto flex gap-1.5">
-                              <button onClick={() => { setSubEditId(s.id); setSubEditName(s.name); setSubEditImg(s.image ?? ""); setHeadMsg(""); }} className="font-bold text-xs px-2.5 py-1.5 rounded-lg bg-white border border-stone-200">Rename</button>
-                              <button onClick={() => deleteSub(s)} className="font-bold text-xs px-2.5 py-1.5 rounded-lg text-white" style={{ background: "#DC2626" }}>Delete</button>
+                            <span className="font-bold text-[13px]">↳ {s.name}</span>
+                            <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-full bg-orange-50 border border-orange-100 text-stone-600 whitespace-nowrap">{subCount(s.id)} products</span>
+                            <span className="ml-auto flex gap-1.5 shrink-0">
+                              <button onClick={() => { setSubEditId(s.id); setSubEditName(s.name); setSubEditImg(s.image ?? ""); setHeadMsg(""); }} className="font-bold text-xs px-2.5 py-1 rounded-lg bg-white border border-stone-200">Rename</button>
+                              <button onClick={() => deleteSub(s)} className="font-bold text-xs px-2.5 py-1 rounded-lg text-white" style={{ background: "#DC2626" }}>Delete</button>
                             </span>
                           </>
                         )}
                       </div>
                     ))}
                     {subsOfHead(h.id).length === 0 && <div className="text-xs font-bold text-stone-400 pl-1">Koi sub-head nahi — neeche se add karein, tabhi is head mein product aayega</div>}
+                    <button onClick={() => { setSubHeadSel(h.id); setHeadMsg(""); const el = document.querySelector<HTMLInputElement>('[data-testid="add-sub-name"]'); el?.scrollIntoView({ block: "center", behavior: "smooth" }); el?.focus({ preventScroll: true }); }}
+                      className="font-bold text-xs px-2.5 py-1 rounded-lg text-white" style={{ background: "#0F172A" }}>+ Add Sub-Head</button>
                   </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -698,30 +1228,100 @@ function OwnerScreen() {
               <select value={subHeadSel} onChange={(e) => setSubHeadSel(e.target.value)} className="rounded-xl border-2 border-stone-200 px-3 py-2.5 font-bold outline-none focus:border-orange-500" aria-label="Sub-head ka head">
                 {heads.map((h) => <option key={h.id} value={h.id}>{h.emoji} {h.name}</option>)}
               </select>
-              <input value={subName} onChange={(e) => setSubName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addSub(); }} placeholder="Naye sub-head ka naam (e.g. Powder)" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 flex-1 min-w-[190px] outline-none focus:border-orange-500" />
+              <input value={subName} onChange={(e) => setSubName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addSub(); }} placeholder="Naye sub-head ka naam (e.g. Powder)" data-testid="add-sub-name" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 flex-1 min-w-[190px] outline-none focus:border-orange-500" />
               <input value={subImage} onChange={(e) => setSubImage(e.target.value)} placeholder="🖼️ Sub-Head Image URL (optional)" className="rounded-xl border-2 border-stone-200 px-3 py-2.5 flex-1 min-w-[170px] outline-none focus:border-orange-500" aria-label="New sub-head image URL" />
               <button onClick={addSub} className="rounded-xl px-4 py-2.5 font-extrabold text-white" style={{ background: "#0F172A" }}>+ Add Sub-Head</button>
             </div>
             {headMsg && <p className="mt-2 text-sm font-bold" style={{ color: headMsg.startsWith("✓") ? "#16A34A" : "#DC2626" }}>{headMsg}</p>}
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {grocery.map((g) => {
-              const hd = heads.find((h) => h.id === g.headId);
-              const sb = subs.find((s) => s.id === g.subId);
-              return (
-              <div key={g.id} className="flex items-center gap-2 rounded-xl bg-orange-50/60 border border-orange-100 px-3 py-2">
-                <span className="text-2xl">{g.emoji}</span>
-                <div className="flex-1 min-w-0"><div className="font-bold text-sm truncate">{g.name}</div><div className="text-xs text-stone-500">SKU {g.sku}{g.barcode ? ` · 🏷️ ${g.barcode}` : ""} · Retail Rs {g.retailPrice} · WS Rs {g.wholesalePrice} · Stock {g.stock} {g.unit}{hd ? ` · ${hd.emoji} ${hd.name}` : ""}{sb ? ` › ${sb.name}` : ""}{g.packings?.length ? ` · 📦 ${g.packings.length} packings` : ""}</div></div>
-                <button onClick={() => setSheet([{ item: g, copies: 1 }])} className="font-bold text-sm px-2 py-1 rounded-lg bg-white border border-stone-200">🏷️ Label</button>
-                <button onClick={() => editG(g)} className="font-bold text-sm px-2 py-1 rounded-lg bg-white border border-stone-200">Edit</button>
-                <button onClick={() => delG(g.id)} className="font-bold text-sm px-2 py-1 rounded-lg text-white" style={{ background: "#DC2626" }}>✕</button>
-              </div>
-              );
-            })}
+          )}
+          {/* Grocery products — compact TABLE (one row per product) + filters + pagination */}
+          {ownerTab === "grocery" && (<>
+          <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="grocery-list-controls">
+            <input value={gListSearch} onChange={(e) => { setGListSearch(e.target.value); setGListPage(1); }} placeholder="🔍 Product / SKU / Barcode search…" aria-label="Grocery products search"
+              className="rounded-xl border-2 border-stone-200 px-3 py-2 flex-1 min-w-[190px] outline-none focus:border-orange-500" />
+            <select value={gListHead} onChange={(e) => { setGListHead(e.target.value); setGListSub("all"); setGListPage(1); }} aria-label="Products head filter"
+              className="rounded-xl border-2 border-stone-200 px-3 py-2 font-bold outline-none focus:border-orange-500">
+              <option value="all">Saare Heads</option>
+              {heads.map((h) => <option key={h.id} value={h.id}>{h.emoji} {h.name}</option>)}
+            </select>
+            <select value={gListSub} onChange={(e) => { setGListSub(e.target.value); setGListPage(1); }} aria-label="Products sub-head filter" disabled={gListHead === "all"}
+              className="rounded-xl border-2 border-stone-200 px-3 py-2 font-bold outline-none focus:border-orange-500 disabled:opacity-50">
+              <option value="all">{gListHead === "all" ? "Pehle Head chunein" : "Saare Sub-Heads"}</option>
+              {gListHead !== "all" && subsOfHead(gListHead).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <span className="text-sm font-bold text-stone-500" data-testid="grocery-list-count">{grocery.length} mein se {gFiltered.length} products</span>
           </div>
+          <div className="rounded-xl border border-orange-100 overflow-x-auto" data-testid="grocery-products-table">
+            <table className="w-full text-sm min-w-[880px] border-collapse">
+              <thead>
+                <tr className="bg-[#FFF7ED] text-left text-[11px] uppercase tracking-wide text-stone-500">
+                  <th className="font-extrabold px-3 py-2">Product</th>
+                  <th className="font-extrabold px-2 py-2 w-24">SKU</th>
+                  <th className="font-extrabold px-2 py-2 w-20">Retail</th>
+                  <th className="font-extrabold px-2 py-2 w-20">WS</th>
+                  <th className="font-extrabold px-2 py-2 w-24">Stock</th>
+                  <th className="font-extrabold px-2 py-2 w-52">Head › Sub</th>
+                  <th className="font-extrabold px-2 py-2 w-20">Packings</th>
+                  <th className="font-extrabold px-3 py-2 w-44 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gPageItems.map((g, i) => {
+                  const hd = heads.find((h) => h.id === g.headId);
+                  const sb = subs.find((s) => s.id === g.subId);
+                  const lowLimit = g.lowStock ?? (g.unit === "kg" ? 2 : 5);
+                  return (
+                    <tr key={g.id} data-testid="grocery-product-row" className={`h-11 border-t border-orange-100/70 hover:bg-orange-50 ${i % 2 ? "bg-orange-50/40" : "bg-white"}`}>
+                      <td className="px-3 py-1.5 max-w-[260px]">
+                        <span className="flex items-center gap-2 min-w-0">
+                          {g.image
+                            ? <img src={g.image} alt="" className="w-7 h-7 rounded-md object-cover shrink-0" />
+                            : <span className="w-7 h-7 rounded-md bg-[#FFF7ED] border border-orange-100 flex items-center justify-center text-base shrink-0">{g.emoji}</span>}
+                          <span className="font-bold truncate" title={g.name}>{g.name}</span>
+                        </span>
+                      </td>
+                      <td className="px-2 py-1.5 font-mono text-xs text-stone-500 whitespace-nowrap">{g.sku}</td>
+                      <td className="px-2 py-1.5 font-bold whitespace-nowrap">Rs {g.retailPrice}</td>
+                      <td className="px-2 py-1.5 whitespace-nowrap">Rs {g.wholesalePrice}{g.wholesaleMinQty !== undefined ? <span className="block text-[10px] font-bold text-stone-400">min {g.wholesaleMinQty}</span> : null}</td>
+                      <td className="px-2 py-1.5 whitespace-nowrap">
+                        <span className="font-bold" style={{ color: g.stock <= 0 ? "#DC2626" : g.stock <= lowLimit ? "#D97706" : undefined }}>{g.stock} {g.unit}</span>
+                        {g.stock <= 0 && <span className="block text-[10px] font-black" style={{ color: "#DC2626" }}>KHATAM</span>}
+                      </td>
+                      <td className="px-2 py-1.5 text-xs text-stone-500 max-w-[210px]">
+                        <span className="block truncate" title={`${hd?.name ?? ""} › ${sb?.name ?? ""}`}>{hd ? `${hd.emoji} ${hd.name}` : "—"}{sb ? ` › ${sb.name}` : ""}</span>
+                      </td>
+                      <td className="px-2 py-1.5 whitespace-nowrap">{g.packings?.length ? `📦 ${g.packings.length}` : <span className="text-stone-400">—</span>}</td>
+                      <td className="px-3 py-1.5 whitespace-nowrap text-right">
+                        <button onClick={() => setSheet([{ item: g, copies: 1 }])} className="font-bold text-xs px-2.5 py-1.5 rounded-lg bg-white border border-stone-200">🏷️ Label</button>
+                        <button onClick={() => editG(g)} className="font-bold text-xs px-2.5 py-1.5 rounded-lg bg-white border border-stone-200 ml-1.5">Edit</button>
+                        <button onClick={() => delG(g.id)} className="font-bold text-xs px-2.5 py-1.5 rounded-lg text-white ml-1.5" style={{ background: "#DC2626" }}>✕</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {gPageItems.length === 0 && (
+                  <tr><td colSpan={8} className="px-3 py-5 text-center font-bold text-stone-400">Is search / filter mein koi product nahi mila.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-2" data-testid="grocery-pagination">
+            <button onClick={() => setGListPage(gPageSafe - 1)} disabled={gPageSafe <= 1}
+              className="rounded-xl px-4 py-2 font-extrabold border-2 border-stone-200 bg-white disabled:opacity-40">← Prev</button>
+            <span className="text-sm font-bold">Page {gPageSafe} of {gTotalPages}</span>
+            <button onClick={() => setGListPage(gPageSafe + 1)} disabled={gPageSafe >= gTotalPages}
+              className="rounded-xl px-4 py-2 font-extrabold border-2 border-stone-200 bg-white disabled:opacity-40">Next →</button>
+            <span className="text-xs font-bold text-stone-400">Har page par {G_PAGE_SIZE} products — baqi pages par hain, page ab lamba nahi hota</span>
+          </div>
+          </>)}
           {/* Barcode Labels — bulk sticker printing (label printer) */}
+          {ownerTab === "labels" && (
           <div className="rounded-2xl border-2 border-dashed border-stone-200 p-3 mt-4" data-testid="label-panel">
-            <div className="font-extrabold mb-1">🏷️ Barcode Labels — stickers print karein</div>
+            <div className="flex items-start justify-between gap-2">
+              <div className="font-extrabold mb-1">🏷️ Barcode Labels — stickers print karein</div>
+              <GuidelineButton entry="owner-labels" />
+            </div>
             <p className="text-xs text-stone-500 mb-2">Products select karein, har product ke stickers ki tadaad set karein, phir print sheet kholein. Har sticker par product ka <b>naam</b>, <b>retail price</b> aur <b>asli scannable Code128 barcode</b> (product ka barcode — na ho to SKU) print hota hai. Sticker size <b>50mm × 30mm</b>; print <b>label printer</b> par hoga (is prototype mein browser print se). Ek product ka label us ki row ke <b>🏷️ Label</b> button se bhi khulta hai.</p>
             <div className="flex flex-wrap gap-2 mb-2">
               <input value={labelSearch} onChange={(e) => setLabelSearch(e.target.value)} placeholder="🔍 Product search…" className="rounded-xl border-2 border-stone-200 px-3 py-2 flex-1 min-w-[150px] outline-none focus:border-orange-500" />
@@ -734,7 +1334,7 @@ function OwnerScreen() {
                 {subs.filter((s) => s.headId === labelHead).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div className="max-h-64 overflow-auto space-y-1 mb-2">
+            <div className="max-h-[260px] overflow-y-auto space-y-1 mb-2 pr-1" data-testid="label-picker-scroll">
               {labelVisible.map((g) => {
                 const on = labelSel[g.id] !== undefined;
                 return (
@@ -767,7 +1367,9 @@ function OwnerScreen() {
               </button>
             </div>
           </div>
+          )}
         </section>
+        )}
 
         {/* Barcode label print sheet — screen preview = print layout (50×30mm) */}
         {sheet && (
@@ -801,7 +1403,38 @@ function OwnerScreen() {
           </div>
         )}
         {/* Shop Settings — Talha sets the real names here himself, no code editing */}
+        {ownerTab === "settings" && (
         <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
+          <div className="flex justify-end mb-3">
+            <GuidelineButton entry="owner-settings" />
+          </div>
+          {/* Shop Status — manual open/close switch. Saves IMMEDIATELY (does
+              not wait for "Save Settings") so BAND karte hi online page band
+              ho jati hai; the saved value is also mirrored into shopForm so
+              a later Save Settings click can never revert it. When BAND,
+              /online (remote + table-QR) shows the closed popup below. */}
+          <div className="mb-4 rounded-2xl border-2 p-3" style={{ borderColor: shopForm.shopOpen ? "#16A34A" : "#DC2626", background: shopForm.shopOpen ? "#F0FDF4" : "#FEF2F2" }}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <div className="font-extrabold text-lg">{shopForm.shopOpen ? "🟢 Shop KHULI hai" : "🔴 Shop BAND hai"}</div>
+                <div className="text-sm text-stone-500">{shopForm.shopOpen ? "Online customers order kar sakte hain." : "Online page par BAND wala popup aa raha hai — order nahi ho raha, sirf neeche wala number Call/WhatsApp ke sath dikh raha hai."}</div>
+              </div>
+              <button data-testid="shop-open-toggle" onClick={() => { const cur = loadShop(); const next = { ...cur, shopOpen: !cur.shopOpen }; saveShop(next); setShopForm((f) => ({ ...f, shopOpen: next.shopOpen })); }}
+                className="rounded-xl px-5 py-3 font-extrabold text-white" style={{ background: shopForm.shopOpen ? "#DC2626" : "#16A34A" }}>
+                {shopForm.shopOpen ? "🔴 Shop BAND kar dein" : "🟢 Shop KHOL dein"}
+              </button>
+            </div>
+          </div>
+          <div className="mb-4">
+            <div className="font-extrabold mb-1">📞 Closed-Shop Contact Number</div>
+            <p className="text-sm text-stone-500 mb-2">Jab shop <b>BAND</b> ho, online customers ko popup mein ye number bara sa dikhega — <b>📞 Call</b> aur <b>💬 WhatsApp</b> button ke sath, taake wo phone par order kar saken. Apna asal number yahan likh kar neeche <b>Save Settings</b> dabayein (status wala switch upar foran save ho jata hai, ye number Save Settings se save hota hai).</p>
+            <label className="block max-w-sm">
+              <span className="text-xs font-extrabold text-stone-500">CONTACT NUMBER (BAND HONE PAR)</span>
+              <input data-testid="closed-contact-input" value={shopForm.closedContactNumber} onChange={(e) => { setShopForm({ ...shopForm, closedContactNumber: e.target.value }); setShopSaved(false); }}
+                className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 font-bold outline-none focus:border-orange-500 bg-[#F6F9FF]" placeholder="03XX-XXXXXXX" inputMode="tel" />
+            </label>
+          </div>
+          <div className="pt-3 border-t border-dashed border-stone-200">
           <h2 className="font-extrabold mb-1">🏷️ Shop Settings — Names</h2>
           <p className="text-sm text-stone-500 mb-3">Set the real names here — they update <b>everywhere</b>: top header, bill headers, table QR cards and the Online Order page. No code editing needed.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -842,23 +1475,136 @@ function OwnerScreen() {
               </label>
             </div>
           </div>
+          {/* Merchant QR codes — Talha apne har account ka ASAL QR yahan
+              upload karega (payment app → My QR / Receive Money wali
+              picture). QR lagte hi online payment step par customer ko
+              wahi QR bara nazar ata hai (scan-and-pay); proof upload +
+              Owner tasdeeq ka gate bilkul waisa hi rehta hai. QR upload/
+              remove FORAN save hota hai; Account Title Save Settings se. */}
+          <div className="mt-4 pt-3 border-t border-dashed border-stone-200">
+            <div className="font-extrabold mb-1">📷 Payment QR Codes <span className="text-xs font-bold text-stone-400">(scan-and-pay ke liye)</span></div>
+            <p className="text-sm text-stone-500 mb-3">Har method ka <b>asal QR</b> upload karein — online customer ko payment wale step par yahi QR bara dikhega. QR na lagaya ho to customer ko sirf number dikhta hai. <b>Farzi/demo QR kabhi na lagayein</b> — sirf apne account ka asal QR. QR Stand print karke counter par lagayein taake walk-in customer bhi scan karke pay kar sake.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {(["JazzCash", "Easypaisa", "Raast", "Bank"] as ProofPaymentMethod[]).map((m) => {
+                const qr = shopForm[QR_FIELD_OF[m]];
+                const slug = m.toLowerCase();
+                return (
+                  <div key={m} className="rounded-2xl border-2 border-stone-200 p-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="font-extrabold">{m}</span>
+                      {qr
+                        ? <span className="text-[10px] font-black rounded-full px-2 py-0.5 text-white" style={{ background: "#16A34A" }}>✓ QR LAGA HAI</span>
+                        : <span className="text-[10px] font-black rounded-full px-2 py-0.5 bg-stone-100 text-stone-500">QR NAHI LAGAYA</span>}
+                    </div>
+                    <div className="flex gap-3">
+                      {qr
+                        ? <img src={qr} alt={`${m} QR code`} data-testid={`qr-preview-${slug}`} className="w-28 h-28 object-contain rounded-xl border border-stone-200 bg-white shrink-0" />
+                        : <div className="w-28 h-28 rounded-xl border-2 border-dashed border-stone-200 bg-stone-50 flex items-center justify-center text-center text-[11px] font-bold text-stone-400 shrink-0 px-1">QR ki picture yahan ayegi</div>}
+                      <div className="flex-1 min-w-0">
+                        <label className="block mb-2">
+                          <span className="text-xs font-extrabold text-stone-500">ACCOUNT TITLE (QR STAND PAR)</span>
+                          <input value={shopForm[TITLE_FIELD_OF[m]]} onChange={(e) => { setShopForm({ ...shopForm, [TITLE_FIELD_OF[m]]: e.target.value }); setShopSaved(false); }}
+                            className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2 font-bold outline-none focus:border-orange-500 bg-[#F6F9FF]" placeholder="e.g. Talha Islam" data-testid={`qr-title-${slug}`} />
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          <label className="rounded-xl px-3 py-2 font-extrabold text-white cursor-pointer" style={{ background: "#F97316" }}>
+                            {qr ? "🔁 QR Badlein" : "📷 QR Upload Karein"}
+                            <input type="file" accept="image/*" className="hidden" data-testid={`qr-upload-${slug}`} onChange={(e) => onQrFile(m, e)} />
+                          </label>
+                          {qr && <button onClick={() => removeQr(m)} data-testid={`qr-remove-${slug}`} className="rounded-xl px-3 py-2 font-extrabold bg-white border-2 border-red-200" style={{ color: "#DC2626" }}>🗑️ Remove</button>}
+                          {qr && <button onClick={() => printQrStand(m)} data-testid={`qr-stand-${slug}`} className="rounded-xl px-3 py-2 font-extrabold text-white" style={{ background: "#0F172A" }}>🖨️ QR Stand</button>}
+                        </div>
+                        <p className="text-[11px] font-bold text-stone-400 mt-1.5">Number: <span className="break-all">{merchantNumber(shopForm, m)}</span>{m === "Bank" && " (RAAST / BANK wala hi number)"}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* QR Stand — counter par lagane wala card. Screen par preview,
+                print mein sirf yahi card (globals.css body.print-qrstand). */}
+            {qrStand && shopForm[QR_FIELD_OF[qrStand]] && (
+              <div className="mt-4">
+                {/* Stand A5 par chhapta hai — bill wale 80mm @page ko is
+                    card ke liye override (label sheet wali hi technique). */}
+                <style>{`@media print { @page { size: A5 portrait; margin: 6mm; } }`}</style>
+                <div className="flex justify-center">
+                  <div id="qr-stand-area" className="rounded-2xl p-5 text-center bg-white shadow-sm" style={{ border: "4px solid #0F172A", width: "148mm", maxWidth: "100%" }}>
+                    <div className="font-black text-2xl leading-tight">{shopForm.canteenName}</div>
+                    <div className="font-extrabold text-stone-500">{shopForm.groceryName}</div>
+                    {shopForm.collegeName.trim() && <div className="text-xs font-bold text-stone-400 mt-0.5">{shopForm.collegeName}</div>}
+                    <div className="mt-3 inline-block rounded-full px-4 py-1.5 font-black text-white text-lg" style={{ background: "#16A34A" }}>{qrStand} — Payment QR</div>
+                    <img src={shopForm[QR_FIELD_OF[qrStand]]} alt={`${qrStand} QR stand`} className="w-64 h-64 object-contain mx-auto my-3 bg-white" />
+                    {shopForm[TITLE_FIELD_OF[qrStand]].trim() && <div className="font-extrabold text-lg">{shopForm[TITLE_FIELD_OF[qrStand]]}</div>}
+                    <div className="font-black text-xl break-all">{merchantNumber(shopForm, qrStand)}</div>
+                    <div className="font-black text-xl mt-3">📷 Scan karke payment karein</div>
+                    <div className="text-xs font-bold text-stone-500 mt-1">Online order mein payment ke baad screenshot (proof) upload karna lazmi hai.</div>
+                  </div>
+                </div>
+                <div className="text-center mt-2 no-print">
+                  <button onClick={() => setQrStand(null)} className="text-xs font-extrabold rounded-lg bg-white border border-stone-200 px-3 py-1.5">✕ Stand Preview Band Karein</button>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="mt-4 pt-3 border-t border-dashed border-stone-200">
+            <div className="font-extrabold mb-1">📦 Wholesale Minimums <span className="text-xs font-bold text-stone-400">(per bill line)</span></div>
+            <p className="text-sm text-stone-500 mb-3">Wholesale bill ki har line ko kam az kam itni quantity leni hogi. Kisi khaas product ki limit alag rakhni ho to Grocery Products form mein us product ka <b>Wholesale Min Qty</b> set karein — woh in defaults par override karega.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <label className="block">
+                <span className="text-xs font-extrabold text-stone-500">Wholesale Min (pieces)</span>
+                <input type="number" min="0" step="1" value={shopForm.wholesaleMinPieces} onChange={(e) => { setShopForm({ ...shopForm, wholesaleMinPieces: e.target.value === "" ? 0 : Number(e.target.value) }); setShopSaved(false); }}
+                  className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 font-bold outline-none focus:border-orange-500 bg-[#F6F9FF]" data-testid="wholesale-min-pieces-input" />
+              </label>
+              <label className="block">
+                <span className="text-xs font-extrabold text-stone-500">Wholesale Min (kg)</span>
+                <input type="number" min="0" step="0.5" value={shopForm.wholesaleMinKg} onChange={(e) => { setShopForm({ ...shopForm, wholesaleMinKg: e.target.value === "" ? 0 : Number(e.target.value) }); setShopSaved(false); }}
+                  className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 font-bold outline-none focus:border-orange-500 bg-[#F6F9FF]" data-testid="wholesale-min-kg-input" />
+              </label>
+            </div>
+          </div>
           <div className="mt-3 flex items-center gap-3">
-            <button onClick={() => { saveShop({ collegeName: shopForm.collegeName.trim(), canteenName: shopForm.canteenName.trim() || "College Canteen", groceryName: shopForm.groceryName.trim() || "Campus Grocery Store", jazzcashNumber: shopForm.jazzcashNumber.trim() || SHOP_DEFAULTS.jazzcashNumber, easypaisaNumber: shopForm.easypaisaNumber.trim() || SHOP_DEFAULTS.easypaisaNumber, raastInfo: shopForm.raastInfo.trim() || SHOP_DEFAULTS.raastInfo }); setShopSaved(true); }}
+            <button onClick={() => { saveShop({ collegeName: shopForm.collegeName.trim(), canteenName: shopForm.canteenName.trim() || "College Canteen", groceryName: shopForm.groceryName.trim() || "Campus Grocery Store", jazzcashNumber: shopForm.jazzcashNumber.trim() || SHOP_DEFAULTS.jazzcashNumber, easypaisaNumber: shopForm.easypaisaNumber.trim() || SHOP_DEFAULTS.easypaisaNumber, raastInfo: shopForm.raastInfo.trim() || SHOP_DEFAULTS.raastInfo, wholesaleMinPieces: Number.isFinite(shopForm.wholesaleMinPieces) && shopForm.wholesaleMinPieces > 0 ? Math.round(shopForm.wholesaleMinPieces) : SHOP_DEFAULTS.wholesaleMinPieces, wholesaleMinKg: Number.isFinite(shopForm.wholesaleMinKg) && shopForm.wholesaleMinKg > 0 ? shopForm.wholesaleMinKg : SHOP_DEFAULTS.wholesaleMinKg, closedContactNumber: shopForm.closedContactNumber.trim() || SHOP_DEFAULTS.closedContactNumber, shopOpen: shopForm.shopOpen, tableCount: Math.min(100, Math.max(1, Math.round(Number(shopForm.tableCount)) || SHOP_DEFAULTS.tableCount)), qrJazzCash: shopForm.qrJazzCash, qrEasypaisa: shopForm.qrEasypaisa, qrRaast: shopForm.qrRaast, qrBank: shopForm.qrBank, titleJazzCash: shopForm.titleJazzCash.trim(), titleEasypaisa: shopForm.titleEasypaisa.trim(), titleRaast: shopForm.titleRaast.trim(), titleBank: shopForm.titleBank.trim() }); setShopSaved(true); }}
               className="rounded-xl px-5 py-2.5 font-extrabold text-white" style={{ background: "#16A34A" }}>💾 Save Settings</button>
-            {shopSaved && <span className="font-bold" style={{ color: "#16A34A" }}>✓ Saved — names + payment numbers updated everywhere.</span>}
+            {shopSaved && <span className="font-bold" style={{ color: "#16A34A" }}>✓ Saved — names, payment numbers, QR account titles, closed-shop number + wholesale minimums updated everywhere. (QR pictures upload karte hi khud save ho jati hain.)</span>}
+          </div>
           </div>
         </section>
+        )}
 
+        {ownerTab === "tables" && (
         <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
             <h2 className="font-extrabold">🪑 Tables &amp; QR — Print &amp; Stick on Tables</h2>
-            <button onClick={() => { document.body.classList.add("print-tables"); window.print(); setTimeout(() => document.body.classList.remove("print-tables"), 500); }}
-              className="rounded-xl px-4 py-2 font-extrabold text-white no-print" style={{ background: "#0F172A" }}>🖨️ Print Table Cards</button>
+            <div className="flex flex-wrap gap-2">
+              <GuidelineButton entry="owner-tables" />
+              <button onClick={() => { document.body.classList.add("print-tables"); window.print(); setTimeout(() => document.body.classList.remove("print-tables"), 500); }}
+                className="rounded-xl px-4 py-2 font-extrabold text-white no-print" style={{ background: "#0F172A" }}>🖨️ Print Table Cards</button>
+            </div>
           </div>
-          <p className="text-sm text-stone-500 mb-4">Every table has its OWN QR. The customer scans it → {shop.canteenName} ordering opens with that table already filled (they can change it). A general canteen QR (no table) can also be printed from the Online Order link: <b>{origin}/online</b></p>
+          <p className="text-sm text-stone-500 mb-3">Every table has its OWN QR. The customer scans it → {shop.canteenName} ordering opens with that table already filled (they can change it). A general canteen QR (no table) can also be printed from the Online Order link: <b>{origin}/online</b></p>
+          {/* Table count — Adjustable (1–100). Draft lives in shopForm; Apply
+              saves via the same loadShop+saveShop pattern as the Shop Status
+              toggle, and the cards below render from the SAVED count (shop),
+              so exactly tableCount cards show/print. Past orders/bills keep
+              their own table numbers — reducing the count never edits them. */}
+          <div className="flex flex-wrap items-center gap-2 mb-4 rounded-2xl border-2 border-dashed border-stone-200 p-3">
+            <span className="font-extrabold text-sm">🪑 Kul Tables:</span>
+            <button data-testid="table-count-minus" onClick={() => { setShopForm((f) => ({ ...f, tableCount: Math.max(1, (Number(f.tableCount) || 8) - 1) })); setTableCountSaved(false); }}
+              className="w-10 h-10 rounded-xl bg-stone-100 font-black text-lg leading-none">−</button>
+            <input data-testid="table-count-input" type="number" min={1} max={100} value={shopForm.tableCount}
+              onChange={(e) => { setShopForm((f) => ({ ...f, tableCount: e.target.value === "" ? 0 : Number(e.target.value) })); setTableCountSaved(false); }}
+              className="w-20 rounded-xl border-2 border-stone-200 px-3 py-2 text-center font-bold outline-none focus:border-orange-500" />
+            <button data-testid="table-count-plus" onClick={() => { setShopForm((f) => ({ ...f, tableCount: Math.min(100, (Number(f.tableCount) || 8) + 1) })); setTableCountSaved(false); }}
+              className="w-10 h-10 rounded-xl bg-stone-100 font-black text-lg leading-none">+</button>
+            <button data-testid="table-count-apply" onClick={() => { const tc = Math.min(100, Math.max(1, Math.round(Number(shopForm.tableCount)) || SHOP_DEFAULTS.tableCount)); saveShop({ ...loadShop(), tableCount: tc }); setShopForm((f) => ({ ...f, tableCount: tc })); setTableCountSaved(true); }}
+              className="rounded-xl px-4 py-2.5 font-extrabold text-white" style={{ background: "#16A34A" }}>✓ Apply</button>
+            {tableCountSaved && <span className="font-bold" style={{ color: "#16A34A" }}>✓ Saved</span>}
+            <span className="text-xs text-stone-500 w-full">Abhi saved: <b>{shop.tableCount} tables</b> (limit 1–100). Apply karte hi neeche utne hi QR cards bante hain aur Online page par bhi sirf <b>Table 1–{shop.tableCount}</b> hi chalegi — us se upar wala number invalid hoga. Count kam karne se purane orders/bills bilkul nahi badalte.</span>
+          </div>
           <div id="table-qr-sheet" className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-              <div key={n} className="rounded-2xl border-2 border-dashed border-stone-300 bg-[#FFFBF5] p-4 text-center">
+            {Array.from({ length: shop.tableCount }, (_, i) => i + 1).map((n) => (
+              <div key={n} data-testid="table-card" className="rounded-2xl border-2 border-dashed border-stone-300 bg-[#FFFBF5] p-4 text-center">
                 <div className="text-xs font-bold text-stone-400">{shop.collegeName || shop.canteenName}</div>
                 <div className="text-3xl font-black" style={{ color: "#F97316" }}>TABLE {n}</div>
                 <div className="flex justify-center my-2 bg-white p-2 rounded-xl shadow-sm w-fit mx-auto">
@@ -870,6 +1616,7 @@ function OwnerScreen() {
             ))}
           </div>
         </section>
+        )}
       </main>
 
       {/* Bill reprint view — same line-split receipt as the original bill */}
