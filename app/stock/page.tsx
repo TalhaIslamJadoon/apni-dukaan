@@ -265,9 +265,9 @@ function StockScreen() {
           <span className="text-sm font-bold text-stone-400">Prices yahan sirf dikhte hain — price badalna Owner ka kaam hai.</span>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* ── Entry form + item picker ── */}
-          <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
+          <section className="min-w-0 bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
             {/* Barcode scan — selects an existing grocery product into this
                 ONE shared form (Stock IN and Wastage use the same selection).
                 Quantity / rate / supplier stay manual; unknown products are
@@ -379,7 +379,7 @@ function StockScreen() {
           </section>
 
           {/* ── Entries log ── */}
-          <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
+          <section className="min-w-0 bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
             <h2 className="font-extrabold mb-1">🧾 Stock Entries — Recent</h2>
             <p className="text-xs font-bold text-stone-400 mb-3">Har entry par: item, quantity, rate/supplier ya wajah, kis ne ki aur kab. (Sales yahan nahi aati — woh POS se stock khud kam karti hain.)</p>
             {entries.length === 0 && <p className="text-stone-400 py-8 text-center">Abhi koi stock entry nahi. Pehli entry left side se karein 👈</p>}
@@ -406,7 +406,7 @@ function StockScreen() {
         {/* Full stock list — both inventories at a glance */}
         <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
           <h2 className="font-extrabold mb-3">📋 Mojooda Stock — {inv === "canteen" ? "🍽️ Canteen" : "🛒 Grocery"} <span className="text-xs font-bold text-stone-400">(jo item low threshold par ya neeche hai woh amber/red hai)</span></h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {views.map((v) => (
               <div key={v.id} className="flex items-center gap-2 rounded-xl border px-3 py-2"
                 style={{ borderColor: v.low ? "#F59E0B" : "#F5F5F4", background: v.low ? "#FFFBEB" : "#fff" }}>
