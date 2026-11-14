@@ -25,9 +25,12 @@ function SoundToggle() {
       title={st.on
         ? st.armed ? "Order alerts ki awaaz ON hai — band karne ke liye dabayein" : "Awaaz ON hai lekin browser rule: pehle screen par ek dafa click karein, tab awaaz arm hogi"
         : "Order alerts ki awaaz OFF hai — on karne ke liye dabayein"}
-      className="rounded-full px-3.5 py-1.5 text-xs font-extrabold text-white transition hover:brightness-125 active:scale-[0.98] shrink-0"
+      className="rounded-full px-3.5 py-1.5 text-xs font-extrabold text-white transition hover:brightness-125 active:scale-[0.98] shrink-0 whitespace-nowrap"
       style={{ background: st.on ? "#16A34A" : "#57534E" }}>
-      {!st.on ? "🔕 Sound: OFF" : st.armed ? "🔔 Sound: ON" : "🔔 Sound: ON — ek click karein"}
+      {/* Mobile: short label — the full "Sound: ON — ek click karein" pill
+          alone is ~216px and pushed the whole header off small screens. */}
+      <span className="sm:hidden">{!st.on ? "🔕 OFF" : "🔔 ON"}</span>
+      <span className="hidden sm:inline">{!st.on ? "🔕 Sound: OFF" : st.armed ? "🔔 Sound: ON" : "🔔 Sound: ON — ek click karein"}</span>
     </button>
   );
 }
@@ -59,9 +62,12 @@ export default function TopBar() {
 
   return (
     <header className="text-white shrink-0" style={{ background: "#0F172A" }}>
-      <div className="flex items-center gap-3 px-4 pt-3 pb-2">
+      {/* flex-wrap: on phones the action pills (Guideline + AI + Sound +
+          Logout) flow onto a second row inside the header instead of
+          forcing the page wider than the screen. Desktop fits one row. */}
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 pt-3 pb-2">
         <div className="text-2xl">🏪</div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 max-sm:basis-[calc(100%-2.75rem)]">
           <div className="text-lg font-extrabold leading-tight truncate">{shop.collegeName || "POS System"}</div>
           <div className="text-xs opacity-70 truncate">{shop.canteenName} · {shop.groceryName} · SAMPLE data — real lists pending</div>
         </div>
