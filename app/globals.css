@@ -176,4 +176,15 @@ button { touch-action: manipulation; }
     position: fixed !important; inset: 0 !important;
     display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 6mm !important;
   }
+
+  /* Printing ONE merchant QR stand card (Owner → Settings → QR Stand) */
+  body.print-qrstand * { visibility: hidden !important; }
+  body.print-qrstand #qr-stand-area,
+  body.print-qrstand #qr-stand-area * { visibility: visible !important; }
+  body.print-qrstand #qr-stand-area {
+    position: fixed !important; top: 0 !important; left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 148mm !important; max-width: 148mm !important;
+    box-shadow: none !important;
+  }
 }
