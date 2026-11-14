@@ -39,6 +39,36 @@ export interface ShopSettings {
   jazzcashNumber: string;
   easypaisaNumber: string;
   raastInfo: string; // Raast ID / bank IBAN — shown for Raast + Bank transfers
+  // Merchant QR images (Owner → Shop Settings) — Talha uploads the REAL QR
+  // picture of each account (app se mila hua QR) so customers scan-and-pay
+  // on the online payment step. Stored as downscaled PNG data URLs; "" =
+  // koi QR nahi lagaya (customer ko sirf number dikhta hai). Account titles
+  // sirf QR Stand card par chhapte hain. Raast aur Bank ka number aik hi
+  // (raastInfo) hai, lekin QR dono ke alag alag lag sakte hain.
+  qrJazzCash: string;
+  qrEasypaisa: string;
+  qrRaast: string;
+  qrBank: string;
+  titleJazzCash: string;
+  titleEasypaisa: string;
+  titleRaast: string;
+  titleBank: string;
+  // Shop-wide wholesale minimums (Owner → Shop Settings). A product may
+  // override either default with GroceryItem.wholesaleMinQty.
+  wholesaleMinPieces: number; // minimum pieces (or packs) per wholesale bill line
+  wholesaleMinKg: number; // minimum kg per loose wholesale bill line
+  // Closed-shop popup (Owner → Shop Settings): when shopOpen is false the
+  // /online page (remote + table-QR alike) stops taking orders and shows
+  // this contact number with Call / WhatsApp buttons instead. Manual
+  // toggle for now — the PC-off AUTO version comes at deployment with the
+  // always-online gateway page.
+  closedContactNumber: string;
+  shopOpen: boolean;
+  // Adjustable table count (Owner → Tables & QR): exactly this many table
+  // QR cards are printed, and the /online table flow only accepts table
+  // numbers 1..tableCount. Bounds 1..100. Changing it never touches past
+  // orders or bills (they keep the table number they were placed with).
+  tableCount: number;
 }
 export const SHOP_DEFAULTS: ShopSettings = {
   collegeName: "",
@@ -48,6 +78,22 @@ export const SHOP_DEFAULTS: ShopSettings = {
   jazzcashNumber: "03XX-XXXXXXX (demo)",
   easypaisaNumber: "03XX-XXXXXXX (demo)",
   raastInfo: "03XX-XXXXXXX (demo Raast ID)",
+  // Koi merchant QR default nahi — farzi QR kabhi asal keh kar nahi dikhana.
+  // Talha apne asal account QR Settings se upload karega.
+  qrJazzCash: "",
+  qrEasypaisa: "",
+  qrRaast: "",
+  qrBank: "",
+  titleJazzCash: "",
+  titleEasypaisa: "",
+  titleRaast: "",
+  titleBank: "",
+  wholesaleMinPieces: 10,
+  wholesaleMinKg: 5,
+  // DEMO placeholder — Talha sets his real number in Shop Settings.
+  closedContactNumber: "0300-0000000 (demo)",
+  shopOpen: true,
+  tableCount: 8,
 };
 const SHOP_KEY = "canteen-pos-shop-v1";
 export function loadShop(): ShopSettings {
@@ -167,6 +213,24 @@ export type PaymentMethod = "Cash" | "JazzCash" | "Easypaisa" | "Udhaar" | "Onli
 // data URL stored with the order in localStorage — Phase 2 moves proofs to
 // server-side file storage (automatic gateway verification is a later step).
 export type ProofPaymentMethod = "JazzCash" | "Easypaisa" | "Raast" | "Bank";
+// Merchant receiving details per proof method — ONE mapping used by the
+// online payment step AND the Owner QR Stand, so they can never drift.
+// Raast aur Bank dono ka number raastInfo hi hai (aik hi box Settings mein).
+export function merchantNumber(shop: ShopSettings, m: ProofPaymentMethod): string {
+  return m === "JazzCash" ? shop.jazzcashNumber : m === "Easypaisa" ? shop.easypaisaNumber : shop.raastInfo;
+}
+export function merchantQr(shop: ShopSettings, m: ProofPaymentMethod): string {
+  return m === "JazzCash" ? shop.qrJazzCash : m === "Easypaisa" ? shop.qrEasypaisa : m === "Raast" ? shop.qrRaast : shop.qrBank;
+}
+export function merchantTitle(shop: ShopSettings, m: ProofPaymentMethod): string {
+  return m === "JazzCash" ? shop.titleJazzCash : m === "Easypaisa" ? shop.titleEasypaisa : m === "Raast" ? shop.titleRaast : shop.titleBank;
+}
+export const QR_FIELD_OF: Record<ProofPaymentMethod, "qrJazzCash" | "qrEasypaisa" | "qrRaast" | "qrBank"> = {
+  JazzCash: "qrJazzCash", Easypaisa: "qrEasypaisa", Raast: "qrRaast", Bank: "qrBank",
+};
+export const TITLE_FIELD_OF: Record<ProofPaymentMethod, "titleJazzCash" | "titleEasypaisa" | "titleRaast" | "titleBank"> = {
+  JazzCash: "titleJazzCash", Easypaisa: "titleEasypaisa", Raast: "titleRaast", Bank: "titleBank",
+};
 export interface OrderPaymentProof {
   method: ProofPaymentMethod;
   txnId?: string; // transaction ID the customer typed (optional)
@@ -388,6 +452,7 @@ export interface GroceryItem {
   barcode?: string; // EAN barcode on packed/branded products — the counter scanner reads THIS first, then SKU
   retailPrice: number; // Rs — per piece, or per kg when unit === "kg"
   wholesalePrice: number; // Rs
+  wholesaleMinQty?: number; // optional per-product wholesale minimum, in this product's unit (packs for packing lines); undefined = shop default
   stock: number; // pieces, or kg when unit === "kg"
   unit: "piece" | "kg";
   lowStock?: number; // low-stock threshold (default: 5 pcs / 2 kg) — highlighted on the Stock screen
@@ -482,7 +547,7 @@ const GROCERY_SUBHEADS_KEY = "canteen-pos-subheads-v1";
 // v2: the old 23-item demo catalogue (canteen-pos-grocery-v1) is replaced
 // wholesale by Talha's 390-product catalogue — the v1 key is simply no
 // longer read. Nothing real was ever entered into the demo data.
-const GROCERY_KEY = "canteen-pos-grocery-v2";
+const GROCERY_KEY = "canteen-pos-grocery-v3"; // v3: real-market catalogue (622 entries, brands/variants) — fresh seed for every browser
 
 export function loadGroceryHeads(): GroceryHead[] {
   const seed = () => GROCERY_HEADS_SEED.map((h) => ({ ...h }));
@@ -669,6 +734,60 @@ export function loadStockEntries(): StockEntry[] {
 }
 export function saveStockEntries(entries: StockEntry[]): void {
   try { window.localStorage.setItem(STOCK_ENTRIES_KEY, JSON.stringify(entries)); } catch {}
+}
+
+// ── UDHAAR KHATA — customer credit identity + WASOOLI (repayments) ─────────
+// Udhaar CHARGES are not a separate record: they are the bills themselves —
+// every Order with payment === "Udhaar". The customer's identity is exactly
+// what the charge carries, and accounts are keyed by it (never a new
+// identity model):
+//   • Counter bills (canteen + grocery) store a free-text name only —
+//     Order.udhaarName (e.g. "Ahmed — Staff"); no separate ID field.
+//   • Online Udhaar orders store the ID separately (Order.customerId) AND
+//     embed it in the stored name: Order.udhaarName = "Name (ID: STU-1024)".
+// udhaarCustomerOf normalises both shapes to { name, id } + a stable key.
+export interface UdhaarCustomer { key: string; name: string; id?: string }
+export function udhaarCustomerOf(o: Order): UdhaarCustomer {
+  let name = (o.udhaarName ?? "").trim();
+  let id = (o.customerId ?? "").trim() || undefined;
+  const m = name.match(/^(.*?)\s*\(ID:\s*([^)]+)\)\s*$/);
+  if (m) {
+    name = m[1].trim();
+    if (!id) id = m[2].trim() || undefined;
+  }
+  if (!name) name = (o.customerName ?? "").trim() || "—";
+  return { key: `${name.toLowerCase()}||${(id ?? "").toLowerCase()}`, name, id };
+}
+
+// WASOOLI = a repayment against a customer's khata, recorded by staff in
+// Owner Dashboard → Udhaar Khata. Wasooli entries are their OWN persisted
+// list; every balance anywhere is derived as (udhaar charges − wasooli).
+// The bill flow is untouched — wasooli never edits orders.
+export type WasooliMethod = "Cash" | "JazzCash" | "Easypaisa" | "Raast" | "Bank";
+export const WASOOLI_METHODS: WasooliMethod[] = ["Cash", "JazzCash", "Easypaisa", "Raast", "Bank"];
+export interface UdhaarWasooli {
+  id: string;
+  customerKey: string; // udhaarCustomerOf key — the same identity the charges carry
+  customerName: string; // display name as stored on the charges
+  customerId?: string; // student/staff ID where the charges carry one
+  amount: number; // Rs repaid
+  method: WasooliMethod;
+  note?: string;
+  by: string; // staff member who recorded it (entered-by)
+  at: string; // ISO date/time
+}
+const UDHAAR_WASOOLI_KEY = "canteen-pos-udhaar-wasooli-v1";
+export function loadUdhaarWasooli(): UdhaarWasooli[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(UDHAAR_WASOOLI_KEY);
+    const parsed = raw ? (JSON.parse(raw) as UdhaarWasooli[]) : [];
+    return Array.isArray(parsed) ? parsed.filter((w) => w && typeof w.amount === "number" && typeof w.customerKey === "string") : [];
+  } catch { return []; }
+}
+export function saveUdhaarWasooli(list: UdhaarWasooli[]): void {
+  try { window.localStorage.setItem(UDHAAR_WASOOLI_KEY, JSON.stringify(list)); } catch {}
+  try { window.dispatchEvent(new Event("udhaar-wasooli-changed")); } catch {}
 }
 
 // Legacy constant — the owner PIN now lives in the staff list (seed: Owner /
