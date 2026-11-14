@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import TopBar from "@/components/TopBar";
 import AIAssistant from "@/components/AIAssistant";
+import { GuidelineButton } from "@/components/Guideline";
 import {
   CATEGORIES, CATEGORY_STYLE, Category, CustomerAccount, GroceryItem, GroceryHead, GrocerySubHead, PackingOption, MenuItem, Order, PaymentMethod, ProofPaymentMethod,
   loadMenu, saveMenu, loadGrocery, saveGrocery, loadGroceryHeads, loadGrocerySubHeads, groceryImage, loadOrders, saveOrders, nextToken, nextBillNo, isToday, adjustStockForOrder,
-  getSessionAccount, loginAccount, registerAccount, setSession, useShop,
+  getSessionAccount, loginAccount, registerAccount, setSession, useShop, merchantNumber, merchantQr,
 } from "@/lib/store";
 
 // Payment-proof screenshots are compressed client-side before they are
@@ -191,7 +192,14 @@ export default function OnlinePage() {
   const visible = cat === "All" ? menu : menu.filter((m) => m.category === cat);
 
   const nameOk = name.trim().length >= 2;
-  const tableOk = entry !== "table" || orderType === "takeaway" || tableNo.trim() !== "";
+  // Valid tables are 1..shop.tableCount (Owner → Tables & QR mein set hota
+  // hai). A QR or typed number above the count is NOT a valid table order:
+  // tableOk stays false (order blocked) and tableInvalid drives the red
+  // message below. Takeaway doesn't use a table, so it is exempt.
+  const tableNum = parseInt(tableNo, 10);
+  const tableInRange = Number.isFinite(tableNum) && tableNum >= 1 && tableNum <= shop.tableCount;
+  const tableInvalid = entry === "table" && orderType === "dine-in" && tableNo.trim() !== "" && !tableInRange;
+  const tableOk = entry !== "table" || orderType === "takeaway" || (tableNo.trim() !== "" && tableInRange);
   const mobileOk = entry !== "remote" || mobile.trim().length >= 10;
   const formOk = !!entry && nameOk && tableOk && mobileOk && (entry !== "remote" || !!account);
   // Udhaar: table customers write an ID at payment; remote customers must
@@ -203,7 +211,10 @@ export default function OnlinePage() {
   // "counter" state (from the table flow) therefore counts as "online".
   const effPay: PayChoice = entry === "remote" && pay === "counter" ? "online" : pay;
   const proofRequired = effPay === "online";
-  const payNumber = payMethod === "JazzCash" ? shop.jazzcashNumber : payMethod === "Easypaisa" ? shop.easypaisaNumber : shop.raastInfo;
+  const payNumber = merchantNumber(shop, payMethod);
+  // Owner ne is method ka asal QR upload kiya ho to payment step par bara
+  // dikhta hai (scan-and-pay); na ho to sirf number wala purana tareeqa.
+  const payQr = merchantQr(shop, payMethod);
 
   async function onProofFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -413,6 +424,35 @@ export default function OnlinePage() {
       : "🥡 Takeaway — Pickup"
     : "";
 
+  // ── SHOP BAND (Owner ne Settings → Shop Status se band kiya) ──────────
+  // The ENTIRE ordering UI is replaced by this closed popup — table-QR
+  // customers included: a closed shop takes no orders at all, walk-in or
+  // remote. No dismiss button on purpose; only Call / WhatsApp on the
+  // owner-set contact number, plus a re-check (reload) button. (The PC-off
+  // AUTO version of this screen comes at deployment via the always-online
+  // gateway page — this is the manual-toggle version.)
+  if (!shop.shopOpen) {
+    const digits = (shop.closedContactNumber || "").replace(/[^\d]/g, "");
+    const intl = digits.startsWith("0") ? "92" + digits.slice(1) : digits;
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#FFF7ED" }}>
+        <div className="w-full max-w-md bg-white rounded-3xl border-2 border-red-200 shadow-xl p-6 text-center pop-in">
+          <div className="text-6xl mb-2">🛑</div>
+          <div className="text-sm font-extrabold text-stone-500">{shop.canteenName} · {shop.groceryName}</div>
+          <h1 className="text-3xl font-black mt-1" style={{ color: "#DC2626" }}>Abhi band hai</h1>
+          <p className="text-stone-600 font-bold mt-3">Order ke liye is number par rabta karein:</p>
+          <div className="text-3xl font-black my-3 tracking-wide" data-testid="closed-number">{shop.closedContactNumber}</div>
+          <div className="grid grid-cols-2 gap-2">
+            <a data-testid="closed-call-btn" href={`tel:+${intl}`} className="rounded-2xl py-3.5 font-extrabold text-white text-lg flex items-center justify-center" style={{ background: "#16A34A" }}>📞 Call karein</a>
+            <a data-testid="closed-wa-btn" href={`https://wa.me/${intl}`} target="_blank" rel="noreferrer" className="rounded-2xl py-3.5 font-extrabold text-white text-lg flex items-center justify-center" style={{ background: "#25D366" }}>💬 WhatsApp</a>
+          </div>
+          <button onClick={() => window.location.reload()} className="mt-5 text-sm font-bold text-stone-500 underline">🔄 Dobara check karein</button>
+        </div>
+        <GuidelineButton entry="online" label="📖 Madad / Guideline" variant="floating" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <TopBar />
@@ -497,9 +537,14 @@ export default function OnlinePage() {
                   <button onClick={doLogout} className="text-xs font-extrabold rounded-lg bg-white border border-blue-200 px-2.5 py-1.5 shrink-0">Logout</button>
                 </div>
               )}
-              {fromQr && entry === "table" && (
+              {fromQr && entry === "table" && !tableInvalid && (
                 <p className="text-sm font-bold mb-3 rounded-xl bg-green-50 border border-green-100 px-3 py-2" style={{ color: "#16A34A" }}>
                   📷 Opened from Table {tableNo} QR — table is filled for you, change it if needed.
+                </p>
+              )}
+              {tableInvalid && (
+                <p data-testid="table-invalid-msg" className="text-sm font-bold mb-3 rounded-xl bg-red-50 border border-red-200 px-3 py-2" style={{ color: "#DC2626" }}>
+                  ⚠️ Table {tableNo} hamari tables mein nahi hai — hamari kul tables <b>1 se {shop.tableCount}</b> tak hain. Sahi table number likhein, tab hi order hoga.
                 </p>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
@@ -530,7 +575,9 @@ export default function OnlinePage() {
               {!formOk && (
                 <p className="mt-2 text-sm font-bold" style={{ color: "#DC2626" }}>
                   ⚠️ {entry === "table"
-                    ? "Write your name" + (orderType === "dine-in" ? " and table number" : "") + " to order. No account, no ID needed. 👍"
+                    ? tableInvalid
+                      ? `Ye table number nahi chalega — 1 se ${shop.tableCount} ke darmiyan wala sahi table number likhein.`
+                      : "Write your name" + (orderType === "dine-in" ? " and table number" : "") + " to order. No account, no ID needed. 👍"
                     : "Remote order ke liye pehle login / account banayein."}
                 </p>
               )}
@@ -940,6 +987,12 @@ export default function OnlinePage() {
                     <div className="font-black text-lg tracking-wide break-all">{payNumber}</div>
                     <span className="text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: "#FEF3C7", color: "#92400E" }}>Demo number — asal number Owner → Shop Settings se set hoga</span>
                   </div>
+                  {payQr && (
+                    <div className="rounded-lg bg-white border border-green-100 px-3 py-3 text-center mb-2 pop-in" data-testid="payment-qr">
+                      <img src={payQr} alt={`${payMethod} QR code — scan karke payment karein`} className="w-52 h-52 object-contain mx-auto rounded-lg border border-stone-200 bg-white" />
+                      <div className="text-sm font-black mt-2">📷 Is QR ko scan karke payment karein — phir neeche screenshot lazmi upload karein</div>
+                    </div>
+                  )}
                   <input value={txnId} onChange={(e) => setTxnId(e.target.value)} placeholder="Transaction ID (optional) — payment app se milta hai"
                     className="w-full rounded-xl border-2 border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-green-600" />
                   <div className="font-black text-sm mt-3 mb-1">Step 2 — Payment ka screenshot (proof) upload karein *</div>
@@ -999,6 +1052,7 @@ export default function OnlinePage() {
           </div>
         </div>
       )}
+      <GuidelineButton entry="online" label="📖 Madad / Guideline" variant="floating" />
       {/* 🤖 AI Assistant — floating button for customers (staff use the TopBar button) */}
       <AIAssistant variant="floating" />
     </div>
