@@ -1,0 +1,5002 @@
+{
+ "heads": [
+  {
+   "id": "aata-maida-sooji",
+   "name": "Aata, Maida & Sooji",
+   "emoji": "🌾",
+   "subs": [
+    {
+     "id": "aata",
+     "name": "Aata",
+     "products": [
+      {
+       "id": "p-01101",
+       "name": "Chakki Aata",
+       "sku": "01101",
+       "retailPrice": 205,
+       "wholesalePrice": 180,
+       "stock": 45,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01101.jpg"
+      },
+      {
+       "id": "p-01102",
+       "name": "Fine Aata",
+       "sku": "01102",
+       "retailPrice": 275,
+       "wholesalePrice": 240,
+       "stock": 60,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01102.jpg"
+      },
+      {
+       "id": "p-01103",
+       "name": "Whole Wheat Aata",
+       "sku": "01103",
+       "retailPrice": 200,
+       "wholesalePrice": 175,
+       "stock": 48,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01103.jpg"
+      },
+      {
+       "id": "p-01104",
+       "name": "Special Aata",
+       "sku": "01104",
+       "retailPrice": 215,
+       "wholesalePrice": 185,
+       "stock": 63,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01104.jpg"
+      },
+      {
+       "id": "p-01105",
+       "name": "Super Aata",
+       "sku": "01105",
+       "retailPrice": 185,
+       "wholesalePrice": 160,
+       "stock": 47,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01105.jpg"
+      },
+      {
+       "id": "p-01106",
+       "name": "Stone Ground Aata",
+       "sku": "01106",
+       "retailPrice": 180,
+       "wholesalePrice": 155,
+       "stock": 94,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01106.jpg"
+      },
+      {
+       "id": "p-01107",
+       "name": "Multigrain Aata",
+       "sku": "01107",
+       "retailPrice": 235,
+       "wholesalePrice": 205,
+       "stock": 50,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01107.jpg"
+      },
+      {
+       "id": "p-01108",
+       "name": "Organic Aata",
+       "sku": "01108",
+       "retailPrice": 270,
+       "wholesalePrice": 235,
+       "stock": 96,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01108.jpg"
+      },
+      {
+       "id": "p-01109",
+       "name": "Bran Aata",
+       "sku": "01109",
+       "retailPrice": 170,
+       "wholesalePrice": 150,
+       "stock": 93,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01109.jpg"
+      },
+      {
+       "id": "p-01110",
+       "name": "Premium Aata",
+       "sku": "01110",
+       "retailPrice": 210,
+       "wholesalePrice": 185,
+       "stock": 74,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01110.jpg"
+      }
+     ],
+     "image": "/images/subs/aata.jpg"
+    },
+    {
+     "id": "maida-sooji",
+     "name": "Maida & Sooji",
+     "products": [
+      {
+       "id": "p-01201",
+       "name": "Maida",
+       "sku": "01201",
+       "retailPrice": 170,
+       "wholesalePrice": 150,
+       "stock": 93,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01201.jpg"
+      },
+      {
+       "id": "p-01202",
+       "name": "Fine Maida",
+       "sku": "01202",
+       "retailPrice": 245,
+       "wholesalePrice": 215,
+       "stock": 88,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01202.jpg"
+      },
+      {
+       "id": "p-01203",
+       "name": "Super Maida",
+       "sku": "01203",
+       "retailPrice": 190,
+       "wholesalePrice": 165,
+       "stock": 66,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01203.jpg"
+      },
+      {
+       "id": "p-01204",
+       "name": "Sooji",
+       "sku": "01204",
+       "retailPrice": 195,
+       "wholesalePrice": 170,
+       "stock": 66,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01204.jpg"
+      },
+      {
+       "id": "p-01205",
+       "name": "Bareek Sooji",
+       "sku": "01205",
+       "retailPrice": 155,
+       "wholesalePrice": 135,
+       "stock": 42,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01205.jpg"
+      },
+      {
+       "id": "p-01206",
+       "name": "Moti Sooji",
+       "sku": "01206",
+       "retailPrice": 230,
+       "wholesalePrice": 200,
+       "stock": 31,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01206.jpg"
+      },
+      {
+       "id": "p-01207",
+       "name": "Besan",
+       "sku": "01207",
+       "retailPrice": 255,
+       "wholesalePrice": 220,
+       "stock": 44,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01207.jpg"
+      },
+      {
+       "id": "p-01208",
+       "name": "Corn Flour",
+       "sku": "01208",
+       "retailPrice": 255,
+       "wholesalePrice": 220,
+       "stock": 82,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01208.jpg"
+      },
+      {
+       "id": "p-01209",
+       "name": "Rice Flour",
+       "sku": "01209",
+       "retailPrice": 230,
+       "wholesalePrice": 200,
+       "stock": 47,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01209.jpg"
+      },
+      {
+       "id": "p-01210",
+       "name": "Custard Powder",
+       "sku": "01210",
+       "retailPrice": 255,
+       "wholesalePrice": 220,
+       "stock": 81,
+       "unit": "kg",
+       "emoji": "🌾",
+       "image": "/images/products/01210.jpg"
+      }
+     ],
+     "image": "/images/subs/maida-sooji.jpg"
+    }
+   ],
+   "image": "/images/heads/aata-maida-sooji.jpg"
+  },
+  {
+   "id": "rice-chawal",
+   "name": "Rice & Chawal",
+   "emoji": "🍚",
+   "subs": [
+    {
+     "id": "basmati-rice",
+     "name": "Basmati Rice",
+     "products": [
+      {
+       "id": "p-02101",
+       "name": "Super Kernel",
+       "sku": "02101",
+       "retailPrice": 405,
+       "wholesalePrice": 350,
+       "stock": 107,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02101.jpg"
+      },
+      {
+       "id": "p-02102",
+       "name": "1121 Basmati",
+       "sku": "02102",
+       "retailPrice": 300,
+       "wholesalePrice": 260,
+       "stock": 115,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02102.jpg"
+      },
+      {
+       "id": "p-02103",
+       "name": "1509 Basmati",
+       "sku": "02103",
+       "retailPrice": 385,
+       "wholesalePrice": 335,
+       "stock": 48,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02103.jpg"
+      },
+      {
+       "id": "p-02104",
+       "name": "Kainat Basmati",
+       "sku": "02104",
+       "retailPrice": 480,
+       "wholesalePrice": 420,
+       "stock": 117,
+       "unit": "kg",
+       "emoji": "🍚"
+      },
+      {
+       "id": "p-02105",
+       "name": "Sella Basmati",
+       "sku": "02105",
+       "retailPrice": 285,
+       "wholesalePrice": 250,
+       "stock": 118,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02105.jpg"
+      },
+      {
+       "id": "p-02106",
+       "name": "Golden Sella",
+       "sku": "02106",
+       "retailPrice": 335,
+       "wholesalePrice": 290,
+       "stock": 44,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02106.jpg"
+      },
+      {
+       "id": "p-02107",
+       "name": "Steam Rice",
+       "sku": "02107",
+       "retailPrice": 480,
+       "wholesalePrice": 420,
+       "stock": 114,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02107.jpg"
+      },
+      {
+       "id": "p-02108",
+       "name": "Old Basmati",
+       "sku": "02108",
+       "retailPrice": 415,
+       "wholesalePrice": 360,
+       "stock": 52,
+       "unit": "kg",
+       "emoji": "🍚"
+      },
+      {
+       "id": "p-02109",
+       "name": "New Basmati",
+       "sku": "02109",
+       "retailPrice": 300,
+       "wholesalePrice": 260,
+       "stock": 44,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02109.jpg"
+      },
+      {
+       "id": "p-02110",
+       "name": "Premium Basmati",
+       "sku": "02110",
+       "retailPrice": 500,
+       "wholesalePrice": 435,
+       "stock": 49,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02110.jpg"
+      }
+     ],
+     "image": "/images/subs/basmati-rice.jpg"
+    },
+    {
+     "id": "other-rice",
+     "name": "Other Rice",
+     "products": [
+      {
+       "id": "p-02201",
+       "name": "IRRI-6",
+       "sku": "02201",
+       "retailPrice": 475,
+       "wholesalePrice": 415,
+       "stock": 96,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02201.jpg"
+      },
+      {
+       "id": "p-02202",
+       "name": "IRRI-9",
+       "sku": "02202",
+       "retailPrice": 535,
+       "wholesalePrice": 465,
+       "stock": 85,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02202.jpg"
+      },
+      {
+       "id": "p-02203",
+       "name": "Short Grain Rice",
+       "sku": "02203",
+       "retailPrice": 375,
+       "wholesalePrice": 325,
+       "stock": 117,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02203.jpg"
+      },
+      {
+       "id": "p-02204",
+       "name": "Broken Rice",
+       "sku": "02204",
+       "retailPrice": 495,
+       "wholesalePrice": 430,
+       "stock": 116,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02204.jpg"
+      },
+      {
+       "id": "p-02205",
+       "name": "Brown Rice",
+       "sku": "02205",
+       "retailPrice": 255,
+       "wholesalePrice": 220,
+       "stock": 66,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02205.jpg"
+      },
+      {
+       "id": "p-02206",
+       "name": "White Rice",
+       "sku": "02206",
+       "retailPrice": 405,
+       "wholesalePrice": 350,
+       "stock": 30,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02206.jpg"
+      },
+      {
+       "id": "p-02207",
+       "name": "Chinese Rice",
+       "sku": "02207",
+       "retailPrice": 240,
+       "wholesalePrice": 210,
+       "stock": 40,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02207.jpg"
+      },
+      {
+       "id": "p-02208",
+       "name": "Thai Rice",
+       "sku": "02208",
+       "retailPrice": 525,
+       "wholesalePrice": 455,
+       "stock": 72,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02208.jpg"
+      },
+      {
+       "id": "p-02209",
+       "name": "Japonica Rice",
+       "sku": "02209",
+       "retailPrice": 335,
+       "wholesalePrice": 290,
+       "stock": 32,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02209.jpg"
+      },
+      {
+       "id": "p-02210",
+       "name": "Parboiled Rice",
+       "sku": "02210",
+       "retailPrice": 390,
+       "wholesalePrice": 340,
+       "stock": 55,
+       "unit": "kg",
+       "emoji": "🍚",
+       "image": "/images/products/02210.jpg"
+      }
+     ]
+    }
+   ],
+   "image": "/images/heads/rice-chawal.jpg"
+  },
+  {
+   "id": "daalain-pulses",
+   "name": "Daalain & Pulses",
+   "emoji": "🫘",
+   "subs": [
+    {
+     "id": "sabut-daal",
+     "name": "Sabut Daal",
+     "products": [
+      {
+       "id": "p-03101",
+       "name": "Sabut Masoor",
+       "sku": "03101",
+       "retailPrice": 310,
+       "wholesalePrice": 270,
+       "stock": 65,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03101.jpg"
+      },
+      {
+       "id": "p-03102",
+       "name": "Sabut Moong",
+       "sku": "03102",
+       "retailPrice": 325,
+       "wholesalePrice": 285,
+       "stock": 107,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03102.jpg"
+      },
+      {
+       "id": "p-03103",
+       "name": "Sabut Mash",
+       "sku": "03103",
+       "retailPrice": 525,
+       "wholesalePrice": 455,
+       "stock": 73,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03103.jpg"
+      },
+      {
+       "id": "p-03104",
+       "name": "Sabut Chana",
+       "sku": "03104",
+       "retailPrice": 575,
+       "wholesalePrice": 500,
+       "stock": 30,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03104.jpg"
+      },
+      {
+       "id": "p-03105",
+       "name": "Kala Chana",
+       "sku": "03105",
+       "retailPrice": 570,
+       "wholesalePrice": 495,
+       "stock": 48,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03105.jpg"
+      },
+      {
+       "id": "p-03106",
+       "name": "White Chana",
+       "sku": "03106",
+       "retailPrice": 475,
+       "wholesalePrice": 415,
+       "stock": 100,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03106.jpg"
+      },
+      {
+       "id": "p-03107",
+       "name": "Rajma Red",
+       "sku": "03107",
+       "retailPrice": 475,
+       "wholesalePrice": 415,
+       "stock": 83,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03107.jpg"
+      },
+      {
+       "id": "p-03108",
+       "name": "Rajma White",
+       "sku": "03108",
+       "retailPrice": 260,
+       "wholesalePrice": 225,
+       "stock": 42,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03108.jpg"
+      },
+      {
+       "id": "p-03109",
+       "name": "Lobia White",
+       "sku": "03109",
+       "retailPrice": 340,
+       "wholesalePrice": 295,
+       "stock": 30,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03109.jpg"
+      },
+      {
+       "id": "p-03110",
+       "name": "Lobia Red",
+       "sku": "03110",
+       "retailPrice": 380,
+       "wholesalePrice": 330,
+       "stock": 94,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03110.jpg"
+      }
+     ],
+     "image": "/images/subs/sabut-daal.jpg"
+    },
+    {
+     "id": "dhuli-daal",
+     "name": "Dhuli Daal",
+     "products": [
+      {
+       "id": "p-03201",
+       "name": "Daal Masoor",
+       "sku": "03201",
+       "retailPrice": 455,
+       "wholesalePrice": 395,
+       "stock": 109,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03201.jpg"
+      },
+      {
+       "id": "p-03202",
+       "name": "Daal Moong",
+       "sku": "03202",
+       "retailPrice": 535,
+       "wholesalePrice": 465,
+       "stock": 98,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03202.jpg"
+      },
+      {
+       "id": "p-03203",
+       "name": "Daal Mash",
+       "sku": "03203",
+       "retailPrice": 450,
+       "wholesalePrice": 390,
+       "stock": 118,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03203.jpg"
+      },
+      {
+       "id": "p-03204",
+       "name": "Daal Chana",
+       "sku": "03204",
+       "retailPrice": 560,
+       "wholesalePrice": 485,
+       "stock": 82,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03204.jpg"
+      },
+      {
+       "id": "p-03205",
+       "name": "Daal Arhar",
+       "sku": "03205",
+       "retailPrice": 450,
+       "wholesalePrice": 390,
+       "stock": 96,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03205.jpg"
+      },
+      {
+       "id": "p-03206",
+       "name": "Daal Moong Chilka",
+       "sku": "03206",
+       "retailPrice": 440,
+       "wholesalePrice": 385,
+       "stock": 82,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03206.jpg"
+      },
+      {
+       "id": "p-03207",
+       "name": "Daal Masoor Chilka",
+       "sku": "03207",
+       "retailPrice": 580,
+       "wholesalePrice": 505,
+       "stock": 36,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03207.jpg"
+      },
+      {
+       "id": "p-03208",
+       "name": "Daal Mash Chilka",
+       "sku": "03208",
+       "retailPrice": 305,
+       "wholesalePrice": 265,
+       "stock": 43,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03208.jpg"
+      },
+      {
+       "id": "p-03209",
+       "name": "Yellow Split Peas",
+       "sku": "03209",
+       "retailPrice": 440,
+       "wholesalePrice": 385,
+       "stock": 66,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03209.jpg"
+      },
+      {
+       "id": "p-03210",
+       "name": "Green Split Peas",
+       "sku": "03210",
+       "retailPrice": 495,
+       "wholesalePrice": 430,
+       "stock": 59,
+       "unit": "kg",
+       "emoji": "🫘",
+       "image": "/images/products/03210.jpg"
+      }
+     ],
+     "image": "/images/subs/dhuli-daal.jpg"
+    }
+   ]
+  },
+  {
+   "id": "ghee-cooking-oil",
+   "name": "Ghee & Cooking Oil",
+   "emoji": "🫙",
+   "subs": [
+    {
+     "id": "cooking-oil",
+     "name": "Cooking Oil",
+     "products": [
+      {
+       "id": "p-04101",
+       "name": "Dalda Oil",
+       "sku": "04101",
+       "retailPrice": 560,
+       "wholesalePrice": 485,
+       "stock": 33,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004101",
+       "image": "/images/products/04101.jpg"
+      },
+      {
+       "id": "p-04102",
+       "name": "Soya Supreme Oil",
+       "sku": "04102",
+       "retailPrice": 615,
+       "wholesalePrice": 535,
+       "stock": 72,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004102",
+       "image": "/images/products/04102.jpg"
+      },
+      {
+       "id": "p-04103",
+       "name": "Canola Oil",
+       "sku": "04103",
+       "retailPrice": 660,
+       "wholesalePrice": 575,
+       "stock": 77,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004103",
+       "image": "/images/products/04103.jpg"
+      },
+      {
+       "id": "p-04104",
+       "name": "Sunflower Oil",
+       "sku": "04104",
+       "retailPrice": 815,
+       "wholesalePrice": 710,
+       "stock": 29,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004104",
+       "image": "/images/products/04104.jpg"
+      },
+      {
+       "id": "p-04105",
+       "name": "Corn Oil",
+       "sku": "04105",
+       "retailPrice": 965,
+       "wholesalePrice": 840,
+       "stock": 62,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004105",
+       "image": "/images/products/04105.jpg"
+      },
+      {
+       "id": "p-04106",
+       "name": "Olive Oil",
+       "sku": "04106",
+       "retailPrice": 885,
+       "wholesalePrice": 770,
+       "stock": 70,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004106"
+      },
+      {
+       "id": "p-04107",
+       "name": "Mustard Oil",
+       "sku": "04107",
+       "retailPrice": 530,
+       "wholesalePrice": 460,
+       "stock": 57,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004107",
+       "image": "/images/products/04107.jpg"
+      },
+      {
+       "id": "p-04108",
+       "name": "Coconut Oil",
+       "sku": "04108",
+       "retailPrice": 695,
+       "wholesalePrice": 605,
+       "stock": 53,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004108",
+       "image": "/images/products/04108.jpg"
+      },
+      {
+       "id": "p-04109",
+       "name": "Blended Cooking Oil",
+       "sku": "04109",
+       "retailPrice": 910,
+       "wholesalePrice": 790,
+       "stock": 78,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004109",
+       "image": "/images/products/04109.jpg"
+      },
+      {
+       "id": "p-04110",
+       "name": "Premium Cooking Oil",
+       "sku": "04110",
+       "retailPrice": 585,
+       "wholesalePrice": 510,
+       "stock": 33,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004110",
+       "image": "/images/products/04110.jpg"
+      }
+     ],
+     "image": "/images/subs/cooking-oil.jpg"
+    },
+    {
+     "id": "ghee",
+     "name": "Ghee",
+     "products": [
+      {
+       "id": "p-04201",
+       "name": "Dalda Banaspati",
+       "sku": "04201",
+       "retailPrice": 580,
+       "wholesalePrice": 505,
+       "stock": 89,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004201",
+       "image": "/images/products/04201.jpg"
+      },
+      {
+       "id": "p-04202",
+       "name": "Habib Banaspati",
+       "sku": "04202",
+       "retailPrice": 765,
+       "wholesalePrice": 665,
+       "stock": 99,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004202",
+       "image": "/images/products/04202.jpg"
+      },
+      {
+       "id": "p-04203",
+       "name": "Kashmir Banaspati",
+       "sku": "04203",
+       "retailPrice": 790,
+       "wholesalePrice": 685,
+       "stock": 59,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004203",
+       "image": "/images/products/04203.jpg"
+      },
+      {
+       "id": "p-04204",
+       "name": "Tallow Ghee",
+       "sku": "04204",
+       "retailPrice": 640,
+       "wholesalePrice": 555,
+       "stock": 36,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004204",
+       "image": "/images/products/04204.jpg"
+      },
+      {
+       "id": "p-04205",
+       "name": "Desi Ghee",
+       "sku": "04205",
+       "retailPrice": 615,
+       "wholesalePrice": 535,
+       "stock": 47,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004205",
+       "image": "/images/products/04205.jpg"
+      },
+      {
+       "id": "p-04206",
+       "name": "Cow Ghee",
+       "sku": "04206",
+       "retailPrice": 770,
+       "wholesalePrice": 670,
+       "stock": 88,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004206",
+       "image": "/images/products/04206.jpg"
+      },
+      {
+       "id": "p-04207",
+       "name": "Buffalo Ghee",
+       "sku": "04207",
+       "retailPrice": 945,
+       "wholesalePrice": 820,
+       "stock": 86,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004207",
+       "image": "/images/products/04207.jpg"
+      },
+      {
+       "id": "p-04208",
+       "name": "Butter Ghee",
+       "sku": "04208",
+       "retailPrice": 765,
+       "wholesalePrice": 665,
+       "stock": 58,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004208",
+       "image": "/images/products/04208.jpg"
+      },
+      {
+       "id": "p-04209",
+       "name": "Premium Desi Ghee",
+       "sku": "04209",
+       "retailPrice": 945,
+       "wholesalePrice": 820,
+       "stock": 78,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004209",
+       "image": "/images/products/04209.jpg"
+      },
+      {
+       "id": "p-04210",
+       "name": "Vegetable Ghee",
+       "sku": "04210",
+       "retailPrice": 780,
+       "wholesalePrice": 680,
+       "stock": 50,
+       "unit": "piece",
+       "emoji": "🫙",
+       "barcode": "8960000004210",
+       "image": "/images/products/04210.jpg"
+      }
+     ],
+     "image": "/images/subs/ghee.jpg"
+    }
+   ],
+   "image": "/images/heads/ghee-cooking-oil.jpg"
+  },
+  {
+   "id": "sugar-salt",
+   "name": "Sugar & Salt",
+   "emoji": "🧂",
+   "subs": [
+    {
+     "id": "sugar",
+     "name": "Sugar",
+     "products": [
+      {
+       "id": "p-05101",
+       "name": "White Sugar",
+       "sku": "05101",
+       "retailPrice": 80,
+       "wholesalePrice": 70,
+       "stock": 35,
+       "unit": "kg",
+       "emoji": "🧂",
+       "image": "/images/products/05101.jpg"
+      },
+      {
+       "id": "p-05102",
+       "name": "Brown Sugar",
+       "sku": "05102",
+       "retailPrice": 285,
+       "wholesalePrice": 250,
+       "stock": 56,
+       "unit": "kg",
+       "emoji": "🧂",
+       "image": "/images/products/05102.jpg"
+      },
+      {
+       "id": "p-05103",
+       "name": "Crystal Sugar",
+       "sku": "05103",
+       "retailPrice": 260,
+       "wholesalePrice": 225,
+       "stock": 69,
+       "unit": "kg",
+       "emoji": "🧂",
+       "image": "/images/products/05103.jpg"
+      },
+      {
+       "id": "p-05104",
+       "name": "Powder Sugar",
+       "sku": "05104",
+       "retailPrice": 220,
+       "wholesalePrice": 190,
+       "stock": 65,
+       "unit": "kg",
+       "emoji": "🧂",
+       "image": "/images/products/05104.jpg"
+      },
+      {
+       "id": "p-05105",
+       "name": "Icing Sugar",
+       "sku": "05105",
+       "retailPrice": 255,
+       "wholesalePrice": 220,
+       "stock": 77,
+       "unit": "kg",
+       "emoji": "🧂",
+       "image": "/images/products/05105.jpg"
+      },
+      {
+       "id": "p-05106",
+       "name": "Cube Sugar",
+       "sku": "05106",
+       "retailPrice": 80,
+       "wholesalePrice": 70,
+       "stock": 111,
+       "unit": "kg",
+       "emoji": "🧂",
+       "image": "/images/products/05106.jpg"
+      },
+      {
+       "id": "p-05107",
+       "name": "Jaggery",
+       "sku": "05107",
+       "retailPrice": 85,
+       "wholesalePrice": 75,
+       "stock": 103,
+       "unit": "kg",
+       "emoji": "🧂",
+       "image": "/images/products/05107.jpg"
+      },
+      {
+       "id": "p-05108",
+       "name": "Shakkar",
+       "sku": "05108",
+       "retailPrice": 190,
+       "wholesalePrice": 165,
+       "stock": 110,
+       "unit": "kg",
+       "emoji": "🧂",
+       "image": "/images/products/05108.jpg"
+      },
+      {
+       "id": "p-05109",
+       "name": "Gur",
+       "sku": "05109",
+       "retailPrice": 95,
+       "wholesalePrice": 85,
+       "stock": 31,
+       "unit": "kg",
+       "emoji": "🧂",
+       "image": "/images/products/05109.jpg"
+      },
+      {
+       "id": "p-05110",
+       "name": "Mishri",
+       "sku": "05110",
+       "retailPrice": 275,
+       "wholesalePrice": 240,
+       "stock": 71,
+       "unit": "kg",
+       "emoji": "🧂",
+       "image": "/images/products/05110.jpg"
+      }
+     ],
+     "image": "/images/subs/sugar.jpg"
+    },
+    {
+     "id": "salt",
+     "name": "Salt",
+     "products": [
+      {
+       "id": "p-05201",
+       "name": "Table Salt",
+       "sku": "05201",
+       "retailPrice": 165,
+       "wholesalePrice": 145,
+       "stock": 80,
+       "unit": "piece",
+       "emoji": "🧂",
+       "barcode": "8960000005201",
+       "image": "/images/products/05201.jpg"
+      },
+      {
+       "id": "p-05202",
+       "name": "Iodized Salt",
+       "sku": "05202",
+       "retailPrice": 50,
+       "wholesalePrice": 45,
+       "stock": 45,
+       "unit": "piece",
+       "emoji": "🧂",
+       "barcode": "8960000005202",
+       "image": "/images/products/05202.jpg"
+      },
+      {
+       "id": "p-05203",
+       "name": "Himalayan Pink Salt",
+       "sku": "05203",
+       "retailPrice": 75,
+       "wholesalePrice": 65,
+       "stock": 46,
+       "unit": "piece",
+       "emoji": "🧂",
+       "barcode": "8960000005203",
+       "image": "/images/products/05203.jpg"
+      },
+      {
+       "id": "p-05204",
+       "name": "Black Salt",
+       "sku": "05204",
+       "retailPrice": 295,
+       "wholesalePrice": 255,
+       "stock": 30,
+       "unit": "piece",
+       "emoji": "🧂",
+       "barcode": "8960000005204",
+       "image": "/images/products/05204.jpg"
+      },
+      {
+       "id": "p-05205",
+       "name": "Rock Salt",
+       "sku": "05205",
+       "retailPrice": 155,
+       "wholesalePrice": 135,
+       "stock": 60,
+       "unit": "piece",
+       "emoji": "🧂",
+       "barcode": "8960000005205",
+       "image": "/images/products/05205.jpg"
+      },
+      {
+       "id": "p-05206",
+       "name": "Sea Salt",
+       "sku": "05206",
+       "retailPrice": 100,
+       "wholesalePrice": 85,
+       "stock": 64,
+       "unit": "piece",
+       "emoji": "🧂",
+       "barcode": "8960000005206",
+       "image": "/images/products/05206.jpg"
+      },
+      {
+       "id": "p-05207",
+       "name": "Powder Salt",
+       "sku": "05207",
+       "retailPrice": 210,
+       "wholesalePrice": 185,
+       "stock": 26,
+       "unit": "piece",
+       "emoji": "🧂",
+       "barcode": "8960000005207",
+       "image": "/images/products/05207.jpg"
+      },
+      {
+       "id": "p-05208",
+       "name": "Coarse Salt",
+       "sku": "05208",
+       "retailPrice": 285,
+       "wholesalePrice": 250,
+       "stock": 94,
+       "unit": "piece",
+       "emoji": "🧂",
+       "barcode": "8960000005208",
+       "image": "/images/products/05208.jpg"
+      },
+      {
+       "id": "p-05209",
+       "name": "Low Sodium Salt",
+       "sku": "05209",
+       "retailPrice": 90,
+       "wholesalePrice": 80,
+       "stock": 95,
+       "unit": "piece",
+       "emoji": "🧂",
+       "barcode": "8960000005209",
+       "image": "/images/products/05209.jpg"
+      },
+      {
+       "id": "p-05210",
+       "name": "White Crystal Salt",
+       "sku": "05210",
+       "retailPrice": 280,
+       "wholesalePrice": 245,
+       "stock": 46,
+       "unit": "piece",
+       "emoji": "🧂",
+       "barcode": "8960000005210",
+       "image": "/images/products/05210.jpg"
+      }
+     ],
+     "image": "/images/subs/salt.jpg"
+    }
+   ],
+   "image": "/images/heads/sugar-salt.jpg"
+  },
+  {
+   "id": "tea-coffee",
+   "name": "Tea & Coffee",
+   "emoji": "☕",
+   "subs": [
+    {
+     "id": "tea",
+     "name": "Tea",
+     "products": [
+      {
+       "id": "p-06101",
+       "name": "Tapal Danedar",
+       "sku": "06101",
+       "retailPrice": 695,
+       "wholesalePrice": 605,
+       "stock": 74,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006101",
+       "image": "/images/products/06101.jpg"
+      },
+      {
+       "id": "p-06102",
+       "name": "Tapal Family Mixture",
+       "sku": "06102",
+       "retailPrice": 870,
+       "wholesalePrice": 755,
+       "stock": 63,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006102",
+       "image": "/images/products/06102.jpg"
+      },
+      {
+       "id": "p-06103",
+       "name": "Lipton Yellow Label",
+       "sku": "06103",
+       "retailPrice": 830,
+       "wholesalePrice": 720,
+       "stock": 28,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006103",
+       "image": "/images/products/06103.jpg"
+      },
+      {
+       "id": "p-06104",
+       "name": "Supreme Tea",
+       "sku": "06104",
+       "retailPrice": 905,
+       "wholesalePrice": 785,
+       "stock": 55,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006104",
+       "image": "/images/products/06104.jpg"
+      },
+      {
+       "id": "p-06105",
+       "name": "Vital Tea",
+       "sku": "06105",
+       "retailPrice": 885,
+       "wholesalePrice": 770,
+       "stock": 97,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006105",
+       "image": "/images/products/06105.jpg"
+      },
+      {
+       "id": "p-06106",
+       "name": "Islamabad Tea",
+       "sku": "06106",
+       "retailPrice": 675,
+       "wholesalePrice": 585,
+       "stock": 59,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006106",
+       "image": "/images/products/06106.jpg"
+      },
+      {
+       "id": "p-06107",
+       "name": "Green Tea",
+       "sku": "06107",
+       "retailPrice": 345,
+       "wholesalePrice": 300,
+       "stock": 69,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006107",
+       "image": "/images/products/06107.jpg"
+      },
+      {
+       "id": "p-06108",
+       "name": "Elaichi Tea",
+       "sku": "06108",
+       "retailPrice": 690,
+       "wholesalePrice": 600,
+       "stock": 80,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006108",
+       "image": "/images/products/06108.jpg"
+      },
+      {
+       "id": "p-06109",
+       "name": "Kashmiri Chai",
+       "sku": "06109",
+       "retailPrice": 575,
+       "wholesalePrice": 500,
+       "stock": 33,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006109",
+       "image": "/images/products/06109.jpg"
+      },
+      {
+       "id": "p-06110",
+       "name": "Herbal Tea",
+       "sku": "06110",
+       "retailPrice": 700,
+       "wholesalePrice": 610,
+       "stock": 39,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006110",
+       "image": "/images/products/06110.jpg"
+      }
+     ],
+     "image": "/images/subs/tea.jpg"
+    },
+    {
+     "id": "coffee-whitener",
+     "name": "Coffee & Whitener",
+     "products": [
+      {
+       "id": "p-06201",
+       "name": "Nescafe Classic",
+       "sku": "06201",
+       "retailPrice": 230,
+       "wholesalePrice": 200,
+       "stock": 84,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006201",
+       "image": "/images/products/06201.jpg"
+      },
+      {
+       "id": "p-06202",
+       "name": "Nescafe Gold",
+       "sku": "06202",
+       "retailPrice": 960,
+       "wholesalePrice": 835,
+       "stock": 55,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006202",
+       "image": "/images/products/06202.jpg"
+      },
+      {
+       "id": "p-06203",
+       "name": "Instant Coffee",
+       "sku": "06203",
+       "retailPrice": 780,
+       "wholesalePrice": 680,
+       "stock": 54,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006203",
+       "image": "/images/products/06203.jpg"
+      },
+      {
+       "id": "p-06204",
+       "name": "Coffee Mate",
+       "sku": "06204",
+       "retailPrice": 375,
+       "wholesalePrice": 325,
+       "stock": 20,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006204",
+       "image": "/images/products/06204.jpg"
+      },
+      {
+       "id": "p-06205",
+       "name": "Everyday Whitener",
+       "sku": "06205",
+       "retailPrice": 550,
+       "wholesalePrice": 480,
+       "stock": 69,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006205",
+       "image": "/images/products/06205.jpg"
+      },
+      {
+       "id": "p-06206",
+       "name": "Milk Powder",
+       "sku": "06206",
+       "retailPrice": 340,
+       "wholesalePrice": 295,
+       "stock": 38,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006206",
+       "image": "/images/products/06206.jpg"
+      },
+      {
+       "id": "p-06207",
+       "name": "Tea Whitener",
+       "sku": "06207",
+       "retailPrice": 880,
+       "wholesalePrice": 765,
+       "stock": 86,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006207",
+       "image": "/images/products/06207.jpg"
+      },
+      {
+       "id": "p-06208",
+       "name": "Cappuccino Mix",
+       "sku": "06208",
+       "retailPrice": 260,
+       "wholesalePrice": 225,
+       "stock": 74,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006208",
+       "image": "/images/products/06208.jpg"
+      },
+      {
+       "id": "p-06209",
+       "name": "Mocha Coffee",
+       "sku": "06209",
+       "retailPrice": 745,
+       "wholesalePrice": 650,
+       "stock": 87,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006209",
+       "image": "/images/products/06209.jpg"
+      },
+      {
+       "id": "p-06210",
+       "name": "Hot Chocolate Mix",
+       "sku": "06210",
+       "retailPrice": 255,
+       "wholesalePrice": 220,
+       "stock": 38,
+       "unit": "piece",
+       "emoji": "☕",
+       "barcode": "8960000006210",
+       "image": "/images/products/06210.jpg"
+      }
+     ],
+     "image": "/images/subs/coffee-whitener.jpg"
+    }
+   ],
+   "image": "/images/heads/tea-coffee.jpg"
+  },
+  {
+   "id": "spices-masalay",
+   "name": "Spices & Masalay",
+   "emoji": "🌶️",
+   "subs": [
+    {
+     "id": "whole-spices",
+     "name": "Whole Spices",
+     "products": [
+      {
+       "id": "p-07101",
+       "name": "Sabut Kali Mirch",
+       "sku": "07101",
+       "retailPrice": 225,
+       "wholesalePrice": 195,
+       "stock": 85,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007101",
+       "image": "/images/products/07101.jpg"
+      },
+      {
+       "id": "p-07102",
+       "name": "Zeera",
+       "sku": "07102",
+       "retailPrice": 330,
+       "wholesalePrice": 285,
+       "stock": 63,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007102",
+       "image": "/images/products/07102.jpg"
+      },
+      {
+       "id": "p-07103",
+       "name": "Sabut Dhania",
+       "sku": "07103",
+       "retailPrice": 200,
+       "wholesalePrice": 175,
+       "stock": 45,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007103",
+       "image": "/images/products/07103.jpg"
+      },
+      {
+       "id": "p-07104",
+       "name": "Laung",
+       "sku": "07104",
+       "retailPrice": 85,
+       "wholesalePrice": 75,
+       "stock": 64,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007104",
+       "image": "/images/products/07104.jpg"
+      },
+      {
+       "id": "p-07105",
+       "name": "Dar Cheeni",
+       "sku": "07105",
+       "retailPrice": 470,
+       "wholesalePrice": 410,
+       "stock": 42,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007105",
+       "image": "/images/products/07105.jpg"
+      },
+      {
+       "id": "p-07106",
+       "name": "Bari Elaichi",
+       "sku": "07106",
+       "retailPrice": 425,
+       "wholesalePrice": 370,
+       "stock": 36,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007106",
+       "image": "/images/products/07106.jpg"
+      },
+      {
+       "id": "p-07107",
+       "name": "Choti Elaichi",
+       "sku": "07107",
+       "retailPrice": 275,
+       "wholesalePrice": 240,
+       "stock": 73,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007107",
+       "image": "/images/products/07107.jpg"
+      },
+      {
+       "id": "p-07108",
+       "name": "Tez Patta",
+       "sku": "07108",
+       "retailPrice": 155,
+       "wholesalePrice": 135,
+       "stock": 66,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007108",
+       "image": "/images/products/07108.jpg"
+      },
+      {
+       "id": "p-07109",
+       "name": "Ajwain",
+       "sku": "07109",
+       "retailPrice": 255,
+       "wholesalePrice": 220,
+       "stock": 55,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007109",
+       "image": "/images/products/07109.jpg"
+      },
+      {
+       "id": "p-07110",
+       "name": "Saunf",
+       "sku": "07110",
+       "retailPrice": 410,
+       "wholesalePrice": 355,
+       "stock": 96,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007110",
+       "image": "/images/products/07110.jpg"
+      }
+     ],
+     "image": "/images/subs/whole-spices.jpg"
+    },
+    {
+     "id": "powder-masalay",
+     "name": "Powder Masalay",
+     "products": [
+      {
+       "id": "p-07201",
+       "name": "Lal Mirch Powder",
+       "sku": "07201",
+       "retailPrice": 340,
+       "wholesalePrice": 295,
+       "stock": 20,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007201",
+       "image": "/images/products/07201.jpg"
+      },
+      {
+       "id": "p-07202",
+       "name": "Haldi Powder",
+       "sku": "07202",
+       "retailPrice": 315,
+       "wholesalePrice": 275,
+       "stock": 83,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007202",
+       "image": "/images/products/07202.jpg"
+      },
+      {
+       "id": "p-07203",
+       "name": "Dhania Powder",
+       "sku": "07203",
+       "retailPrice": 90,
+       "wholesalePrice": 80,
+       "stock": 71,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007203",
+       "image": "/images/products/07203.jpg"
+      },
+      {
+       "id": "p-07204",
+       "name": "Zeera Powder",
+       "sku": "07204",
+       "retailPrice": 95,
+       "wholesalePrice": 85,
+       "stock": 50,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007204",
+       "image": "/images/products/07204.jpg"
+      },
+      {
+       "id": "p-07205",
+       "name": "Kali Mirch Powder",
+       "sku": "07205",
+       "retailPrice": 180,
+       "wholesalePrice": 155,
+       "stock": 33,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007205",
+       "image": "/images/products/07205.jpg"
+      },
+      {
+       "id": "p-07206",
+       "name": "Garam Masala",
+       "sku": "07206",
+       "retailPrice": 60,
+       "wholesalePrice": 50,
+       "stock": 81,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007206",
+       "image": "/images/products/07206.jpg"
+      },
+      {
+       "id": "p-07207",
+       "name": "Chaat Masala",
+       "sku": "07207",
+       "retailPrice": 245,
+       "wholesalePrice": 215,
+       "stock": 87,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007207",
+       "image": "/images/products/07207.jpg"
+      },
+      {
+       "id": "p-07208",
+       "name": "Biryani Masala",
+       "sku": "07208",
+       "retailPrice": 325,
+       "wholesalePrice": 285,
+       "stock": 30,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007208",
+       "image": "/images/products/07208.jpg"
+      },
+      {
+       "id": "p-07209",
+       "name": "Qorma Masala",
+       "sku": "07209",
+       "retailPrice": 260,
+       "wholesalePrice": 225,
+       "stock": 37,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007209",
+       "image": "/images/products/07209.jpg"
+      },
+      {
+       "id": "p-07210",
+       "name": "Karahi Masala",
+       "sku": "07210",
+       "retailPrice": 405,
+       "wholesalePrice": 350,
+       "stock": 25,
+       "unit": "piece",
+       "emoji": "🌶️",
+       "barcode": "8960000007210",
+       "image": "/images/products/07210.jpg"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "biscuits-bakery",
+   "name": "Biscuits & Bakery",
+   "emoji": "🍪",
+   "subs": [
+    {
+     "id": "biscuits",
+     "name": "Biscuits",
+     "products": [
+      {
+       "id": "p-08101",
+       "name": "Oreo",
+       "sku": "08101",
+       "retailPrice": 325,
+       "wholesalePrice": 285,
+       "stock": 90,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008101",
+       "image": "/images/products/08101.jpg"
+      },
+      {
+       "id": "p-08102",
+       "name": "Prince",
+       "sku": "08102",
+       "retailPrice": 70,
+       "wholesalePrice": 60,
+       "stock": 77,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008102",
+       "image": "/images/products/08102.jpg"
+      },
+      {
+       "id": "p-08103",
+       "name": "Sooper",
+       "sku": "08103",
+       "retailPrice": 135,
+       "wholesalePrice": 115,
+       "stock": 83,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008103",
+       "image": "/images/products/08103.jpg"
+      },
+      {
+       "id": "p-08104",
+       "name": "Gala",
+       "sku": "08104",
+       "retailPrice": 250,
+       "wholesalePrice": 220,
+       "stock": 24,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008104",
+       "image": "/images/products/08104.jpg"
+      },
+      {
+       "id": "p-08105",
+       "name": "TUC",
+       "sku": "08105",
+       "retailPrice": 175,
+       "wholesalePrice": 150,
+       "stock": 53,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008105",
+       "image": "/images/products/08105.jpg"
+      },
+      {
+       "id": "p-08106",
+       "name": "Rio",
+       "sku": "08106",
+       "retailPrice": 260,
+       "wholesalePrice": 225,
+       "stock": 54,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008106",
+       "image": "/images/products/08106.jpg"
+      },
+      {
+       "id": "p-08107",
+       "name": "Peanut Pik",
+       "sku": "08107",
+       "retailPrice": 295,
+       "wholesalePrice": 255,
+       "stock": 88,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008107",
+       "image": "/images/products/08107.jpg"
+      },
+      {
+       "id": "p-08108",
+       "name": "Candi",
+       "sku": "08108",
+       "retailPrice": 165,
+       "wholesalePrice": 145,
+       "stock": 88,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008108",
+       "image": "/images/products/08108.jpg"
+      },
+      {
+       "id": "p-08109",
+       "name": "Chocolato",
+       "sku": "08109",
+       "retailPrice": 155,
+       "wholesalePrice": 135,
+       "stock": 59,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008109",
+       "image": "/images/products/08109.jpg"
+      },
+      {
+       "id": "p-08110",
+       "name": "Marie",
+       "sku": "08110",
+       "retailPrice": 200,
+       "wholesalePrice": 175,
+       "stock": 32,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008110",
+       "image": "/images/products/08110.jpg"
+      }
+     ],
+     "image": "/images/subs/biscuits.jpg"
+    },
+    {
+     "id": "bakery",
+     "name": "Bakery",
+     "products": [
+      {
+       "id": "p-08201",
+       "name": "White Bread",
+       "sku": "08201",
+       "retailPrice": 65,
+       "wholesalePrice": 55,
+       "stock": 80,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008201",
+       "image": "/images/products/08201.jpg"
+      },
+      {
+       "id": "p-08202",
+       "name": "Brown Bread",
+       "sku": "08202",
+       "retailPrice": 120,
+       "wholesalePrice": 105,
+       "stock": 98,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008202",
+       "image": "/images/products/08202.jpg"
+      },
+      {
+       "id": "p-08203",
+       "name": "Milk Bread",
+       "sku": "08203",
+       "retailPrice": 225,
+       "wholesalePrice": 195,
+       "stock": 77,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008203",
+       "image": "/images/products/08203.jpg"
+      },
+      {
+       "id": "p-08204",
+       "name": "Burger Buns",
+       "sku": "08204",
+       "retailPrice": 80,
+       "wholesalePrice": 70,
+       "stock": 22,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008204",
+       "image": "/images/products/08204.jpg"
+      },
+      {
+       "id": "p-08205",
+       "name": "Pizza Bread",
+       "sku": "08205",
+       "retailPrice": 75,
+       "wholesalePrice": 65,
+       "stock": 94,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008205",
+       "image": "/images/products/08205.jpg"
+      },
+      {
+       "id": "p-08206",
+       "name": "Rusk",
+       "sku": "08206",
+       "retailPrice": 185,
+       "wholesalePrice": 160,
+       "stock": 28,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008206",
+       "image": "/images/products/08206.jpg"
+      },
+      {
+       "id": "p-08207",
+       "name": "Cake Rusk",
+       "sku": "08207",
+       "retailPrice": 180,
+       "wholesalePrice": 155,
+       "stock": 39,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008207",
+       "image": "/images/products/08207.jpg"
+      },
+      {
+       "id": "p-08208",
+       "name": "Plain Cake",
+       "sku": "08208",
+       "retailPrice": 215,
+       "wholesalePrice": 185,
+       "stock": 42,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008208",
+       "image": "/images/products/08208.jpg"
+      },
+      {
+       "id": "p-08209",
+       "name": "Cup Cakes",
+       "sku": "08209",
+       "retailPrice": 365,
+       "wholesalePrice": 320,
+       "stock": 70,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008209"
+      },
+      {
+       "id": "p-08210",
+       "name": "Swiss Roll",
+       "sku": "08210",
+       "retailPrice": 355,
+       "wholesalePrice": 310,
+       "stock": 30,
+       "unit": "piece",
+       "emoji": "🍪",
+       "barcode": "8960000008210",
+       "image": "/images/products/08210.jpg"
+      }
+     ],
+     "image": "/images/subs/bakery.jpg"
+    }
+   ],
+   "image": "/images/heads/biscuits-bakery.jpg"
+  },
+  {
+   "id": "snacks-nimko",
+   "name": "Snacks & Nimko",
+   "emoji": "🍟",
+   "subs": [
+    {
+     "id": "chips",
+     "name": "Chips",
+     "products": [
+      {
+       "id": "p-09101",
+       "name": "Lays",
+       "sku": "09101",
+       "retailPrice": 155,
+       "wholesalePrice": 135,
+       "stock": 71,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009101",
+       "image": "/images/products/09101.jpg"
+      },
+      {
+       "id": "p-09102",
+       "name": "Kurkure",
+       "sku": "09102",
+       "retailPrice": 305,
+       "wholesalePrice": 265,
+       "stock": 64,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009102",
+       "image": "/images/products/09102.jpg"
+      },
+      {
+       "id": "p-09103",
+       "name": "Super Crisp",
+       "sku": "09103",
+       "retailPrice": 115,
+       "wholesalePrice": 100,
+       "stock": 22,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009103",
+       "image": "/images/products/09103.jpg"
+      },
+      {
+       "id": "p-09104",
+       "name": "Slanty",
+       "sku": "09104",
+       "retailPrice": 205,
+       "wholesalePrice": 180,
+       "stock": 73,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009104",
+       "image": "/images/products/09104.jpg"
+      },
+      {
+       "id": "p-09105",
+       "name": "Cheetos",
+       "sku": "09105",
+       "retailPrice": 205,
+       "wholesalePrice": 180,
+       "stock": 38,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009105",
+       "image": "/images/products/09105.jpg"
+      },
+      {
+       "id": "p-09106",
+       "name": "Oye Hoye",
+       "sku": "09106",
+       "retailPrice": 300,
+       "wholesalePrice": 260,
+       "stock": 82,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009106",
+       "image": "/images/products/09106.jpg"
+      },
+      {
+       "id": "p-09107",
+       "name": "Snackers",
+       "sku": "09107",
+       "retailPrice": 270,
+       "wholesalePrice": 235,
+       "stock": 98,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009107",
+       "image": "/images/products/09107.jpg"
+      },
+      {
+       "id": "p-09108",
+       "name": "Wavy Chips",
+       "sku": "09108",
+       "retailPrice": 210,
+       "wholesalePrice": 185,
+       "stock": 59,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009108",
+       "image": "/images/products/09108.jpg"
+      },
+      {
+       "id": "p-09109",
+       "name": "Potato Sticks",
+       "sku": "09109",
+       "retailPrice": 65,
+       "wholesalePrice": 55,
+       "stock": 64,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009109",
+       "image": "/images/products/09109.jpg"
+      },
+      {
+       "id": "p-09110",
+       "name": "Masala Chips",
+       "sku": "09110",
+       "retailPrice": 55,
+       "wholesalePrice": 50,
+       "stock": 68,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009110",
+       "image": "/images/products/09110.jpg"
+      }
+     ],
+     "image": "/images/subs/chips.jpg"
+    },
+    {
+     "id": "nimko",
+     "name": "Nimko",
+     "products": [
+      {
+       "id": "p-09201",
+       "name": "Mix Nimko",
+       "sku": "09201",
+       "retailPrice": 285,
+       "wholesalePrice": 250,
+       "stock": 94,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009201",
+       "image": "/images/products/09201.jpg"
+      },
+      {
+       "id": "p-09202",
+       "name": "Daal Moth",
+       "sku": "09202",
+       "retailPrice": 80,
+       "wholesalePrice": 70,
+       "stock": 31,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009202",
+       "image": "/images/products/09202.jpg"
+      },
+      {
+       "id": "p-09203",
+       "name": "Peanuts",
+       "sku": "09203",
+       "retailPrice": 140,
+       "wholesalePrice": 120,
+       "stock": 48,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009203",
+       "image": "/images/products/09203.jpg"
+      },
+      {
+       "id": "p-09204",
+       "name": "Salted Peanuts",
+       "sku": "09204",
+       "retailPrice": 120,
+       "wholesalePrice": 105,
+       "stock": 68,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009204",
+       "image": "/images/products/09204.jpg"
+      },
+      {
+       "id": "p-09205",
+       "name": "Masala Peanuts",
+       "sku": "09205",
+       "retailPrice": 150,
+       "wholesalePrice": 130,
+       "stock": 45,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009205",
+       "image": "/images/products/09205.jpg"
+      },
+      {
+       "id": "p-09206",
+       "name": "Chanachur",
+       "sku": "09206",
+       "retailPrice": 255,
+       "wholesalePrice": 220,
+       "stock": 46,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009206",
+       "image": "/images/products/09206.jpg"
+      },
+      {
+       "id": "p-09207",
+       "name": "Daal Sev",
+       "sku": "09207",
+       "retailPrice": 45,
+       "wholesalePrice": 40,
+       "stock": 44,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009207",
+       "image": "/images/products/09207.jpg"
+      },
+      {
+       "id": "p-09208",
+       "name": "Corn Snacks",
+       "sku": "09208",
+       "retailPrice": 170,
+       "wholesalePrice": 150,
+       "stock": 21,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009208",
+       "image": "/images/products/09208.jpg"
+      },
+      {
+       "id": "p-09209",
+       "name": "Spicy Mix",
+       "sku": "09209",
+       "retailPrice": 55,
+       "wholesalePrice": 50,
+       "stock": 73,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009209",
+       "image": "/images/products/09209.jpg"
+      },
+      {
+       "id": "p-09210",
+       "name": "Fried Chana",
+       "sku": "09210",
+       "retailPrice": 135,
+       "wholesalePrice": 115,
+       "stock": 34,
+       "unit": "piece",
+       "emoji": "🍟",
+       "barcode": "8960000009210",
+       "image": "/images/products/09210.jpg"
+      }
+     ],
+     "image": "/images/subs/nimko.jpg"
+    }
+   ],
+   "image": "/images/heads/snacks-nimko.jpg"
+  },
+  {
+   "id": "cold-drinks-juices",
+   "name": "Cold Drinks & Juices",
+   "emoji": "🥤",
+   "subs": [
+    {
+     "id": "cold-drinks",
+     "name": "Cold Drinks",
+     "products": [
+      {
+       "id": "p-10101",
+       "name": "Coca-Cola",
+       "sku": "10101",
+       "retailPrice": 310,
+       "wholesalePrice": 270,
+       "stock": 58,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010101",
+       "packings": [
+        {
+         "label": "500ml",
+         "retailPrice": 90,
+         "wholesalePrice": 80
+        },
+        {
+         "label": "1.5L",
+         "retailPrice": 230,
+         "wholesalePrice": 200
+        },
+        {
+         "label": "2.25L",
+         "retailPrice": 320,
+         "wholesalePrice": 280
+        }
+       ],
+       "image": "/images/products/10101.jpg"
+      },
+      {
+       "id": "p-10102",
+       "name": "Pepsi",
+       "sku": "10102",
+       "retailPrice": 160,
+       "wholesalePrice": 140,
+       "stock": 49,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010102",
+       "image": "/images/products/10102.jpg"
+      },
+      {
+       "id": "p-10103",
+       "name": "Sprite",
+       "sku": "10103",
+       "retailPrice": 85,
+       "wholesalePrice": 75,
+       "stock": 37,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010103",
+       "image": "/images/products/10103.jpg"
+      },
+      {
+       "id": "p-10104",
+       "name": "7UP",
+       "sku": "10104",
+       "retailPrice": 250,
+       "wholesalePrice": 220,
+       "stock": 50,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010104",
+       "image": "/images/products/10104.jpg"
+      },
+      {
+       "id": "p-10105",
+       "name": "Fanta",
+       "sku": "10105",
+       "retailPrice": 255,
+       "wholesalePrice": 220,
+       "stock": 56,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010105",
+       "image": "/images/products/10105.jpg"
+      },
+      {
+       "id": "p-10106",
+       "name": "Mountain Dew",
+       "sku": "10106",
+       "retailPrice": 185,
+       "wholesalePrice": 160,
+       "stock": 96,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010106",
+       "image": "/images/products/10106.jpg"
+      },
+      {
+       "id": "p-10107",
+       "name": "Mirinda",
+       "sku": "10107",
+       "retailPrice": 270,
+       "wholesalePrice": 235,
+       "stock": 68,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010107",
+       "image": "/images/products/10107.jpg"
+      },
+      {
+       "id": "p-10108",
+       "name": "Pakola",
+       "sku": "10108",
+       "retailPrice": 320,
+       "wholesalePrice": 280,
+       "stock": 85,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010108",
+       "image": "/images/products/10108.jpg"
+      },
+      {
+       "id": "p-10109",
+       "name": "Marinda Lemon",
+       "sku": "10109",
+       "retailPrice": 215,
+       "wholesalePrice": 185,
+       "stock": 34,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010109",
+       "image": "/images/products/10109.jpg"
+      },
+      {
+       "id": "p-10110",
+       "name": "Sting",
+       "sku": "10110",
+       "retailPrice": 245,
+       "wholesalePrice": 215,
+       "stock": 48,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010110",
+       "image": "/images/products/10110.jpg"
+      }
+     ],
+     "image": "/images/subs/cold-drinks.jpg"
+    },
+    {
+     "id": "juices",
+     "name": "Juices",
+     "products": [
+      {
+       "id": "p-10201",
+       "name": "Apple Juice",
+       "sku": "10201",
+       "retailPrice": 55,
+       "wholesalePrice": 50,
+       "stock": 55,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010201",
+       "image": "/images/products/10201.jpg"
+      },
+      {
+       "id": "p-10202",
+       "name": "Mango Juice",
+       "sku": "10202",
+       "retailPrice": 170,
+       "wholesalePrice": 150,
+       "stock": 62,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010202",
+       "image": "/images/products/10202.jpg"
+      },
+      {
+       "id": "p-10203",
+       "name": "Orange Juice",
+       "sku": "10203",
+       "retailPrice": 275,
+       "wholesalePrice": 240,
+       "stock": 25,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010203",
+       "image": "/images/products/10203.jpg"
+      },
+      {
+       "id": "p-10204",
+       "name": "Guava Juice",
+       "sku": "10204",
+       "retailPrice": 155,
+       "wholesalePrice": 135,
+       "stock": 73,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010204",
+       "image": "/images/products/10204.jpg"
+      },
+      {
+       "id": "p-10205",
+       "name": "Red Grapes Juice",
+       "sku": "10205",
+       "retailPrice": 80,
+       "wholesalePrice": 70,
+       "stock": 76,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010205",
+       "image": "/images/products/10205.jpg"
+      },
+      {
+       "id": "p-10206",
+       "name": "Mixed Fruit Juice",
+       "sku": "10206",
+       "retailPrice": 140,
+       "wholesalePrice": 120,
+       "stock": 23,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010206",
+       "image": "/images/products/10206.jpg"
+      },
+      {
+       "id": "p-10207",
+       "name": "Pineapple Juice",
+       "sku": "10207",
+       "retailPrice": 285,
+       "wholesalePrice": 250,
+       "stock": 63,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010207",
+       "image": "/images/products/10207.jpg"
+      },
+      {
+       "id": "p-10208",
+       "name": "Pomegranate Juice",
+       "sku": "10208",
+       "retailPrice": 195,
+       "wholesalePrice": 170,
+       "stock": 25,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010208",
+       "image": "/images/products/10208.jpg"
+      },
+      {
+       "id": "p-10209",
+       "name": "Fruit Cocktail",
+       "sku": "10209",
+       "retailPrice": 105,
+       "wholesalePrice": 90,
+       "stock": 52,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010209",
+       "image": "/images/products/10209.jpg"
+      },
+      {
+       "id": "p-10210",
+       "name": "Lychee Juice",
+       "sku": "10210",
+       "retailPrice": 205,
+       "wholesalePrice": 180,
+       "stock": 58,
+       "unit": "piece",
+       "emoji": "🥤",
+       "barcode": "8960000010210",
+       "image": "/images/products/10210.jpg"
+      }
+     ],
+     "image": "/images/subs/juices.jpg"
+    }
+   ],
+   "image": "/images/heads/cold-drinks-juices.jpg"
+  },
+  {
+   "id": "milk-dairy-products",
+   "name": "Milk & Dairy Products",
+   "emoji": "🥛",
+   "subs": [
+    {
+     "id": "milk",
+     "name": "Milk",
+     "products": [
+      {
+       "id": "p-11101",
+       "name": "Fresh Milk",
+       "sku": "11101",
+       "retailPrice": 340,
+       "wholesalePrice": 295,
+       "stock": 76,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011101",
+       "image": "/images/products/11101.jpg"
+      },
+      {
+       "id": "p-11102",
+       "name": "UHT Milk",
+       "sku": "11102",
+       "retailPrice": 275,
+       "wholesalePrice": 240,
+       "stock": 22,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011102",
+       "packings": [
+        {
+         "label": "250ml",
+         "retailPrice": 85,
+         "wholesalePrice": 75
+        },
+        {
+         "label": "500ml",
+         "retailPrice": 160,
+         "wholesalePrice": 140
+        },
+        {
+         "label": "1L",
+         "retailPrice": 300,
+         "wholesalePrice": 265
+        }
+       ],
+       "image": "/images/products/11102.jpg"
+      },
+      {
+       "id": "p-11103",
+       "name": "Full Cream Milk",
+       "sku": "11103",
+       "retailPrice": 215,
+       "wholesalePrice": 185,
+       "stock": 47,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011103",
+       "image": "/images/products/11103.jpg"
+      },
+      {
+       "id": "p-11104",
+       "name": "Low Fat Milk",
+       "sku": "11104",
+       "retailPrice": 350,
+       "wholesalePrice": 305,
+       "stock": 39,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011104",
+       "image": "/images/products/11104.jpg"
+      },
+      {
+       "id": "p-11105",
+       "name": "Powder Milk",
+       "sku": "11105",
+       "retailPrice": 610,
+       "wholesalePrice": 530,
+       "stock": 56,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011105",
+       "image": "/images/products/11105.jpg"
+      },
+      {
+       "id": "p-11106",
+       "name": "Flavoured Milk",
+       "sku": "11106",
+       "retailPrice": 650,
+       "wholesalePrice": 565,
+       "stock": 59,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011106",
+       "image": "/images/products/11106.jpg"
+      },
+      {
+       "id": "p-11107",
+       "name": "Chocolate Milk",
+       "sku": "11107",
+       "retailPrice": 315,
+       "wholesalePrice": 275,
+       "stock": 81,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011107",
+       "image": "/images/products/11107.jpg"
+      },
+      {
+       "id": "p-11108",
+       "name": "Strawberry Milk",
+       "sku": "11108",
+       "retailPrice": 420,
+       "wholesalePrice": 365,
+       "stock": 90,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011108",
+       "image": "/images/products/11108.jpg"
+      },
+      {
+       "id": "p-11109",
+       "name": "Condensed Milk",
+       "sku": "11109",
+       "retailPrice": 300,
+       "wholesalePrice": 260,
+       "stock": 96,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011109",
+       "image": "/images/products/11109.jpg"
+      },
+      {
+       "id": "p-11110",
+       "name": "Evaporated Milk",
+       "sku": "11110",
+       "retailPrice": 640,
+       "wholesalePrice": 555,
+       "stock": 51,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011110",
+       "image": "/images/products/11110.jpg"
+      }
+     ],
+     "image": "/images/subs/milk.jpg"
+    },
+    {
+     "id": "dairy",
+     "name": "Dairy",
+     "products": [
+      {
+       "id": "p-11201",
+       "name": "Yogurt",
+       "sku": "11201",
+       "retailPrice": 650,
+       "wholesalePrice": 565,
+       "stock": 74,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011201",
+       "image": "/images/products/11201.jpg"
+      },
+      {
+       "id": "p-11202",
+       "name": "Butter",
+       "sku": "11202",
+       "retailPrice": 290,
+       "wholesalePrice": 250,
+       "stock": 40,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011202",
+       "image": "/images/products/11202.jpg"
+      },
+      {
+       "id": "p-11203",
+       "name": "Cheese",
+       "sku": "11203",
+       "retailPrice": 410,
+       "wholesalePrice": 355,
+       "stock": 24,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011203",
+       "image": "/images/products/11203.jpg"
+      },
+      {
+       "id": "p-11204",
+       "name": "Cream",
+       "sku": "11204",
+       "retailPrice": 200,
+       "wholesalePrice": 175,
+       "stock": 96,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011204",
+       "image": "/images/products/11204.jpg"
+      },
+      {
+       "id": "p-11205",
+       "name": "Fresh Cream",
+       "sku": "11205",
+       "retailPrice": 335,
+       "wholesalePrice": 290,
+       "stock": 73,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011205",
+       "image": "/images/products/11205.jpg"
+      },
+      {
+       "id": "p-11206",
+       "name": "Whipping Cream",
+       "sku": "11206",
+       "retailPrice": 375,
+       "wholesalePrice": 325,
+       "stock": 22,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011206"
+      },
+      {
+       "id": "p-11207",
+       "name": "Desi Lassi",
+       "sku": "11207",
+       "retailPrice": 185,
+       "wholesalePrice": 160,
+       "stock": 66,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011207",
+       "image": "/images/products/11207.jpg"
+      },
+      {
+       "id": "p-11208",
+       "name": "Sweet Lassi",
+       "sku": "11208",
+       "retailPrice": 480,
+       "wholesalePrice": 420,
+       "stock": 27,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011208",
+       "image": "/images/products/11208.jpg"
+      },
+      {
+       "id": "p-11209",
+       "name": "Plain Dahi",
+       "sku": "11209",
+       "retailPrice": 185,
+       "wholesalePrice": 160,
+       "stock": 50,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011209",
+       "image": "/images/products/11209.jpg"
+      },
+      {
+       "id": "p-11210",
+       "name": "Cheese Slices",
+       "sku": "11210",
+       "retailPrice": 245,
+       "wholesalePrice": 215,
+       "stock": 43,
+       "unit": "piece",
+       "emoji": "🥛",
+       "barcode": "8960000011210",
+       "image": "/images/products/11210.jpg"
+      }
+     ],
+     "image": "/images/subs/dairy.jpg"
+    }
+   ],
+   "image": "/images/heads/milk-dairy-products.jpg"
+  },
+  {
+   "id": "chocolates-candies",
+   "name": "Chocolates & Candies",
+   "emoji": "🍫",
+   "subs": [
+    {
+     "id": "chocolates",
+     "name": "Chocolates",
+     "products": [
+      {
+       "id": "p-12101",
+       "name": "Dairy Milk",
+       "sku": "12101",
+       "retailPrice": 265,
+       "wholesalePrice": 230,
+       "stock": 58,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012101",
+       "image": "/images/products/12101.jpg"
+      },
+      {
+       "id": "p-12102",
+       "name": "KitKat",
+       "sku": "12102",
+       "retailPrice": 505,
+       "wholesalePrice": 440,
+       "stock": 92,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012102",
+       "image": "/images/products/12102.jpg"
+      },
+      {
+       "id": "p-12103",
+       "name": "Perk",
+       "sku": "12103",
+       "retailPrice": 175,
+       "wholesalePrice": 150,
+       "stock": 64,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012103",
+       "image": "/images/products/12103.jpg"
+      },
+      {
+       "id": "p-12104",
+       "name": "Bounty",
+       "sku": "12104",
+       "retailPrice": 145,
+       "wholesalePrice": 125,
+       "stock": 67,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012104",
+       "image": "/images/products/12104.jpg"
+      },
+      {
+       "id": "p-12105",
+       "name": "Snickers",
+       "sku": "12105",
+       "retailPrice": 1230,
+       "wholesalePrice": 1070,
+       "stock": 46,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012105",
+       "image": "/images/products/12105.jpg"
+      },
+      {
+       "id": "p-12106",
+       "name": "Mars",
+       "sku": "12106",
+       "retailPrice": 750,
+       "wholesalePrice": 650,
+       "stock": 35,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012106",
+       "image": "/images/products/12106.jpg"
+      },
+      {
+       "id": "p-12107",
+       "name": "Twix",
+       "sku": "12107",
+       "retailPrice": 430,
+       "wholesalePrice": 375,
+       "stock": 81,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012107",
+       "image": "/images/products/12107.jpg"
+      },
+      {
+       "id": "p-12108",
+       "name": "Munch",
+       "sku": "12108",
+       "retailPrice": 1015,
+       "wholesalePrice": 885,
+       "stock": 40,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012108",
+       "image": "/images/products/12108.jpg"
+      },
+      {
+       "id": "p-12109",
+       "name": "Ferrero Rocher",
+       "sku": "12109",
+       "retailPrice": 220,
+       "wholesalePrice": 190,
+       "stock": 43,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012109",
+       "image": "/images/products/12109.jpg"
+      },
+      {
+       "id": "p-12110",
+       "name": "Galaxy",
+       "sku": "12110",
+       "retailPrice": 1045,
+       "wholesalePrice": 910,
+       "stock": 64,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012110",
+       "image": "/images/products/12110.jpg"
+      }
+     ],
+     "image": "/images/subs/chocolates.jpg"
+    },
+    {
+     "id": "candies",
+     "name": "Candies",
+     "products": [
+      {
+       "id": "p-12201",
+       "name": "Eclairs",
+       "sku": "12201",
+       "retailPrice": 950,
+       "wholesalePrice": 825,
+       "stock": 40,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012201",
+       "image": "/images/products/12201.jpg"
+      },
+      {
+       "id": "p-12202",
+       "name": "Mentos",
+       "sku": "12202",
+       "retailPrice": 695,
+       "wholesalePrice": 605,
+       "stock": 42,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012202",
+       "image": "/images/products/12202.jpg"
+      },
+      {
+       "id": "p-12203",
+       "name": "Chupa Chups",
+       "sku": "12203",
+       "retailPrice": 395,
+       "wholesalePrice": 345,
+       "stock": 26,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012203",
+       "image": "/images/products/12203.jpg"
+      },
+      {
+       "id": "p-12204",
+       "name": "Polo",
+       "sku": "12204",
+       "retailPrice": 215,
+       "wholesalePrice": 185,
+       "stock": 23,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012204",
+       "image": "/images/products/12204.jpg"
+      },
+      {
+       "id": "p-12205",
+       "name": "Fox Candy",
+       "sku": "12205",
+       "retailPrice": 725,
+       "wholesalePrice": 630,
+       "stock": 77,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012205",
+       "image": "/images/products/12205.jpg"
+      },
+      {
+       "id": "p-12206",
+       "name": "Kopiko",
+       "sku": "12206",
+       "retailPrice": 440,
+       "wholesalePrice": 385,
+       "stock": 71,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012206",
+       "image": "/images/products/12206.jpg"
+      },
+      {
+       "id": "p-12207",
+       "name": "Jelly Candy",
+       "sku": "12207",
+       "retailPrice": 40,
+       "wholesalePrice": 35,
+       "stock": 45,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012207",
+       "image": "/images/products/12207.jpg"
+      },
+      {
+       "id": "p-12208",
+       "name": "Toffee",
+       "sku": "12208",
+       "retailPrice": 595,
+       "wholesalePrice": 520,
+       "stock": 97,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012208",
+       "image": "/images/products/12208.jpg"
+      },
+      {
+       "id": "p-12209",
+       "name": "Bubble Gum",
+       "sku": "12209",
+       "retailPrice": 970,
+       "wholesalePrice": 845,
+       "stock": 79,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012209",
+       "image": "/images/products/12209.jpg"
+      },
+      {
+       "id": "p-12210",
+       "name": "Mint Candy",
+       "sku": "12210",
+       "retailPrice": 270,
+       "wholesalePrice": 235,
+       "stock": 48,
+       "unit": "piece",
+       "emoji": "🍫",
+       "barcode": "8960000012210",
+       "image": "/images/products/12210.jpg"
+      }
+     ],
+     "image": "/images/subs/candies.jpg"
+    }
+   ]
+  },
+  {
+   "id": "household-items",
+   "name": "Household Items",
+   "emoji": "🏠",
+   "subs": [
+    {
+     "id": "kitchen-items",
+     "name": "Kitchen Items",
+     "products": [
+      {
+       "id": "p-13101",
+       "name": "Aluminium Foil",
+       "sku": "13101",
+       "retailPrice": 405,
+       "wholesalePrice": 350,
+       "stock": 98,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013101",
+       "image": "/images/products/13101.jpg"
+      },
+      {
+       "id": "p-13102",
+       "name": "Cling Film",
+       "sku": "13102",
+       "retailPrice": 90,
+       "wholesalePrice": 80,
+       "stock": 46,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013102",
+       "image": "/images/products/13102.jpg"
+      },
+      {
+       "id": "p-13103",
+       "name": "Tissue Paper",
+       "sku": "13103",
+       "retailPrice": 55,
+       "wholesalePrice": 50,
+       "stock": 36,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013103",
+       "image": "/images/products/13103.jpg"
+      },
+      {
+       "id": "p-13104",
+       "name": "Kitchen Towels",
+       "sku": "13104",
+       "retailPrice": 285,
+       "wholesalePrice": 250,
+       "stock": 89,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013104",
+       "image": "/images/products/13104.jpg"
+      },
+      {
+       "id": "p-13105",
+       "name": "Disposable Plates",
+       "sku": "13105",
+       "retailPrice": 395,
+       "wholesalePrice": 345,
+       "stock": 32,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013105",
+       "image": "/images/products/13105.jpg"
+      },
+      {
+       "id": "p-13106",
+       "name": "Disposable Glasses",
+       "sku": "13106",
+       "retailPrice": 305,
+       "wholesalePrice": 265,
+       "stock": 86,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013106",
+       "image": "/images/products/13106.jpg"
+      },
+      {
+       "id": "p-13107",
+       "name": "Disposable Spoons",
+       "sku": "13107",
+       "retailPrice": 290,
+       "wholesalePrice": 250,
+       "stock": 60,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013107",
+       "image": "/images/products/13107.jpg"
+      },
+      {
+       "id": "p-13108",
+       "name": "Match Boxes",
+       "sku": "13108",
+       "retailPrice": 95,
+       "wholesalePrice": 85,
+       "stock": 82,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013108",
+       "image": "/images/products/13108.jpg"
+      },
+      {
+       "id": "p-13109",
+       "name": "Garbage Bags",
+       "sku": "13109",
+       "retailPrice": 275,
+       "wholesalePrice": 240,
+       "stock": 50,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013109",
+       "image": "/images/products/13109.jpg"
+      },
+      {
+       "id": "p-13110",
+       "name": "Toothpicks",
+       "sku": "13110",
+       "retailPrice": 405,
+       "wholesalePrice": 350,
+       "stock": 57,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013110",
+       "image": "/images/products/13110.jpg"
+      }
+     ]
+    },
+    {
+     "id": "general-household",
+     "name": "General Household",
+     "products": [
+      {
+       "id": "p-13201",
+       "name": "Candles",
+       "sku": "13201",
+       "retailPrice": 105,
+       "wholesalePrice": 90,
+       "stock": 54,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013201",
+       "image": "/images/products/13201.jpg"
+      },
+      {
+       "id": "p-13202",
+       "name": "Batteries",
+       "sku": "13202",
+       "retailPrice": 370,
+       "wholesalePrice": 320,
+       "stock": 86,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013202",
+       "image": "/images/products/13202.jpg"
+      },
+      {
+       "id": "p-13203",
+       "name": "Mosquito Coil",
+       "sku": "13203",
+       "retailPrice": 420,
+       "wholesalePrice": 365,
+       "stock": 32,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013203",
+       "image": "/images/products/13203.jpg"
+      },
+      {
+       "id": "p-13204",
+       "name": "Mosquito Repellent",
+       "sku": "13204",
+       "retailPrice": 405,
+       "wholesalePrice": 350,
+       "stock": 83,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013204",
+       "image": "/images/products/13204.jpg"
+      },
+      {
+       "id": "p-13205",
+       "name": "Room Freshener",
+       "sku": "13205",
+       "retailPrice": 110,
+       "wholesalePrice": 95,
+       "stock": 56,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013205",
+       "image": "/images/products/13205.jpg"
+      },
+      {
+       "id": "p-13206",
+       "name": "Air Freshener",
+       "sku": "13206",
+       "retailPrice": 405,
+       "wholesalePrice": 350,
+       "stock": 90,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013206",
+       "image": "/images/products/13206.jpg"
+      },
+      {
+       "id": "p-13207",
+       "name": "Shoe Polish",
+       "sku": "13207",
+       "retailPrice": 75,
+       "wholesalePrice": 65,
+       "stock": 79,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013207",
+       "image": "/images/products/13207.jpg"
+      },
+      {
+       "id": "p-13208",
+       "name": "Shoe Brush",
+       "sku": "13208",
+       "retailPrice": 100,
+       "wholesalePrice": 85,
+       "stock": 67,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013208",
+       "image": "/images/products/13208.jpg"
+      },
+      {
+       "id": "p-13209",
+       "name": "Plastic Bags",
+       "sku": "13209",
+       "retailPrice": 395,
+       "wholesalePrice": 345,
+       "stock": 82,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013209",
+       "image": "/images/products/13209.jpg"
+      },
+      {
+       "id": "p-13210",
+       "name": "Packing Tape",
+       "sku": "13210",
+       "retailPrice": 305,
+       "wholesalePrice": 265,
+       "stock": 47,
+       "unit": "piece",
+       "emoji": "🏠",
+       "barcode": "8960000013210",
+       "image": "/images/products/13210.jpg"
+      }
+     ],
+     "image": "/images/subs/general-household.jpg"
+    }
+   ]
+  },
+  {
+   "id": "washing-cleaning-items",
+   "name": "Washing & Cleaning Items",
+   "emoji": "🧺",
+   "subs": [
+    {
+     "id": "washing",
+     "name": "Washing",
+     "products": [
+      {
+       "id": "p-14101",
+       "name": "Surf Excel",
+       "sku": "14101",
+       "retailPrice": 135,
+       "wholesalePrice": 115,
+       "stock": 72,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014101",
+       "packings": [
+        {
+         "label": "500g",
+         "retailPrice": 430,
+         "wholesalePrice": 380
+        },
+        {
+         "label": "1kg",
+         "retailPrice": 820,
+         "wholesalePrice": 720
+        },
+        {
+         "label": "2kg",
+         "retailPrice": 1580,
+         "wholesalePrice": 1390
+        }
+       ],
+       "image": "/images/products/14101.jpg"
+      },
+      {
+       "id": "p-14102",
+       "name": "Ariel",
+       "sku": "14102",
+       "retailPrice": 815,
+       "wholesalePrice": 710,
+       "stock": 35,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014102",
+       "image": "/images/products/14102.jpg"
+      },
+      {
+       "id": "p-14103",
+       "name": "Bonus",
+       "sku": "14103",
+       "retailPrice": 230,
+       "wholesalePrice": 200,
+       "stock": 77,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014103",
+       "image": "/images/products/14103.jpg"
+      },
+      {
+       "id": "p-14104",
+       "name": "Brite",
+       "sku": "14104",
+       "retailPrice": 440,
+       "wholesalePrice": 385,
+       "stock": 62,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014104",
+       "image": "/images/products/14104.jpg"
+      },
+      {
+       "id": "p-14105",
+       "name": "Express Power",
+       "sku": "14105",
+       "retailPrice": 250,
+       "wholesalePrice": 220,
+       "stock": 49,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014105",
+       "image": "/images/products/14105.jpg"
+      },
+      {
+       "id": "p-14106",
+       "name": "Wheel",
+       "sku": "14106",
+       "retailPrice": 230,
+       "wholesalePrice": 200,
+       "stock": 69,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014106",
+       "image": "/images/products/14106.jpg"
+      },
+      {
+       "id": "p-14107",
+       "name": "Rin",
+       "sku": "14107",
+       "retailPrice": 455,
+       "wholesalePrice": 395,
+       "stock": 94,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014107",
+       "image": "/images/products/14107.jpg"
+      },
+      {
+       "id": "p-14108",
+       "name": "Washing Powder",
+       "sku": "14108",
+       "retailPrice": 565,
+       "wholesalePrice": 490,
+       "stock": 77,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014108",
+       "image": "/images/products/14108.jpg"
+      },
+      {
+       "id": "p-14109",
+       "name": "Washing Liquid",
+       "sku": "14109",
+       "retailPrice": 300,
+       "wholesalePrice": 260,
+       "stock": 30,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014109",
+       "image": "/images/products/14109.jpg"
+      },
+      {
+       "id": "p-14110",
+       "name": "Fabric Softener",
+       "sku": "14110",
+       "retailPrice": 165,
+       "wholesalePrice": 145,
+       "stock": 75,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014110",
+       "image": "/images/products/14110.jpg"
+      }
+     ],
+     "image": "/images/subs/washing.jpg"
+    },
+    {
+     "id": "cleaning",
+     "name": "Cleaning",
+     "products": [
+      {
+       "id": "p-14201",
+       "name": "Harpic",
+       "sku": "14201",
+       "retailPrice": 670,
+       "wholesalePrice": 585,
+       "stock": 84,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014201",
+       "image": "/images/products/14201.jpg"
+      },
+      {
+       "id": "p-14202",
+       "name": "Vim",
+       "sku": "14202",
+       "retailPrice": 170,
+       "wholesalePrice": 150,
+       "stock": 61,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014202",
+       "image": "/images/products/14202.jpg"
+      },
+      {
+       "id": "p-14203",
+       "name": "Max",
+       "sku": "14203",
+       "retailPrice": 335,
+       "wholesalePrice": 290,
+       "stock": 38,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014203",
+       "image": "/images/products/14203.jpg"
+      },
+      {
+       "id": "p-14204",
+       "name": "Phenyl",
+       "sku": "14204",
+       "retailPrice": 750,
+       "wholesalePrice": 650,
+       "stock": 61,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014204",
+       "image": "/images/products/14204.jpg"
+      },
+      {
+       "id": "p-14205",
+       "name": "Bleach",
+       "sku": "14205",
+       "retailPrice": 800,
+       "wholesalePrice": 695,
+       "stock": 95,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014205",
+       "image": "/images/products/14205.jpg"
+      },
+      {
+       "id": "p-14206",
+       "name": "Floor Cleaner",
+       "sku": "14206",
+       "retailPrice": 340,
+       "wholesalePrice": 295,
+       "stock": 99,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014206",
+       "image": "/images/products/14206.jpg"
+      },
+      {
+       "id": "p-14207",
+       "name": "Toilet Cleaner",
+       "sku": "14207",
+       "retailPrice": 570,
+       "wholesalePrice": 495,
+       "stock": 91,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014207",
+       "image": "/images/products/14207.jpg"
+      },
+      {
+       "id": "p-14208",
+       "name": "Glass Cleaner",
+       "sku": "14208",
+       "retailPrice": 140,
+       "wholesalePrice": 120,
+       "stock": 36,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014208",
+       "image": "/images/products/14208.jpg"
+      },
+      {
+       "id": "p-14209",
+       "name": "Dishwashing Liquid",
+       "sku": "14209",
+       "retailPrice": 180,
+       "wholesalePrice": 155,
+       "stock": 46,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014209",
+       "image": "/images/products/14209.jpg"
+      },
+      {
+       "id": "p-14210",
+       "name": "Dishwashing Bar",
+       "sku": "14210",
+       "retailPrice": 635,
+       "wholesalePrice": 550,
+       "stock": 76,
+       "unit": "piece",
+       "emoji": "🧺",
+       "barcode": "8960000014210",
+       "image": "/images/products/14210.jpg"
+      }
+     ],
+     "image": "/images/subs/cleaning.jpg"
+    }
+   ],
+   "image": "/images/heads/washing-cleaning-items.jpg"
+  },
+  {
+   "id": "personal-care-products",
+   "name": "Personal Care Products",
+   "emoji": "🧴",
+   "subs": [
+    {
+     "id": "hair-care",
+     "name": "Hair Care",
+     "products": [
+      {
+       "id": "p-15101",
+       "name": "Sunsilk Shampoo",
+       "sku": "15101",
+       "retailPrice": 640,
+       "wholesalePrice": 555,
+       "stock": 65,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015101",
+       "image": "/images/products/15101.jpg"
+      },
+      {
+       "id": "p-15102",
+       "name": "Head & Shoulders",
+       "sku": "15102",
+       "retailPrice": 170,
+       "wholesalePrice": 150,
+       "stock": 60,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015102",
+       "image": "/images/products/15102.jpg"
+      },
+      {
+       "id": "p-15103",
+       "name": "Pantene Shampoo",
+       "sku": "15103",
+       "retailPrice": 120,
+       "wholesalePrice": 105,
+       "stock": 77,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015103",
+       "image": "/images/products/15103.jpg"
+      },
+      {
+       "id": "p-15104",
+       "name": "Clear Shampoo",
+       "sku": "15104",
+       "retailPrice": 410,
+       "wholesalePrice": 355,
+       "stock": 45,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015104",
+       "image": "/images/products/15104.jpg"
+      },
+      {
+       "id": "p-15105",
+       "name": "Dove Shampoo",
+       "sku": "15105",
+       "retailPrice": 585,
+       "wholesalePrice": 510,
+       "stock": 44,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015105",
+       "image": "/images/products/15105.jpg"
+      },
+      {
+       "id": "p-15106",
+       "name": "Hair Oil",
+       "sku": "15106",
+       "retailPrice": 475,
+       "wholesalePrice": 415,
+       "stock": 22,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015106",
+       "image": "/images/products/15106.jpg"
+      },
+      {
+       "id": "p-15107",
+       "name": "Coconut Oil",
+       "sku": "15107",
+       "retailPrice": 650,
+       "wholesalePrice": 565,
+       "stock": 53,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015107",
+       "image": "/images/products/15107.jpg"
+      },
+      {
+       "id": "p-15108",
+       "name": "Hair Gel",
+       "sku": "15108",
+       "retailPrice": 635,
+       "wholesalePrice": 550,
+       "stock": 67,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015108",
+       "image": "/images/products/15108.jpg"
+      },
+      {
+       "id": "p-15109",
+       "name": "Hair Color",
+       "sku": "15109",
+       "retailPrice": 615,
+       "wholesalePrice": 535,
+       "stock": 22,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015109",
+       "image": "/images/products/15109.jpg"
+      },
+      {
+       "id": "p-15110",
+       "name": "Conditioner",
+       "sku": "15110",
+       "retailPrice": 460,
+       "wholesalePrice": 400,
+       "stock": 70,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015110",
+       "image": "/images/products/15110.jpg"
+      }
+     ],
+     "image": "/images/subs/hair-care.jpg"
+    },
+    {
+     "id": "body-oral-care",
+     "name": "Body & Oral Care",
+     "products": [
+      {
+       "id": "p-15201",
+       "name": "Lux Soap",
+       "sku": "15201",
+       "retailPrice": 325,
+       "wholesalePrice": 285,
+       "stock": 63,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015201",
+       "image": "/images/products/15201.jpg"
+      },
+      {
+       "id": "p-15202",
+       "name": "Lifebuoy Soap",
+       "sku": "15202",
+       "retailPrice": 590,
+       "wholesalePrice": 515,
+       "stock": 72,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015202",
+       "image": "/images/products/15202.jpg"
+      },
+      {
+       "id": "p-15203",
+       "name": "Dove Soap",
+       "sku": "15203",
+       "retailPrice": 675,
+       "wholesalePrice": 585,
+       "stock": 58,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015203",
+       "image": "/images/products/15203.jpg"
+      },
+      {
+       "id": "p-15204",
+       "name": "Dettol Soap",
+       "sku": "15204",
+       "retailPrice": 460,
+       "wholesalePrice": 400,
+       "stock": 24,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015204",
+       "image": "/images/products/15204.jpg"
+      },
+      {
+       "id": "p-15205",
+       "name": "Safeguard Soap",
+       "sku": "15205",
+       "retailPrice": 405,
+       "wholesalePrice": 350,
+       "stock": 70,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015205",
+       "image": "/images/products/15205.jpg"
+      },
+      {
+       "id": "p-15206",
+       "name": "Toothpaste",
+       "sku": "15206",
+       "retailPrice": 640,
+       "wholesalePrice": 555,
+       "stock": 21,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015206",
+       "image": "/images/products/15206.jpg"
+      },
+      {
+       "id": "p-15207",
+       "name": "Toothbrush",
+       "sku": "15207",
+       "retailPrice": 645,
+       "wholesalePrice": 560,
+       "stock": 75,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015207",
+       "image": "/images/products/15207.jpg"
+      },
+      {
+       "id": "p-15208",
+       "name": "Mouthwash",
+       "sku": "15208",
+       "retailPrice": 625,
+       "wholesalePrice": 545,
+       "stock": 46,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015208",
+       "image": "/images/products/15208.jpg"
+      },
+      {
+       "id": "p-15209",
+       "name": "Face Wash",
+       "sku": "15209",
+       "retailPrice": 550,
+       "wholesalePrice": 480,
+       "stock": 38,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015209",
+       "image": "/images/products/15209.jpg"
+      },
+      {
+       "id": "p-15210",
+       "name": "Hand Wash",
+       "sku": "15210",
+       "retailPrice": 535,
+       "wholesalePrice": 465,
+       "stock": 36,
+       "unit": "piece",
+       "emoji": "🧴",
+       "barcode": "8960000015210",
+       "image": "/images/products/15210.jpg"
+      }
+     ],
+     "image": "/images/subs/body-oral-care.jpg"
+    }
+   ],
+   "image": "/images/heads/personal-care-products.jpg"
+  },
+  {
+   "id": "baby-products",
+   "name": "Baby Products",
+   "emoji": "👶",
+   "subs": [
+    {
+     "id": "baby-care",
+     "name": "Baby Care",
+     "products": [
+      {
+       "id": "p-16101",
+       "name": "Pampers",
+       "sku": "16101",
+       "retailPrice": 320,
+       "wholesalePrice": 280,
+       "stock": 23,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016101",
+       "packings": [
+        {
+         "label": "Small Pack",
+         "retailPrice": 1450,
+         "wholesalePrice": 1280
+        },
+        {
+         "label": "Medium Pack",
+         "retailPrice": 1950,
+         "wholesalePrice": 1720
+        },
+        {
+         "label": "Jumbo Pack",
+         "retailPrice": 2650,
+         "wholesalePrice": 2340
+        }
+       ],
+       "image": "/images/products/16101.jpg"
+      },
+      {
+       "id": "p-16102",
+       "name": "Molfix",
+       "sku": "16102",
+       "retailPrice": 1110,
+       "wholesalePrice": 965,
+       "stock": 67,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016102",
+       "image": "/images/products/16102.jpg"
+      },
+      {
+       "id": "p-16103",
+       "name": "Canbebe",
+       "sku": "16103",
+       "retailPrice": 185,
+       "wholesalePrice": 160,
+       "stock": 82,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016103",
+       "image": "/images/products/16103.jpg"
+      },
+      {
+       "id": "p-16104",
+       "name": "Baby Wipes",
+       "sku": "16104",
+       "retailPrice": 155,
+       "wholesalePrice": 135,
+       "stock": 57,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016104",
+       "image": "/images/products/16104.jpg"
+      },
+      {
+       "id": "p-16105",
+       "name": "Baby Powder",
+       "sku": "16105",
+       "retailPrice": 1575,
+       "wholesalePrice": 1370,
+       "stock": 48,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016105",
+       "image": "/images/products/16105.jpg"
+      },
+      {
+       "id": "p-16106",
+       "name": "Baby Lotion",
+       "sku": "16106",
+       "retailPrice": 985,
+       "wholesalePrice": 855,
+       "stock": 84,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016106",
+       "image": "/images/products/16106.jpg"
+      },
+      {
+       "id": "p-16107",
+       "name": "Baby Shampoo",
+       "sku": "16107",
+       "retailPrice": 1770,
+       "wholesalePrice": 1540,
+       "stock": 33,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016107",
+       "image": "/images/products/16107.jpg"
+      },
+      {
+       "id": "p-16108",
+       "name": "Baby Soap",
+       "sku": "16108",
+       "retailPrice": 1265,
+       "wholesalePrice": 1100,
+       "stock": 32,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016108",
+       "image": "/images/products/16108.jpg"
+      },
+      {
+       "id": "p-16109",
+       "name": "Baby Oil",
+       "sku": "16109",
+       "retailPrice": 2230,
+       "wholesalePrice": 1940,
+       "stock": 55,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016109",
+       "image": "/images/products/16109.jpg"
+      },
+      {
+       "id": "p-16110",
+       "name": "Baby Cream",
+       "sku": "16110",
+       "retailPrice": 875,
+       "wholesalePrice": 760,
+       "stock": 98,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016110",
+       "image": "/images/products/16110.jpg"
+      }
+     ],
+     "image": "/images/subs/baby-care.jpg"
+    },
+    {
+     "id": "baby-food",
+     "name": "Baby Food",
+     "products": [
+      {
+       "id": "p-16201",
+       "name": "Cerelac Wheat",
+       "sku": "16201",
+       "retailPrice": 895,
+       "wholesalePrice": 780,
+       "stock": 53,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016201",
+       "image": "/images/products/16201.jpg"
+      },
+      {
+       "id": "p-16202",
+       "name": "Cerelac Rice",
+       "sku": "16202",
+       "retailPrice": 1480,
+       "wholesalePrice": 1290,
+       "stock": 97,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016202",
+       "image": "/images/products/16202.jpg"
+      },
+      {
+       "id": "p-16203",
+       "name": "Cerelac Fruits",
+       "sku": "16203",
+       "retailPrice": 1480,
+       "wholesalePrice": 1290,
+       "stock": 88,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016203",
+       "image": "/images/products/16203.jpg"
+      },
+      {
+       "id": "p-16204",
+       "name": "Lactogen",
+       "sku": "16204",
+       "retailPrice": 885,
+       "wholesalePrice": 770,
+       "stock": 54,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016204",
+       "image": "/images/products/16204.jpg"
+      },
+      {
+       "id": "p-16205",
+       "name": "Nido",
+       "sku": "16205",
+       "retailPrice": 2400,
+       "wholesalePrice": 2090,
+       "stock": 82,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016205",
+       "image": "/images/products/16205.jpg"
+      },
+      {
+       "id": "p-16206",
+       "name": "Formula Milk",
+       "sku": "16206",
+       "retailPrice": 2135,
+       "wholesalePrice": 1855,
+       "stock": 58,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016206",
+       "image": "/images/products/16206.jpg"
+      },
+      {
+       "id": "p-16207",
+       "name": "Baby Biscuits",
+       "sku": "16207",
+       "retailPrice": 1820,
+       "wholesalePrice": 1585,
+       "stock": 22,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016207",
+       "image": "/images/products/16207.jpg"
+      },
+      {
+       "id": "p-16208",
+       "name": "Baby Cereal",
+       "sku": "16208",
+       "retailPrice": 2230,
+       "wholesalePrice": 1940,
+       "stock": 75,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016208",
+       "image": "/images/products/16208.jpg"
+      },
+      {
+       "id": "p-16209",
+       "name": "Fruit Puree",
+       "sku": "16209",
+       "retailPrice": 1370,
+       "wholesalePrice": 1190,
+       "stock": 77,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016209",
+       "image": "/images/products/16209.jpg"
+      },
+      {
+       "id": "p-16210",
+       "name": "Baby Snacks",
+       "sku": "16210",
+       "retailPrice": 1805,
+       "wholesalePrice": 1570,
+       "stock": 35,
+       "unit": "piece",
+       "emoji": "👶",
+       "barcode": "8960000016210",
+       "image": "/images/products/16210.jpg"
+      }
+     ],
+     "image": "/images/subs/baby-food.jpg"
+    }
+   ],
+   "image": "/images/heads/baby-products.jpg"
+  },
+  {
+   "id": "frozen-foods",
+   "name": "Frozen Foods",
+   "emoji": "🧊",
+   "subs": [
+    {
+     "id": "frozen-snacks",
+     "name": "Frozen Snacks",
+     "products": [
+      {
+       "id": "p-17101",
+       "name": "Frozen Samosa",
+       "sku": "17101",
+       "retailPrice": 405,
+       "wholesalePrice": 350,
+       "stock": 24,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017101"
+      },
+      {
+       "id": "p-17102",
+       "name": "Frozen Spring Rolls",
+       "sku": "17102",
+       "retailPrice": 675,
+       "wholesalePrice": 585,
+       "stock": 89,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017102"
+      },
+      {
+       "id": "p-17103",
+       "name": "Frozen Nuggets",
+       "sku": "17103",
+       "retailPrice": 605,
+       "wholesalePrice": 525,
+       "stock": 93,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017103"
+      },
+      {
+       "id": "p-17104",
+       "name": "Frozen Fries",
+       "sku": "17104",
+       "retailPrice": 1225,
+       "wholesalePrice": 1065,
+       "stock": 22,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017104"
+      },
+      {
+       "id": "p-17105",
+       "name": "Frozen Shami Kebab",
+       "sku": "17105",
+       "retailPrice": 570,
+       "wholesalePrice": 495,
+       "stock": 68,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017105"
+      },
+      {
+       "id": "p-17106",
+       "name": "Frozen Paratha",
+       "sku": "17106",
+       "retailPrice": 545,
+       "wholesalePrice": 475,
+       "stock": 67,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017106"
+      },
+      {
+       "id": "p-17107",
+       "name": "Frozen Chapli Kebab",
+       "sku": "17107",
+       "retailPrice": 340,
+       "wholesalePrice": 295,
+       "stock": 78,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017107"
+      },
+      {
+       "id": "p-17108",
+       "name": "Frozen Chicken Strips",
+       "sku": "17108",
+       "retailPrice": 245,
+       "wholesalePrice": 215,
+       "stock": 21,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017108"
+      },
+      {
+       "id": "p-17109",
+       "name": "Frozen Seekh Kebab",
+       "sku": "17109",
+       "retailPrice": 310,
+       "wholesalePrice": 270,
+       "stock": 38,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017109"
+      },
+      {
+       "id": "p-17110",
+       "name": "Frozen Patties",
+       "sku": "17110",
+       "retailPrice": 845,
+       "wholesalePrice": 735,
+       "stock": 51,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017110"
+      }
+     ]
+    },
+    {
+     "id": "frozen-dairy-desserts",
+     "name": "Frozen Dairy & Desserts",
+     "products": [
+      {
+       "id": "p-17201",
+       "name": "Vanilla Ice Cream",
+       "sku": "17201",
+       "retailPrice": 635,
+       "wholesalePrice": 550,
+       "stock": 63,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017201"
+      },
+      {
+       "id": "p-17202",
+       "name": "Chocolate Ice Cream",
+       "sku": "17202",
+       "retailPrice": 740,
+       "wholesalePrice": 645,
+       "stock": 49,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017202"
+      },
+      {
+       "id": "p-17203",
+       "name": "Strawberry Ice Cream",
+       "sku": "17203",
+       "retailPrice": 1065,
+       "wholesalePrice": 925,
+       "stock": 67,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017203"
+      },
+      {
+       "id": "p-17204",
+       "name": "Kulfa",
+       "sku": "17204",
+       "retailPrice": 635,
+       "wholesalePrice": 550,
+       "stock": 37,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017204"
+      },
+      {
+       "id": "p-17205",
+       "name": "Mango Ice Cream",
+       "sku": "17205",
+       "retailPrice": 310,
+       "wholesalePrice": 270,
+       "stock": 77,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017205"
+      },
+      {
+       "id": "p-17206",
+       "name": "Ice Lollies",
+       "sku": "17206",
+       "retailPrice": 640,
+       "wholesalePrice": 555,
+       "stock": 73,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017206"
+      },
+      {
+       "id": "p-17207",
+       "name": "Frozen Yogurt",
+       "sku": "17207",
+       "retailPrice": 900,
+       "wholesalePrice": 785,
+       "stock": 80,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017207"
+      },
+      {
+       "id": "p-17208",
+       "name": "Ice Cream Sandwich",
+       "sku": "17208",
+       "retailPrice": 895,
+       "wholesalePrice": 780,
+       "stock": 20,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017208"
+      },
+      {
+       "id": "p-17209",
+       "name": "Frozen Dessert",
+       "sku": "17209",
+       "retailPrice": 1195,
+       "wholesalePrice": 1040,
+       "stock": 93,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017209"
+      },
+      {
+       "id": "p-17210",
+       "name": "Ice Cream Cups",
+       "sku": "17210",
+       "retailPrice": 935,
+       "wholesalePrice": 815,
+       "stock": 52,
+       "unit": "piece",
+       "emoji": "🧊",
+       "barcode": "8960000017210"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dry-fruits",
+   "name": "Dry Fruits",
+   "emoji": "🥜",
+   "subs": [
+    {
+     "id": "nuts",
+     "name": "Nuts",
+     "products": [
+      {
+       "id": "p-18101",
+       "name": "Almonds",
+       "sku": "18101",
+       "retailPrice": 3215,
+       "wholesalePrice": 2795,
+       "stock": 69,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18102",
+       "name": "Cashews",
+       "sku": "18102",
+       "retailPrice": 1330,
+       "wholesalePrice": 1155,
+       "stock": 49,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18103",
+       "name": "Pistachios",
+       "sku": "18103",
+       "retailPrice": 3790,
+       "wholesalePrice": 3295,
+       "stock": 62,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18104",
+       "name": "Walnuts",
+       "sku": "18104",
+       "retailPrice": 905,
+       "wholesalePrice": 785,
+       "stock": 95,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18105",
+       "name": "Peanuts",
+       "sku": "18105",
+       "retailPrice": 4160,
+       "wholesalePrice": 3620,
+       "stock": 78,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18106",
+       "name": "Hazelnuts",
+       "sku": "18106",
+       "retailPrice": 2130,
+       "wholesalePrice": 1855,
+       "stock": 99,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18107",
+       "name": "Macadamia",
+       "sku": "18107",
+       "retailPrice": 890,
+       "wholesalePrice": 775,
+       "stock": 60,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18108",
+       "name": "Pine Nuts",
+       "sku": "18108",
+       "retailPrice": 3055,
+       "wholesalePrice": 2660,
+       "stock": 111,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18109",
+       "name": "Roasted Almonds",
+       "sku": "18109",
+       "retailPrice": 1355,
+       "wholesalePrice": 1180,
+       "stock": 50,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18110",
+       "name": "Salted Cashews",
+       "sku": "18110",
+       "retailPrice": 4150,
+       "wholesalePrice": 3610,
+       "stock": 118,
+       "unit": "kg",
+       "emoji": "🥜"
+      }
+     ]
+    },
+    {
+     "id": "dry-fruits",
+     "name": "Dry Fruits",
+     "products": [
+      {
+       "id": "p-18201",
+       "name": "Raisins",
+       "sku": "18201",
+       "retailPrice": 3610,
+       "wholesalePrice": 3140,
+       "stock": 56,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18202",
+       "name": "Dates",
+       "sku": "18202",
+       "retailPrice": 1595,
+       "wholesalePrice": 1390,
+       "stock": 84,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18203",
+       "name": "Dried Figs",
+       "sku": "18203",
+       "retailPrice": 1450,
+       "wholesalePrice": 1260,
+       "stock": 79,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18204",
+       "name": "Dried Apricots",
+       "sku": "18204",
+       "retailPrice": 3930,
+       "wholesalePrice": 3420,
+       "stock": 64,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18205",
+       "name": "Dried Plums",
+       "sku": "18205",
+       "retailPrice": 4150,
+       "wholesalePrice": 3610,
+       "stock": 115,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18206",
+       "name": "Dried Mango",
+       "sku": "18206",
+       "retailPrice": 1505,
+       "wholesalePrice": 1310,
+       "stock": 37,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18207",
+       "name": "Dried Cranberries",
+       "sku": "18207",
+       "retailPrice": 1825,
+       "wholesalePrice": 1590,
+       "stock": 33,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18208",
+       "name": "Dry Coconut",
+       "sku": "18208",
+       "retailPrice": 3675,
+       "wholesalePrice": 3195,
+       "stock": 37,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18209",
+       "name": "Dried Berries",
+       "sku": "18209",
+       "retailPrice": 3120,
+       "wholesalePrice": 2715,
+       "stock": 82,
+       "unit": "kg",
+       "emoji": "🥜"
+      },
+      {
+       "id": "p-18210",
+       "name": "Dry Fruit Mix",
+       "sku": "18210",
+       "retailPrice": 2745,
+       "wholesalePrice": 2390,
+       "stock": 110,
+       "unit": "kg",
+       "emoji": "🥜"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sauces-ketchup",
+   "name": "Sauces & Ketchup",
+   "emoji": "🍅",
+   "subs": [
+    {
+     "id": "sauces",
+     "name": "Sauces",
+     "products": [
+      {
+       "id": "p-19101",
+       "name": "Tomato Ketchup",
+       "sku": "19101",
+       "retailPrice": 405,
+       "wholesalePrice": 350,
+       "stock": 58,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019101"
+      },
+      {
+       "id": "p-19102",
+       "name": "Chilli Garlic Sauce",
+       "sku": "19102",
+       "retailPrice": 290,
+       "wholesalePrice": 250,
+       "stock": 40,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019102"
+      },
+      {
+       "id": "p-19103",
+       "name": "Soy Sauce",
+       "sku": "19103",
+       "retailPrice": 320,
+       "wholesalePrice": 280,
+       "stock": 51,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019103"
+      },
+      {
+       "id": "p-19104",
+       "name": "Chilli Sauce",
+       "sku": "19104",
+       "retailPrice": 140,
+       "wholesalePrice": 120,
+       "stock": 84,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019104"
+      },
+      {
+       "id": "p-19105",
+       "name": "BBQ Sauce",
+       "sku": "19105",
+       "retailPrice": 470,
+       "wholesalePrice": 410,
+       "stock": 77,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019105"
+      },
+      {
+       "id": "p-19106",
+       "name": "Mustard Sauce",
+       "sku": "19106",
+       "retailPrice": 415,
+       "wholesalePrice": 360,
+       "stock": 48,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019106"
+      },
+      {
+       "id": "p-19107",
+       "name": "Mayonnaise",
+       "sku": "19107",
+       "retailPrice": 365,
+       "wholesalePrice": 320,
+       "stock": 52,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019107"
+      },
+      {
+       "id": "p-19108",
+       "name": "Hot Sauce",
+       "sku": "19108",
+       "retailPrice": 615,
+       "wholesalePrice": 535,
+       "stock": 45,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019108"
+      },
+      {
+       "id": "p-19109",
+       "name": "Worcestershire Sauce",
+       "sku": "19109",
+       "retailPrice": 175,
+       "wholesalePrice": 150,
+       "stock": 87,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019109"
+      },
+      {
+       "id": "p-19110",
+       "name": "Pizza Sauce",
+       "sku": "19110",
+       "retailPrice": 655,
+       "wholesalePrice": 570,
+       "stock": 69,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019110"
+      }
+     ]
+    },
+    {
+     "id": "pickles-spreads",
+     "name": "Pickles & Spreads",
+     "products": [
+      {
+       "id": "p-19201",
+       "name": "Mango Pickle",
+       "sku": "19201",
+       "retailPrice": 315,
+       "wholesalePrice": 275,
+       "stock": 45,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019201"
+      },
+      {
+       "id": "p-19202",
+       "name": "Mixed Pickle",
+       "sku": "19202",
+       "retailPrice": 395,
+       "wholesalePrice": 345,
+       "stock": 49,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019202"
+      },
+      {
+       "id": "p-19203",
+       "name": "Lemon Pickle",
+       "sku": "19203",
+       "retailPrice": 130,
+       "wholesalePrice": 115,
+       "stock": 92,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019203"
+      },
+      {
+       "id": "p-19204",
+       "name": "Garlic Pickle",
+       "sku": "19204",
+       "retailPrice": 660,
+       "wholesalePrice": 575,
+       "stock": 59,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019204"
+      },
+      {
+       "id": "p-19205",
+       "name": "Green Chilli Pickle",
+       "sku": "19205",
+       "retailPrice": 260,
+       "wholesalePrice": 225,
+       "stock": 72,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019205"
+      },
+      {
+       "id": "p-19206",
+       "name": "Jam",
+       "sku": "19206",
+       "retailPrice": 605,
+       "wholesalePrice": 525,
+       "stock": 73,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019206"
+      },
+      {
+       "id": "p-19207",
+       "name": "Strawberry Jam",
+       "sku": "19207",
+       "retailPrice": 155,
+       "wholesalePrice": 135,
+       "stock": 79,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019207"
+      },
+      {
+       "id": "p-19208",
+       "name": "Marmalade",
+       "sku": "19208",
+       "retailPrice": 605,
+       "wholesalePrice": 525,
+       "stock": 59,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019208"
+      },
+      {
+       "id": "p-19209",
+       "name": "Peanut Butter",
+       "sku": "19209",
+       "retailPrice": 230,
+       "wholesalePrice": 200,
+       "stock": 25,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019209"
+      },
+      {
+       "id": "p-19210",
+       "name": "Chocolate Spread",
+       "sku": "19210",
+       "retailPrice": 440,
+       "wholesalePrice": 385,
+       "stock": 31,
+       "unit": "piece",
+       "emoji": "🍅",
+       "barcode": "8960000019210"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "general-items",
+   "name": "General Items",
+   "emoji": "🛒",
+   "subs": [
+    {
+     "id": "miscellaneous",
+     "name": "Miscellaneous",
+     "products": [
+      {
+       "id": "p-20101",
+       "name": "Eggs",
+       "sku": "20101",
+       "retailPrice": 215,
+       "wholesalePrice": 185,
+       "stock": 22,
+       "unit": "piece",
+       "emoji": "🛒",
+       "barcode": "8960000020101"
+      },
+      {
+       "id": "p-20102",
+       "name": "Match Sticks",
+       "sku": "20102",
+       "retailPrice": 235,
+       "wholesalePrice": 205,
+       "stock": 56,
+       "unit": "piece",
+       "emoji": "🛒",
+       "barcode": "8960000020102"
+      },
+      {
+       "id": "p-20103",
+       "name": "Drinking Straws",
+       "sku": "20103",
+       "retailPrice": 400,
+       "wholesalePrice": 350,
+       "stock": 29,
+       "unit": "piece",
+       "emoji": "🛒",
+       "barcode": "8960000020103"
+      },
+      {
+       "id": "p-20104",
+       "name": "Disposable Cups",
+       "sku": "20104",
+       "retailPrice": 225,
+       "wholesalePrice": 195,
+       "stock": 56,
+       "unit": "piece",
+       "emoji": "🛒",
+       "barcode": "8960000020104"
+      },
+      {
+       "id": "p-20105",
+       "name": "Rubber Bands",
+       "sku": "20105",
+       "retailPrice": 210,
+       "wholesalePrice": 185,
+       "stock": 78,
+       "unit": "piece",
+       "emoji": "🛒",
+       "barcode": "8960000020105"
+      },
+      {
+       "id": "p-20106",
+       "name": "Sewing Needles",
+       "sku": "20106",
+       "retailPrice": 215,
+       "wholesalePrice": 185,
+       "stock": 84,
+       "unit": "piece",
+       "emoji": "🛒",
+       "barcode": "8960000020106"
+      },
+      {
+       "id": "p-20107",
+       "name": "Thread",
+       "sku": "20107",
+       "retailPrice": 165,
+       "wholesalePrice": 145,
+       "stock": 98,
+       "unit": "piece",
+       "emoji": "🛒",
+       "barcode": "8960000020107"
+      },
+      {
+       "id": "p-20108",
+       "name": "Shoe Laces",
+       "sku": "20108",
+       "retailPrice": 105,
+       "wholesalePrice": 90,
+       "stock": 60,
+       "unit": "piece",
+       "emoji": "🛒",
+       "barcode": "8960000020108"
+      },
+      {
+       "id": "p-20109",
+       "name": "Lighters",
+       "sku": "20109",
+       "retailPrice": 260,
+       "wholesalePrice": 225,
+       "stock": 92,
+       "unit": "piece",
+       "emoji": "🛒",
+       "barcode": "8960000020109"
+      },
+      {
+       "id": "p-20110",
+       "name": "Water Bottles",
+       "sku": "20110",
+       "retailPrice": 50,
+       "wholesalePrice": 45,
+       "stock": 85,
+       "unit": "piece",
+       "emoji": "🛒",
+       "barcode": "8960000020110"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
