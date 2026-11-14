@@ -15,9 +15,29 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
-  GroceryItem, Order,
+  GroceryItem, Order, PackingOption,
   loadGrocery, loadGroceryHeads, loadGrocerySubHeads, loadMenu, loadOrders, loadStockEntries, isToday, billNoOf, isPaymentCleared,
 } from "./store";
+
+// Offer pricing — LOCAL copies of the lib/store.ts helpers. This module is
+// imported by the server route /api/v1/assistant/query, and lib/store.ts is
+// a client module: calling its functions from the server throws. The rules
+// are pure functions of the item shape, so they are mirrored here (keep in
+// sync with offerActive/effectiveRetail/effectivePackingRetail in store.ts
+// and the charging rule in server/services/orders.ts).
+function offerActive(g: GroceryItem): boolean {
+  return g.boardOffer === true
+    && typeof g.offerPrice === "number" && g.offerPrice > 0
+    && g.offerPrice < g.retailPrice;
+}
+function effectiveRetail(g: GroceryItem): number {
+  return offerActive(g) ? (g.offerPrice as number) : g.retailPrice;
+}
+function effectivePackingRetail(g: GroceryItem, p: PackingOption): number {
+  if (!offerActive(g) || !g.packings) return p.retailPrice;
+  const op = g.packings.find((x) => x.retailPrice === g.retailPrice);
+  return op && op.label === p.label ? (g.offerPrice as number) : p.retailPrice;
+}
 
 export type Audience = "owner" | "staff" | "stock" | "kitchen" | "customer";
 
@@ -39,7 +59,7 @@ function snap() {
     menu: loadMenu(), orders: loadOrders(), entries: loadStockEntries(),
   };
 }
-type Snap = ReturnType<typeof snap>;
+export type Snap = ReturnType<typeof snap>;
 
 const headName = (s: Snap, g: GroceryItem) => s.heads.find((h) => h.id === g.headId)?.name ?? "";
 const subName = (s: Snap, g: GroceryItem) => s.subs.find((x) => x.id === g.subId)?.name ?? "";
@@ -62,17 +82,22 @@ function findMenu(s: Snap, q: string) {
 
 function productAnswer(s: Snap, g: GroceryItem, audience: Audience): string {
   const lines = [`${g.emoji} ${g.name} — ${headName(s, g)} › ${subName(s, g)}`];
+  // Offer-aware (Phase 2 port): when an offer price is ACTIVE the assistant
+  // quotes the price the customer actually pays, with the purana rate named.
+  const onOffer = offerActive(g);
+  const offerNote = onOffer ? ` 🎉 Offer chal raha hai (purana rate ${rs(g.retailPrice)})` : "";
   if (audience === "customer") {
     lines.push(g.packings?.length
-      ? `Price: ${rs(Math.min(...g.packings.map((p) => p.retailPrice)))} se start — packings: ${g.packings.map((p) => `${p.label} (${rs(p.retailPrice)})`).join(", ")}`
-      : `Price: ${rs(g.retailPrice)}${g.unit === "kg" ? " /kg" : ""}`);
+      ? `Price: ${rs(Math.min(...g.packings.map((p) => effectivePackingRetail(g, p))))} se start — packings: ${g.packings.map((p) => `${p.label} (${rs(effectivePackingRetail(g, p))})`).join(", ")}`
+      : `Price: ${rs(effectiveRetail(g))}${g.unit === "kg" ? " /kg" : ""}`);
+    if (onOffer) lines.push(`🎉 Is par offer hai — sirf ${rs(g.offerPrice as number)} (purana rate ${rs(g.retailPrice)})`);
     lines.push(g.stock > 0 ? "✅ Available hai — order kar sakte hain." : "❌ Abhi khatam hai (sold out).");
     return lines.join("\n");
   }
-  lines.push(`Retail: ${rs(g.retailPrice)}${g.unit === "kg" ? " /kg" : ""}${audience === "owner" ? ` · Wholesale: ${rs(g.wholesalePrice)}` : ""}`);
+  lines.push(`Retail: ${rs(effectiveRetail(g))}${g.unit === "kg" ? " /kg" : ""}${onOffer ? offerNote : ""}${audience === "owner" ? ` · Wholesale: ${rs(g.wholesalePrice)}` : ""}`);
   lines.push(`Stock: ${qty(g.stock)} ${g.unit === "kg" ? "kg" : "pcs"} · SKU ${g.sku}${g.barcode ? ` · Barcode ${g.barcode}` : ""}`);
   if (g.packings?.length) {
-    lines.push(`📦 Packings: ${g.packings.map((p) => audience === "owner" ? `${p.label} (R ${rs(p.retailPrice)} / W ${rs(p.wholesalePrice)})` : `${p.label} (${rs(p.retailPrice)})`).join(", ")}`);
+    lines.push(`📦 Packings: ${g.packings.map((p) => audience === "owner" ? `${p.label} (R ${rs(effectivePackingRetail(g, p))} / W ${rs(p.wholesalePrice)})` : `${p.label} (${rs(effectivePackingRetail(g, p))})`).join(", ")}`);
   }
   return lines.join("\n");
 }
@@ -108,9 +133,11 @@ export function chipsFor(audience: Audience): string[] {
   }
 }
 
-export function answerQuery(raw: string, ctx: AssistantCtx): string {
+export function answerQuery(raw: string, ctx: AssistantCtx, snapData?: Snap): string {
   const q = raw.toLowerCase().trim();
-  const s = snap();
+  // Phase 2: the server endpoint passes a permission-scoped snapshot built
+  // from PostgreSQL; the local snap() remains only as an offline fallback.
+  const s = snapData ?? snap();
   const a = ctx.audience;
   if (!q) return "Kuch likhein ya neeche diye gaye sawalon mein se ek chunein.";
 
@@ -131,11 +158,11 @@ export function answerQuery(raw: string, ctx: AssistantCtx): string {
     const amt = parseInt(budgetM[1], 10);
     const words = ["snack", "biscuit", "chocolate", "drink", "juice", "chai", "tea", "coffee", "milk", "baby", "frozen", "fruit"];
     const word = words.find((w) => q.includes(w));
-    let items = s.grocery.filter((g) => g.retailPrice <= amt && g.stock > 0);
+    let items = s.grocery.filter((g) => effectiveRetail(g) <= amt && g.stock > 0);
     if (word) items = items.filter((g) => g.name.toLowerCase().includes(word) || headName(s, g).toLowerCase().includes(word) || subName(s, g).toLowerCase().includes(word));
-    items = items.sort((x, y) => y.retailPrice - x.retailPrice).slice(0, 8);
+    items = items.sort((x, y) => effectiveRetail(y) - effectiveRetail(x)).slice(0, 8);
     if (!items.length) return `${rs(amt)} ke andar ${word ? `“${word}” mein ` : ""}koi available item nahi mila. Budget thora barha kar try karein.`;
-    return [`💸 ${rs(amt)} ke andar ${word ? `${word} ke ` : ""}best options:`, ...items.map((g) => `• ${g.name} — ${rs(g.retailPrice)}${g.unit === "kg" ? "/kg" : ""}`)].join("\n");
+    return [`💸 ${rs(amt)} ke andar ${word ? `${word} ke ` : ""}best options:`, ...items.map((g) => `• ${g.name} — ${rs(effectiveRetail(g))}${g.unit === "kg" ? "/kg" : ""}${offerActive(g) ? " 🎉 offer" : ""}`)].join("\n");
   }
 
   // Owner: today's sales

@@ -1,21 +1,77 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Data layer — Phase 1
-// Phase 1 persistence: browser localStorage, so the prototype runs standalone
-// with zero setup. ALL reads/writes go through the functions in this file.
-// Phase 2: replace ONLY the bodies of load*/save* with PostgreSQL queries
-// (via Next.js API routes / Server Actions + Prisma or Drizzle) — the page
-// components consume the same MenuItem / Order types and will not change.
-// Redis is planned in Phase 2 as a cache for the menu + today's totals on
-// top of PostgreSQL. It is NOT used or faked in Phase 1.
+// Canteen POS data layer — PHASE 2 FACADE (PHASE2-PLAN §5).
+//
+// Phase 1 kept every exported signature stable so this swap needs no screen
+// rewrites: the loaders return an in-memory cache hydrated from the REST
+// API, the savers diff against the last-known server state ("shadow") and
+// write through the API, and realtime (SSE over the transactional
+// event_outbox + a short poll fallback) keeps the cache — and therefore
+// every screen — fresh across devices. localStorage is GONE as a data
+// store (all Phase 1 data here was sample by design); it survives only for
+// tiny client prefs (id-alias map, idempotency keys, guest order tokens).
+//
+// Money/stock truth lives ONLY on the server: order placement, stock-entry
+// posting and payment confirm/reject/reproof move stock transactionally.
+// Catalogue saves therefore persist descriptive fields (+ packings /
+// variants, and the stock field on an explicit owner product/menu save,
+// which the server applies as an audited adjustment) and NEVER write raw
+// stock numbers computed by the client.
 // ─────────────────────────────────────────────────────────────────────────────
+"use client";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ★ SHOP CONFIG — change the names in THIS ONE PLACE only ★
-// Talha runs the canteen + grocery store on contract at a college (names
-// NOT yet given — these are neutral placeholders, do not invent real ones).
-// The bill header, header bar and table-QR cards all read from here.
-// This system is NOT connected to any college LMS/administration software.
-// ─────────────────────────────────────────────────────────────────────────────
+import { useEffect, useState } from "react";
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from "./api";
+import seedData from "./catalog-seed.json";
+
+// ── SHOP SETTINGS (Talha, 14 Nov 2026) ──────────────────────────────────────
+// Shop names are placeholders until the real college/canteen names are
+// known; the owner edits them in Owner Dashboard → Shop Settings and every
+// screen + bill follows. Payment numbers shown at checkout live here too.
+export interface ShopSettings {
+  collegeName: string;
+  canteenName: string;
+  groceryName: string;
+  jazzcashNumber: string;
+  easypaisaNumber: string;
+  raastInfo: string;
+  wholesaleMinPieces: number; // shop default wholesale minimum (pieces) — Phase 2
+  wholesaleMinKg: number; // shop default wholesale minimum (kg) — Phase 2
+  shopOpen: boolean; // false → online customers see the closed-shop popup
+  closedContactNumber: string; // number shown in the closed-shop popup (owner-editable)
+  tableCount: number; // dining tables 1..N (owner-adjustable, 1..100)
+  // Business Setup (SALE version): kaunsi dukaan ON hai. `retailType`
+  // lib/templates.ts ke 14 retail templates mein se ek key hai, ya null
+  // jab sirf canteen ho. First-paint defaults = maujooda install ka
+  // behaviour (dono ON, grocery) — server value hydrate hote hi lagta hai.
+  hasCanteen: boolean;
+  retailType: string | null;
+  setupDone: boolean;
+}
+
+export const SHOP_DEFAULTS: ShopSettings = {
+  collegeName: "",
+  canteenName: "College Canteen",
+  groceryName: "Campus Grocery Store",
+  // DEMO placeholders — Talha sets the real numbers in Shop Settings.
+  jazzcashNumber: "03XX-XXXXXXX (demo)",
+  easypaisaNumber: "03XX-XXXXXXX (demo)",
+  raastInfo: "03XX-XXXXXXX (demo Raast ID)",
+  wholesaleMinPieces: 10,
+  wholesaleMinKg: 5,
+  shopOpen: true,
+  // DEMO placeholder — Talha sets the real number in Shop Settings.
+  closedContactNumber: "0300-0000000 (demo)",
+  tableCount: 8,
+  hasCanteen: true,
+  retailType: "grocery",
+  setupDone: true,
+};
+
+/** Retail dukaan is setup mein hai ya nahi (retailType null = sirf canteen). */
+export function hasRetail(s: ShopSettings): boolean {
+  return typeof s.retailType === "string" && s.retailType.length > 0;
+}
+// Static brand block (receipt header etc.) — unchanged from Phase 1.
 export const SHOP = {
   systemName: "POS SYSTEM",
   canteenName: "College Canteen",
@@ -23,158 +79,24 @@ export const SHOP = {
   tagline: "College Canteen & Campus Grocery Store",
 };
 
-// ── Shop Settings (editable in Owner Dashboard → Shop Settings) ─────────────
-// Talha will set the real college + shop names HIMSELF from inside the app —
-// no code editing. Defaults are the neutral placeholders above; saved values
-// live in localStorage and override them everywhere (header, bills, QR cards,
-// online page). This is the single source of truth — components use useShop().
-import { useEffect, useState } from "react";
-export interface ShopSettings {
-  collegeName: string;
-  canteenName: string;
-  groceryName: string;
-  // Online-payment receiving details (Owner → Shop Settings). For ONLINE
-  // orders the customer sends money to one of these BEFORE the order is
-  // confirmed and uploads a screenshot as proof (see OrderPaymentProof).
-  jazzcashNumber: string;
-  easypaisaNumber: string;
-  raastInfo: string; // Raast ID / bank IBAN — shown for Raast + Bank transfers
-  // Merchant QR images (Owner → Shop Settings) — Talha uploads the REAL QR
-  // picture of each account (app se mila hua QR) so customers scan-and-pay
-  // on the online payment step. Stored as downscaled PNG data URLs; "" =
-  // koi QR nahi lagaya (customer ko sirf number dikhta hai). Account titles
-  // sirf QR Stand card par chhapte hain. Raast aur Bank ka number aik hi
-  // (raastInfo) hai, lekin QR dono ke alag alag lag sakte hain.
-  qrJazzCash: string;
-  qrEasypaisa: string;
-  qrRaast: string;
-  qrBank: string;
-  titleJazzCash: string;
-  titleEasypaisa: string;
-  titleRaast: string;
-  titleBank: string;
-  // Shop-wide wholesale minimums (Owner → Shop Settings). A product may
-  // override either default with GroceryItem.wholesaleMinQty.
-  wholesaleMinPieces: number; // minimum pieces (or packs) per wholesale bill line
-  wholesaleMinKg: number; // minimum kg per loose wholesale bill line
-  // Closed-shop popup (Owner → Shop Settings): when shopOpen is false the
-  // /online page (remote + table-QR alike) stops taking orders and shows
-  // this contact number with Call / WhatsApp buttons instead. Manual
-  // toggle for now — the PC-off AUTO version comes at deployment with the
-  // always-online gateway page.
-  closedContactNumber: string;
-  shopOpen: boolean;
-  // Adjustable table count (Owner → Tables & QR): exactly this many table
-  // QR cards are printed, and the /online table flow only accepts table
-  // numbers 1..tableCount. Bounds 1..100. Changing it never touches past
-  // orders or bills (they keep the table number they were placed with).
-  tableCount: number;
-}
-export const SHOP_DEFAULTS: ShopSettings = {
-  collegeName: "",
-  canteenName: SHOP.canteenName,
-  groceryName: SHOP.groceryName,
-  // DEMO placeholders — Talha sets the real numbers in Shop Settings.
-  jazzcashNumber: "03XX-XXXXXXX (demo)",
-  easypaisaNumber: "03XX-XXXXXXX (demo)",
-  raastInfo: "03XX-XXXXXXX (demo Raast ID)",
-  // Koi merchant QR default nahi — farzi QR kabhi asal keh kar nahi dikhana.
-  // Talha apne asal account QR Settings se upload karega.
-  qrJazzCash: "",
-  qrEasypaisa: "",
-  qrRaast: "",
-  qrBank: "",
-  titleJazzCash: "",
-  titleEasypaisa: "",
-  titleRaast: "",
-  titleBank: "",
-  wholesaleMinPieces: 10,
-  wholesaleMinKg: 5,
-  // DEMO placeholder — Talha sets his real number in Shop Settings.
-  closedContactNumber: "0300-0000000 (demo)",
-  shopOpen: true,
-  tableCount: 8,
-};
-const SHOP_KEY = "canteen-pos-shop-v1";
-export function loadShop(): ShopSettings {
-  try {
-    const raw = localStorage.getItem(SHOP_KEY);
-    if (raw) return { ...SHOP_DEFAULTS, ...(JSON.parse(raw) as Partial<ShopSettings>) };
-  } catch { /* ignore */ }
-  return { ...SHOP_DEFAULTS };
-}
-export function saveShop(s: ShopSettings) {
-  try {
-    localStorage.setItem(SHOP_KEY, JSON.stringify(s));
-    window.dispatchEvent(new Event("shop-updated"));
-  } catch { /* ignore */ }
-}
-export function useShop(): ShopSettings {
-  const [shop, setShop] = useState<ShopSettings>(SHOP_DEFAULTS);
-  useEffect(() => {
-    const read = () => setShop(loadShop());
-    read();
-    window.addEventListener("shop-updated", read);
-    window.addEventListener("storage", read);
-    return () => {
-      window.removeEventListener("shop-updated", read);
-      window.removeEventListener("storage", read);
-    };
-  }, []);
-  return shop;
-}
-
-// ── Customer accounts — REMOTE online orders ONLY (Talha, 14 Nov 2026) ──────
-// Walk-in and table-QR customers NEVER create an account. A customer ordering
-// REMOTELY (hostel room / office / anywhere online) MUST have an account —
-// fake-order protection. The account is made with the MOBILE NUMBER as the
-// login ID; the student/staff ID inside the account stays OPTIONAL (needed
-// only for Udhaar). PROTOTYPE HONESTY: passwords are stored locally in plain
-// form for this demo only — Phase 2 moves accounts to the PostgreSQL backend
-// with proper password hashing. Do not use a real personal password in the demo.
+// ── CUSTOMER ACCOUNTS (remote online orders) ────────────────────────────────
+// Remote orders require an account: mobile number = login ID (any Pakistani
+// mobile format is accepted as typed), password ≥ 6 characters, name +
+// place label (hostel room / department / office…). Accounts are SERVER
+// records now (hashed passwords, opaque session cookie); walk-in and table
+// customers still never need one.
 export interface CustomerAccount {
   name: string;
   mobile: string; // unique login ID
-  password: string; // DEMO ONLY — hashed server-side in Phase 2
+  password: string; // never returned by the server after login ("" in session DTOs)
+  email?: string; // LAZMI (15 Nov 2026) — confirmation code isi par jata hai
+  emailVerified?: boolean; // false → account inactive hai: order nahi ho sakta (server bhi block karta hai)
+  mobileVerified?: boolean; // optional mobile confirmation ka flag (Skip allowed tha)
   placeType: "Hostel Room" | "Office" | "Other";
   placeDetail: string; // e.g. "Room 12", "Accounts Office"
+  placeLabel?: string; // composed "Hostel Room — Room 12" (server DTO convenience)
   studentId?: string; // OPTIONAL — required only for Udhaar
-  createdAt: number;
-}
-const ACCOUNTS_KEY = "canteen-pos-accounts-v1";
-const SESSION_KEY = "canteen-pos-session-v1";
-export function loadAccounts(): CustomerAccount[] {
-  try {
-    const raw = localStorage.getItem(ACCOUNTS_KEY);
-    if (raw) return JSON.parse(raw) as CustomerAccount[];
-  } catch { /* ignore */ }
-  return [];
-}
-export function registerAccount(a: Omit<CustomerAccount, "createdAt">): "ok" | "exists" {
-  const all = loadAccounts();
-  if (all.some((x) => x.mobile === a.mobile)) return "exists";
-  all.push({ ...a, createdAt: Date.now() });
-  try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(all)); } catch { /* ignore */ }
-  setSession(a.mobile);
-  return "ok";
-}
-export function loginAccount(mobile: string, password: string): CustomerAccount | null {
-  const acc = loadAccounts().find((x) => x.mobile === mobile && x.password === password);
-  if (acc) setSession(mobile);
-  return acc ?? null;
-}
-export function setSession(mobile: string | null) {
-  try {
-    if (mobile) localStorage.setItem(SESSION_KEY, mobile);
-    else localStorage.removeItem(SESSION_KEY);
-  } catch { /* ignore */ }
-}
-export function getSessionAccount(): CustomerAccount | null {
-  try {
-    const m = localStorage.getItem(SESSION_KEY);
-    if (!m) return null;
-    return loadAccounts().find((x) => x.mobile === m) ?? null;
-  } catch { return null; }
+  createdAt: number; // epoch ms
 }
 
 export type Category = "Chai" | "Cold Drink" | "Fast Food" | "Nashta" | "Snacks";
@@ -182,7 +104,6 @@ export type Category = "Chai" | "Cold Drink" | "Fast Food" | "Nashta" | "Snacks"
 // Business modes: ONE system, one billing/payment/stock/report engine,
 // shared orders + owner dashboard. Modes have SEPARATE cashier screens
 // (top tabs) — a mode never leaks into another mode's screen.
-// Both "canteen" and "grocery" ship in this build (Talha, 14 Nov 2026).
 export type BusinessMode = "canteen" | "grocery";
 export const BUSINESS_MODE: BusinessMode = "canteen";
 
@@ -190,6 +111,7 @@ export interface MenuItem {
   id: string;
   name: string;
   price: number; // Rs
+  cost?: number; // Lagat (Rs) — owner-entered; sirf P&L report ke liye, customer ko kabhi nahi dikhta. undefined = lagat nahi bhari (us item ki bikri munafa mein nahi ginti)
   category: Category;
   emoji: string;
   image?: string; // optional real photo (path/URL) — online 3D picture cards render it in the same frame when set; emoji is the offline-safe fallback art
@@ -201,50 +123,42 @@ export interface MenuItem {
 
 export type PaymentMethod = "Cash" | "JazzCash" | "Easypaisa" | "Udhaar" | "Online" | "Counter";
 
-// ── Online payment proof (Talha, 14 Nov 2026) ───────────────────────────────
+// ── Online payment proof ────────────────────────────────────────────────────
 // Rule for ONLINE orders: "payment pehle, order confirm baad mein". The
 // customer pays the shop's JazzCash / Easypaisa / Raast / Bank number first
 // and uploads a screenshot of the payment as PROOF. The order is created
-// with paymentStatus "proof_pending" and an order token of 0 — it does NOT
-// reach the Kitchen / packing queue. Staff verify the proof in the Owner
-// Dashboard; only on Confirm is the token assigned and the order released
-// to fulfilment. Named `paymentProof` because `payment` is already the
-// Order's PaymentMethod field. PROTOTYPE: the proof image is a compressed
-// data URL stored with the order in localStorage — Phase 2 moves proofs to
-// server-side file storage (automatic gateway verification is a later step).
+// with paymentStatus "proof_pending" and NO token — it does NOT reach the
+// Kitchen / packing queue. Staff verify the proof in the Owner Dashboard;
+// only on Confirm is the token assigned and the order released.
 export type ProofPaymentMethod = "JazzCash" | "Easypaisa" | "Raast" | "Bank";
-// Merchant receiving details per proof method — ONE mapping used by the
-// online payment step AND the Owner QR Stand, so they can never drift.
-// Raast aur Bank dono ka number raastInfo hi hai (aik hi box Settings mein).
-export function merchantNumber(shop: ShopSettings, m: ProofPaymentMethod): string {
-  return m === "JazzCash" ? shop.jazzcashNumber : m === "Easypaisa" ? shop.easypaisaNumber : shop.raastInfo;
-}
-export function merchantQr(shop: ShopSettings, m: ProofPaymentMethod): string {
-  return m === "JazzCash" ? shop.qrJazzCash : m === "Easypaisa" ? shop.qrEasypaisa : m === "Raast" ? shop.qrRaast : shop.qrBank;
-}
-export function merchantTitle(shop: ShopSettings, m: ProofPaymentMethod): string {
-  return m === "JazzCash" ? shop.titleJazzCash : m === "Easypaisa" ? shop.titleEasypaisa : m === "Raast" ? shop.titleRaast : shop.titleBank;
-}
-export const QR_FIELD_OF: Record<ProofPaymentMethod, "qrJazzCash" | "qrEasypaisa" | "qrRaast" | "qrBank"> = {
-  JazzCash: "qrJazzCash", Easypaisa: "qrEasypaisa", Raast: "qrRaast", Bank: "qrBank",
-};
-export const TITLE_FIELD_OF: Record<ProofPaymentMethod, "titleJazzCash" | "titleEasypaisa" | "titleRaast" | "titleBank"> = {
-  JazzCash: "titleJazzCash", Easypaisa: "titleEasypaisa", Raast: "titleRaast", Bank: "titleBank",
-};
 export interface OrderPaymentProof {
   method: ProofPaymentMethod;
   txnId?: string; // transaction ID the customer typed (optional)
   amount: number; // Rs the customer says they paid (= order total at placement)
-  proofImage: string; // compressed screenshot — data URL (max 1200px, JPEG)
+  proofImage: string; // compressed screenshot — data URL (Phase 2 keeps the data URL inline on the order)
   uploadedAt: number; // epoch ms
 }
 export type OrderPaymentStatus = "proof_pending" | "confirmed" | "rejected";
+
+/** Ek deal line ke andar ki cheezein — order-time snapshot (naam + qty). */
+export interface OrderLineComponent {
+  itemId: string; // menu item id
+  name: string;
+  qty: number; // per ONE deal
+}
 
 export interface OrderLine {
   itemId: string;
   name: string;
   price: number;
   qty: number;
+  // Deal lines par: deal ke andar ki asal cheezein (server order-time par
+  // snapshot freeze karta hai). Kitchen har component alag line mein
+  // dikhata hai; receipt deal ke neeche sub-rows print karta hai.
+  components?: OrderLineComponent[];
+  // Serial-tracked product (mobile shop) ki bikri par har unit ka
+  // IMEI/serial — receipt par print hota hai.
+  serials?: string[];
 }
 
 export interface Order {
@@ -252,7 +166,7 @@ export interface Order {
   billNo?: string; // sequential unique bill number, e.g. "B-0007" (professional billing)
   mode?: BusinessMode; // "canteen" (default for old records) | "grocery"
   priceType?: "retail" | "wholesale"; // grocery orders
-  token: number; // sequential, per day
+  token: number; // sequential, per day (0 while a proof is pending)
   lines: OrderLine[];
   subtotal?: number; // before discount (falls back to total on old records)
   discount?: number; // Rs amount deducted
@@ -275,6 +189,8 @@ export interface Order {
   placeLabel?: string; // remote account orders: e.g. "Hostel Room 12", "Office — Accounts"
   status: "pending" | "preparing" | "ready";
   createdAt: string; // ISO
+  serverId?: string; // Phase 2: the server's uuid (cache keeps the client id for screen continuity)
+  clientRequestId?: string; // Phase 2: idempotency key the order was placed with
 }
 
 // Category colours — cashier recognises the category by colour, not by reading.
@@ -288,34 +204,28 @@ export const CATEGORY_STYLE: Record<Category, { bg: string; ring: string; chip: 
 
 export const CATEGORIES: Category[] = ["Chai", "Cold Drink", "Fast Food", "Nashta", "Snacks"];
 
-// ── SAMPLE menu ──────────────────────────────────────────────────────────────
-// Talha has not yet given the real menu. These are typical Pakistani canteen
-// items with realistic Rs prices, for testing the prototype only.
+// ── SAMPLE menu (first-paint fallback before the API answers; the server
+// seed carries the same items) ──
 export const SAMPLE_MENU: MenuItem[] = [
-  // Chai (brown)
   { id: "chai-1", image: "/images/canteen/chai-1.jpg", name: "Doodh Patti Chai", price: 80, category: "Chai", emoji: "☕" , stock: 60 },
   { id: "chai-2", image: "/images/canteen/chai-2.jpg", name: "Elaichi Chai", price: 100, category: "Chai", emoji: "🫖" , stock: 45 },
   { id: "chai-3", image: "/images/canteen/chai-3.jpg", name: "Green Tea / Qehwa", price: 60, category: "Chai", emoji: "🍵" , stock: 40 },
   { id: "chai-4", image: "/images/canteen/chai-4.jpg", name: "Coffee", price: 150, category: "Chai", emoji: "☕" , stock: 4 },
-  // Cold Drink (blue)
   { id: "cold-1", image: "/images/canteen/cold-1.jpg", name: "Soft Drink (Can)", price: 80, category: "Cold Drink", emoji: "🥤" , stock: 96 },
   { id: "cold-2", image: "/images/canteen/cold-2.jpg", name: "Soft Drink (1.5L Bottle)", price: 180, category: "Cold Drink", emoji: "🍾" , stock: 24 },
   { id: "cold-3", image: "/images/canteen/cold-3.jpg", name: "Mineral Water (Small)", price: 60, category: "Cold Drink", emoji: "💧" , stock: 120 },
   { id: "cold-4", image: "/images/canteen/cold-4.jpg", name: "Fresh Lime / Lassi", price: 120, category: "Cold Drink", emoji: "🥛" , stock: 30 },
   { id: "cold-5", image: "/images/canteen/cold-5.jpg", name: "Juice (Pack)", price: 70, category: "Cold Drink", emoji: "🧃" , stock: 72 },
-  // Fast Food (red/orange)
   { id: "fast-1", image: "/images/canteen/fast-1.jpg", name: "Chicken Burger", price: 350, category: "Fast Food", emoji: "🍔" , stock: 35 },
   { id: "fast-2", image: "/images/canteen/fast-2.jpg", name: "Zinger Burger", price: 450, category: "Fast Food", emoji: "🍔" , stock: 3 },
   { id: "fast-3", image: "/images/canteen/fast-3.jpg", name: "Chicken Shawarma", price: 250, category: "Fast Food", emoji: "🌯" , stock: 28 },
   { id: "fast-4", image: "/images/canteen/fast-4.jpg", name: "Fries (Regular)", price: 150, category: "Fast Food", emoji: "🍟" , stock: 50 },
   { id: "fast-5", image: "/images/canteen/fast-5.jpg", name: "Chicken Biryani", price: 300, category: "Fast Food", emoji: "🍛" , stock: 26 },
   { id: "fast-6", image: "/images/canteen/fast-6.jpg", name: "Daal Chawal", price: 220, category: "Fast Food", emoji: "🍚" , stock: 32 },
-  // Nashta (green)
   { id: "nash-1", image: "/images/canteen/nash-1.jpg", name: "Halwa Puri Set", price: 250, category: "Nashta", emoji: "🫓" , stock: 22 },
   { id: "nash-2", image: "/images/canteen/nash-2.jpg", name: "Anda Paratha", price: 180, category: "Nashta", emoji: "🍳" , stock: 30 },
   { id: "nash-3", image: "/images/canteen/nash-3.jpg", name: "Plain Paratha", price: 80, category: "Nashta", emoji: "🫓" , stock: 45 },
   { id: "nash-4", image: "/images/canteen/nash-4.jpg", name: "Omelette + Toast", price: 200, category: "Nashta", emoji: "🥚" , stock: 18 },
-  // Snacks (purple)
   { id: "snk-1", image: "/images/canteen/snk-1.jpg", name: "Samosa (1 pc)", price: 50, category: "Snacks", emoji: "🔺" , stock: 80 },
   { id: "snk-2", image: "/images/canteen/snk-2.jpg", name: "Pakora (Plate)", price: 150, category: "Snacks", emoji: "🧆" , stock: 40 },
   { id: "snk-3", image: "/images/canteen/snk-3.jpg", name: "Roll Paratha", price: 200, category: "Snacks", emoji: "🌮" , stock: 25 },
@@ -324,45 +234,13 @@ export const SAMPLE_MENU: MenuItem[] = [
   { id: "snk-6", image: "/images/canteen/snk-6.jpg", name: "Chocolate", price: 100, category: "Snacks", emoji: "🍫" , stock: 55 },
 ];
 
-const MENU_KEY = "canteen-pos-menu-v1";
-const ORDERS_KEY = "canteen-pos-orders-v1";
-
+// ── Pure order helpers (unchanged Phase 1 semantics) ────────────────────────
 function todayKey(d = new Date()): string {
   return d.toISOString().slice(0, 10);
 }
-
-export function loadMenu(): MenuItem[] {
-  if (typeof window === "undefined") return SAMPLE_MENU;
-  try {
-    const raw = window.localStorage.getItem(MENU_KEY);
-    const parsed = raw ? (JSON.parse(raw) as MenuItem[]) : null;
-    const list = Array.isArray(parsed) && parsed.length ? parsed : SAMPLE_MENU;
-    // Normalise: older saved menus have no stock fields — give them sample stock
-    // so the Stock screen and sale decrements always have numbers to work with.
-    return list.map((m) => ({ ...m, stock: typeof m.stock === "number" ? m.stock : 50, lowStock: typeof m.lowStock === "number" ? m.lowStock : 5 }));
-  } catch { return SAMPLE_MENU; }
+export function isToday(o: Order): boolean {
+  return o.createdAt.slice(0, 10) === todayKey();
 }
-
-export function saveMenu(menu: MenuItem[]): void {
-  try { window.localStorage.setItem(MENU_KEY, JSON.stringify(menu)); } catch {}
-}
-
-export function loadOrders(): Order[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(ORDERS_KEY);
-    return raw ? (JSON.parse(raw) as Order[]) : [];
-  } catch { return []; }
-}
-
-export function saveOrders(orders: Order[]): void {
-  try { window.localStorage.setItem(ORDERS_KEY, JSON.stringify(orders)); } catch {}
-  // notify other tabs / same-tab listeners (kitchen screen)
-  try { window.dispatchEvent(new Event("canteen-orders-changed")); } catch {}
-  // cross-tab near-instant signal for the staff order-alert engine
-  try { const bc = new BroadcastChannel("canteen-pos-orders"); bc.postMessage("changed"); bc.close(); } catch {}
-}
-
 export function nextBillNo(orders: Order[]): string {
   let max = 0;
   for (const o of orders) {
@@ -371,98 +249,93 @@ export function nextBillNo(orders: Order[]): string {
   }
   return `B-${String(Math.max(max, orders.length) + 1).padStart(4, "0")}`;
 }
-
 export function billNoOf(o: Order): string {
-  return o.billNo || `B-${String(o.token).padStart(4, "0")}`;
+  if (o.billNo) return o.billNo;
+  const m = o.id.match(/(\d+)$/);
+  return `B-${String(m ? parseInt(m[1], 10) : 0).padStart(4, "0")}`;
 }
-
-export function nextToken(orders: Order[]): number {
-  const t = todayKey();
-  const todays = orders.filter((o) => o.createdAt.slice(0, 10) === t);
-  return todays.length ? Math.max(...todays.map((o) => o.token)) + 1 : 1;
+export function nextToken(orders: Order[], mode?: BusinessMode): number {
+  // Per-shop tokens (Talha, 15 Nov 2026): canteen aur grocery ki apni
+  // apni daily counting — mode diya jaye to sirf usi dukaan ke aaj ke
+  // tokens dekhe jate hain. (Phase 2 mein asal token server deta hai; ye
+  // sirf local estimate hai.)
+  const todays = orders
+    .filter((o) => isToday(o) && (mode === undefined || (o.mode ?? "canteen") === mode))
+    .map((o) => o.token || 0);
+  return (todays.length ? Math.max(...todays) : 0) + 1;
 }
-
-export function isToday(o: Order): boolean {
-  return o.createdAt.slice(0, 10) === todayKey();
-}
-
 /**
  * Fulfilment gate for the payment-proof flow: an order may reach the
  * Kitchen / grocery packing queue only when its payment is cleared —
  * paymentStatus undefined (all normal orders) or "confirmed".
- * "proof_pending" and "rejected" online orders stay OUT of fulfilment.
  */
 export function isPaymentCleared(o: Order): boolean {
   return o.paymentStatus === undefined || o.paymentStatus === "confirmed";
 }
 
-/**
- * Move an order's stock by its lines: dir -1 deducts, +1 restores.
- * Grocery stock is per PRODUCT (packing lines sum onto their product);
- * canteen stock is per menu item. Used when a proof-flow order is
- * REJECTED (restore — placement already deducted) and when the customer
- * re-uploads a proof after a rejection (deduct again). Placement itself
- * deducts inline in the online checkout, exactly like counter sales.
- */
-export function adjustStockForOrder(order: Order, dir: 1 | -1): void {
-  if (typeof window === "undefined") return;
-  const per = new Map<string, number>();
-  order.lines.forEach((l) => per.set(l.itemId, (per.get(l.itemId) ?? 0) + l.qty));
-  if (!per.size) return;
-  if (order.mode === "grocery") {
-    saveGrocery(loadGrocery().map((it) => {
-      const q = per.get(it.id);
-      return q ? { ...it, stock: Math.max(0, Math.round((it.stock + dir * q) * 10) / 10) } : it;
-    }));
-  } else {
-    saveMenu(loadMenu().map((m) => {
-      const q = per.get(m.id);
-      return q ? { ...m, stock: Math.max(0, (m.stock ?? 0) + dir * q) } : m;
-    }));
-  }
-}
-
 // ── GROCERY MODE — 3-LEVEL STRUCTURE: Main Head → Sub Head → Product ────────
-// (Talha's approved structure, 14 Nov 2026 — replaces the old 2-level
-// "sections" model.) Every product lives in exactly ONE sub-head; every
-// sub-head lives in ONE main head. The catalogue — 20 heads, 39 sub-heads,
-// 390 products — is Talha's own list, kept as data in lib/catalog-seed.json
-// (plain-text source: categories-source.txt) and flattened into the seeds
-// below. Prices / stock in the seed are SAMPLE values: the owner sets the
-// real ones in Owner Dashboard → Grocery Products. Same billing / payment /
-// stock / report engine as the canteen — only the product organisation
-// changed. The heads and sub-heads are state like staff/products: the owner
-// can add / rename them in the Owner Dashboard, and they persist in
-// localStorage. The Grocery POS and the online grocery view filter their
-// tiles by head chips (row 1) and sub-head chips (row 2); search always
-// looks across ALL heads.
-
+// Every product lives in exactly ONE sub-head; every sub-head in ONE main
+// head. Brand is part of the product identity (Sunsilk ≠ Pantene); flavours
+// / types are VARIANTS under the master; sizes are PACKINGS of a variant.
+// A sold variant+packing bills as `Name (Variant · Packing)`.
 export interface PackingOption {
-  label: string; // a SIZE of the product: "500g", "1kg", "2.25L"…
+  label: string; // a SIZE of the variant ("500g", "1kg") or a sealed-pack count ("Snack Pack", "Full Dabba")
   retailPrice: number;
   wholesalePrice: number;
+  barcode?: string; // Phase 2: each packing carries its OWN EAN barcode
+  containsQty?: number; // Phase 2: sealed packs inside this packing (smallest pack = 1, Full Dabba = N) — stock counts packs for these
+  wholesaleMinQty?: number; // Phase 2: optional per-packing wholesale minimum (packs); undefined = product/shop default
+}
+
+export interface GroceryVariant {
+  name: string; // flavour / type: "Black", "Pink", "Anti-Dandruff", "Mango" — "Standard" = no flavours
+  packings: PackingOption[];
 }
 
 export interface GroceryItem {
   id: string;
   name: string;
+  brand?: string | null; // Phase 2: company/brand — part of the product identity, searchable
   headId: string; // main head this product lives under (GroceryHead.id)
   subId: string; // sub-head id — namespaced `${headId}:${subSlug}`, unique across heads
   sku: string; // shop SKU / PLU code (typed or scanned) — loose per-kg items are sold by this
   barcode?: string; // EAN barcode on packed/branded products — the counter scanner reads THIS first, then SKU
   retailPrice: number; // Rs — per piece, or per kg when unit === "kg"
   wholesalePrice: number; // Rs
-  wholesaleMinQty?: number; // optional per-product wholesale minimum, in this product's unit (packs for packing lines); undefined = shop default
-  stock: number; // pieces, or kg when unit === "kg"
+  wholesaleMinQty?: number | null; // optional per-product wholesale minimum, in this product's unit (base packs for packing lines); null/undefined = shop default
+  stock: number; // base units: pieces (or packs for count products), or kg when unit === "kg"
   unit: "piece" | "kg";
   lowStock?: number; // low-stock threshold (default: 5 pcs / 2 kg) — highlighted on the Stock screen
+  // Owner-controlled: show this product on the Grocery Board's "🎉 Aaj ki
+  // Offers" slide (/grocery-board). Optional — records saved before this
+  // field existed simply have it missing, which everywhere means false.
+  boardOffer?: boolean;
+  // REAL offer price (Rs) for the boardOffer item — Talha's rule (15 Nov
+  // 2026): "Biscuits pehle 200 ke thay, ab offer mein 180 ke kar rahe
+  // hain." ACTIVE only when boardOffer is on AND 0 < offerPrice <
+  // retailPrice (see offerActive). It replaces the item's REPRESENTATIVE
+  // retail price (this base retailPrice field — which is also the price of
+  // exactly one packing, see offerPackingOf) on the Grocery Board offers
+  // slide, in Grocery POS retail billing and in the /online grocery
+  // catalogue/orders (the server re-charges it — client prices are never
+  // trusted). Other packings keep their own prices; wholesale is NEVER
+  // touched. Optional — missing/0 means "no offer price".
+  offerPrice?: number;
+  // Mobile shops ka khaas flag: aise product ki bikri par har unit ka
+  // IMEI/serial lazmi likha jata hai (retail POS pay modal) aur bill par
+  // print hota hai. Owner product form mein checkbox sirf tab dikhta hai
+  // jab retailType "mobile" ho.
+  trackSerial?: boolean;
   emoji: string;
   image?: string; // optional real photo — same 3D picture-card frame as the canteen items when set
-  // Size variants of THIS product (Talha's rule: a size is a PACKING of one
-  // product, never a separate item). A sold packing bills as
-  // `Name (Label)` at the packing's own price. Stock is tracked per
-  // PRODUCT, not per packing (prototype simplification).
+  // Sizes of the product's Standard variant (Talha's rule: a size is a
+  // PACKING of one product, never a separate item). A sold packing bills as
+  // `Name (Label)` at the packing's own price.
   packings?: PackingOption[];
+  // Phase 2: ALL variants incl. "Standard" (whose packings mirror
+  // `packings`). Masters with real flavours expose them here; the POS asks
+  // variant first, then packing.
+  variants?: GroceryVariant[];
 }
 
 export interface GroceryHead {
@@ -480,8 +353,6 @@ export interface GrocerySubHead {
   image?: string; // optional picture (URL/path) — see the tile fallback rule on GroceryHead
 }
 
-import catalogSeed from "./catalog-seed.json";
-
 interface CatalogProduct {
   id: string; name: string; sku: string; barcode?: string;
   retailPrice: number; wholesalePrice: number; stock: number;
@@ -489,7 +360,7 @@ interface CatalogProduct {
 }
 interface CatalogSub { id: string; name: string; image?: string; products: CatalogProduct[]; }
 interface CatalogHead { id: string; name: string; emoji: string; image?: string; subs: CatalogSub[]; }
-const CATALOG_HEADS = (catalogSeed as unknown as { heads: CatalogHead[] }).heads;
+const CATALOG_HEADS = (seedData as unknown as { heads: CatalogHead[] }).heads;
 
 // Soft pastel tints — one per seeded head, same family as the old section tints.
 const HEAD_TINTS = [
@@ -501,7 +372,7 @@ const HEAD_TINTS = [
 
 export const GROCERY_HEADS_SEED: GroceryHead[] = CATALOG_HEADS.map((h, i) => {
   const head: GroceryHead = { id: h.id, name: h.name, emoji: h.emoji, tint: HEAD_TINTS[i % HEAD_TINTS.length] };
-  if (h.image) head.image = h.image; // empty for now — picture manifest is integrated separately
+  if (h.image) head.image = h.image;
   return head;
 });
 
@@ -512,6 +383,11 @@ export const GROCERY_SUBHEADS_SEED: GrocerySubHead[] = CATALOG_HEADS.flatMap((h)
     return sub;
   })
 );
+
+const BOARD_OFFER_SEED_IDS = new Set(["p-14101", "p-08106", "p-10101", "p-12101"]); // Surf Excel · Peek Freans Rio · Coca-Cola · Cadbury Dairy Milk
+// One seeded item also carries a REAL offer price so the dual-rate board
+// display is visible on a fresh seed: Peek Freans Rio retail Rs 80 → 70.
+const OFFER_PRICE_SEED: Record<string, number> = { "p-08106": 70 };
 
 export const SAMPLE_GROCERY: GroceryItem[] = CATALOG_HEADS.flatMap((h) =>
   h.subs.flatMap((s) =>
@@ -524,16 +400,59 @@ export const SAMPLE_GROCERY: GroceryItem[] = CATALOG_HEADS.flatMap((h) =>
       if (p.barcode) item.barcode = p.barcode;
       if (p.image) item.image = p.image;
       if (p.packings && p.packings.length) item.packings = p.packings.map((k) => ({ ...k }));
+      if (BOARD_OFFER_SEED_IDS.has(p.id)) item.boardOffer = true;
+      if (OFFER_PRICE_SEED[p.id]) item.offerPrice = OFFER_PRICE_SEED[p.id];
       return item;
     })
   )
 );
 
 /**
- * Tile picture fallback (Talha): the product's own image wins; if it has
- * none, its SUB-HEAD's image; then its HEAD's image; otherwise undefined
- * and the tile renders the emoji art as before. Empty strings count as
- * "no image".
+ * Offer pricing (Talha, 15 Nov 2026 — mirrors the server rule in
+ * server/services/orders.ts). An offer price is ACTIVE only when the
+ * product is flagged for the board AND has a real offer price below its
+ * representative retail price. The offer replaces ONLY that representative
+ * price: the item's base `retailPrice`, which by catalogue construction is
+ * also the retail price of exactly ONE packing (the product's "main" size
+ * — e.g. Coca-Cola base 200 = its 1.5L packing). Every other packing keeps
+ * its own price; wholesale is never affected.
+ */
+export function offerActive(it: GroceryItem): boolean {
+  return it.boardOffer === true
+    && typeof it.offerPrice === "number" && it.offerPrice > 0
+    && it.offerPrice < it.retailPrice;
+}
+
+/** The packing whose retail price IS the item's representative price. */
+export function offerPackingOf(it: GroceryItem): PackingOption | undefined {
+  if (!offerActive(it) || !it.packings) return undefined;
+  return it.packings.find((p) => p.retailPrice === it.retailPrice);
+}
+
+/** Effective BASE retail price — the offer price when an offer is active. */
+export function effectiveRetail(it: GroceryItem): number {
+  return offerActive(it) ? (it.offerPrice as number) : it.retailPrice;
+}
+
+/** Effective retail price of ONE packing — only the representative
+ *  packing (offerPackingOf) follows the offer; all others keep theirs. */
+export function effectivePackingRetail(it: GroceryItem, p: PackingOption): number {
+  const op = offerPackingOf(it);
+  return op && op.label === p.label ? (it.offerPrice as number) : p.retailPrice;
+}
+
+/** True when selling this exact line (base product or one packing) at
+ *  retail charges the offer price — used for the "(Offer)" receipt tag. */
+export function lineIsOffer(it: GroceryItem, packing?: PackingOption): boolean {
+  if (!offerActive(it)) return false;
+  if (!packing) return true;
+  const op = offerPackingOf(it);
+  return !!op && op.label === packing.label;
+}
+
+/**
+ * Picture fallback: the product's own picture → its sub-head's → its head's
+ * → undefined (the tile renders the emoji art as before).
  */
 export function groceryImage(item: GroceryItem, heads: GroceryHead[], subs: GrocerySubHead[]): string | undefined {
   return item.image
@@ -542,81 +461,11 @@ export function groceryImage(item: GroceryItem, heads: GroceryHead[], subs: Groc
     || undefined;
 }
 
-const GROCERY_HEADS_KEY = "canteen-pos-heads-v1";
-const GROCERY_SUBHEADS_KEY = "canteen-pos-subheads-v1";
-// v2: the old 23-item demo catalogue (canteen-pos-grocery-v1) is replaced
-// wholesale by Talha's 390-product catalogue — the v1 key is simply no
-// longer read. Nothing real was ever entered into the demo data.
-const GROCERY_KEY = "canteen-pos-grocery-v3"; // v3: real-market catalogue (622 entries, brands/variants) — fresh seed for every browser
-
-export function loadGroceryHeads(): GroceryHead[] {
-  const seed = () => GROCERY_HEADS_SEED.map((h) => ({ ...h }));
-  if (typeof window === "undefined") return seed();
-  try {
-    const raw = window.localStorage.getItem(GROCERY_HEADS_KEY);
-    if (!raw) return seed();
-    const parsed = JSON.parse(raw) as GroceryHead[];
-    // An empty/invalid list would leave products with nowhere to live —
-    // fall back to the seeds rather than break the grocery screens.
-    if (!Array.isArray(parsed) || parsed.length === 0) return seed();
-    return parsed
-      .filter((h) => h && typeof h.id === "string" && typeof h.name === "string")
-      .map((h) => ({
-        id: h.id,
-        name: h.name,
-        emoji: typeof h.emoji === "string" && h.emoji ? h.emoji : "🛒",
-        tint: typeof h.tint === "string" && h.tint ? h.tint : "#FFF7ED",
-      }));
-  } catch { return seed(); }
-}
-
-export function saveGroceryHeads(list: GroceryHead[]): void {
-  try { window.localStorage.setItem(GROCERY_HEADS_KEY, JSON.stringify(list)); } catch {}
-}
-
-export function loadGrocerySubHeads(): GrocerySubHead[] {
-  const seed = () => GROCERY_SUBHEADS_SEED.map((s) => ({ ...s }));
-  if (typeof window === "undefined") return seed();
-  try {
-    const raw = window.localStorage.getItem(GROCERY_SUBHEADS_KEY);
-    if (!raw) return seed();
-    const parsed = JSON.parse(raw) as GrocerySubHead[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return seed();
-    return parsed
-      .filter((s) => s && typeof s.id === "string" && typeof s.headId === "string" && typeof s.name === "string")
-      .map((s) => ({ id: s.id, headId: s.headId, name: s.name }));
-  } catch { return seed(); }
-}
-
-export function saveGrocerySubHeads(list: GrocerySubHead[]): void {
-  try { window.localStorage.setItem(GROCERY_SUBHEADS_KEY, JSON.stringify(list)); } catch {}
-}
-
-export function loadGrocery(): GroceryItem[] {
-  const seed = () => SAMPLE_GROCERY.map((g) => ({ ...g, packings: g.packings?.map((k) => ({ ...k })) }));
-  if (typeof window === "undefined") return seed();
-  try {
-    const raw = window.localStorage.getItem(GROCERY_KEY);
-    if (!raw) return seed();
-    const parsed = JSON.parse(raw) as GroceryItem[];
-    if (!Array.isArray(parsed) || !parsed.length) return seed();
-    return parsed;
-  } catch { return seed(); }
-}
-
-export function saveGrocery(items: GroceryItem[]): void {
-  try { window.localStorage.setItem(GROCERY_KEY, JSON.stringify(items)); } catch {}
-}
-
-// ── STAFF & ROLE-BASED TAB ACCESS (Talha, 14 Nov 2026) ──────────────────────
-// Rule: "Jis banday ko jis chez ka access ho usy just uska tab show ho" —
-// every staff member sees ONLY the tab(s) the OWNER ticked for them. The
-// owner assigns roles from Owner Dashboard → Staff Access. One person may
-// hold MULTIPLE tabs. The owner account can never be deleted and can never
-// lose the Owner tab (enforced in loadStaff + the Staff Access UI).
-// PROTOTYPE HONESTY: PINs are demo-grade and stored locally in plain form,
-// exactly like the customer accounts — Phase 2 moves staff to the
-// PostgreSQL backend with per-user accounts + hashed passwords.
+// ── STAFF & ROLE-BASED TAB ACCESS ───────────────────────────────────────────
+// Every staff member sees ONLY the tab(s) the OWNER granted. Phase 2: the
+// grants live on the server and are enforced there too — a role receives
+// 403 from endpoints outside its tabs. Credentials are hashed server-side;
+// the list endpoint never returns PIN material (pin is "" in DTOs).
 export type TabKey = "canteen" | "grocery" | "kitchen" | "stock" | "owner" | "online";
 export const TABS_META: { key: TabKey; href: string; label: string; short: string; emoji: string }[] = [
   { key: "canteen", href: "/", label: "🍽️ Canteen POS", short: "Canteen", emoji: "🍽️" },
@@ -641,11 +490,12 @@ export function firstTabHref(m: StaffMember): string {
 export interface StaffMember {
   id: string;
   name: string;
-  pin: string; // 4-digit — DEMO ONLY, plain local storage (hashed server-side in Phase 2)
-  tabs: TabKey[]; // the ONLY tabs this person can see/open
-  isOwner?: boolean; // exactly one owner — protected: cannot be removed, cannot lose the Owner tab
+  pin: string; // always "" from the server — credentials are never shipped to clients
+  tabs: TabKey[]; // the ONLY tabs this person can see/open (server-enforced)
+  isOwner?: boolean; // exactly one owner — protected server-side too
 }
 
+export const OWNER_PIN = "1234";
 export const STAFF_SEED: StaffMember[] = [
   { id: "staff-owner", name: "Owner", pin: "1234", tabs: ["canteen", "grocery", "kitchen", "stock", "owner", "online"], isOwner: true },
   { id: "staff-canteen", name: "Canteen Wala", pin: "1111", tabs: ["canteen"] },
@@ -654,62 +504,6 @@ export const STAFF_SEED: StaffMember[] = [
   { id: "staff-stock", name: "Stock Wala", pin: "4444", tabs: ["stock"] },
 ];
 
-const STAFF_KEY = "canteen-pos-staff-v1";
-const STAFF_SESSION_KEY = "canteen-pos-staff-session-v1";
-
-export function loadStaff(): StaffMember[] {
-  let list: StaffMember[] = [];
-  try {
-    const raw = localStorage.getItem(STAFF_KEY);
-    if (raw) list = JSON.parse(raw) as StaffMember[];
-  } catch { /* ignore */ }
-  if (!Array.isArray(list) || list.length === 0) return STAFF_SEED.map((s) => ({ ...s, tabs: [...s.tabs] }));
-  // Safety net: an owner (with the Owner tab) must ALWAYS exist — otherwise
-  // nobody could ever open Staff Access again. Restore the seed owner.
-  if (!list.some((s) => s.isOwner && s.tabs.includes("owner"))) {
-    list = [...list, { ...STAFF_SEED[0], tabs: [...STAFF_SEED[0].tabs] }];
-  }
-  return list;
-}
-export function saveStaff(list: StaffMember[]) {
-  try {
-    localStorage.setItem(STAFF_KEY, JSON.stringify(list));
-    window.dispatchEvent(new Event("staff-updated"));
-  } catch { /* ignore */ }
-}
-export function setStaffSession(id: string | null) {
-  try {
-    if (id) localStorage.setItem(STAFF_SESSION_KEY, id);
-    else localStorage.removeItem(STAFF_SESSION_KEY);
-    window.dispatchEvent(new Event("staff-updated"));
-  } catch { /* ignore */ }
-}
-export function getStaffSessionMember(): StaffMember | null {
-  try {
-    const id = localStorage.getItem(STAFF_SESSION_KEY);
-    if (!id) return null;
-    return loadStaff().find((s) => s.id === id) ?? null;
-  } catch { return null; }
-}
-export function useStaffSession(): StaffMember | null {
-  const [member, setMember] = useState<StaffMember | null>(null);
-  useEffect(() => {
-    const read = () => setMember(getStaffSessionMember());
-    read();
-    window.addEventListener("staff-updated", read);
-    window.addEventListener("storage", read);
-    return () => {
-      window.removeEventListener("staff-updated", read);
-      window.removeEventListener("storage", read);
-    };
-  }, []);
-  return member;
-}
-
-// ── STOCK ENTRIES LOG (Stock screen) ─────────────────────────────────────────
-// Every backend stock movement the stock keeper makes: stock-IN (purchase)
-// and WASTAGE out. Sales are NOT logged here — they decrement stock directly
-// in the POS flows. `by` = the logged-in staff member's name.
 export interface StockEntry {
   id: string;
   at: string; // ISO date/time
@@ -722,74 +516,964 @@ export interface StockEntry {
   rate?: number; // purchase rate Rs (add entries)
   supplier?: string; // optional (add entries)
   reason?: string; // expired / damaged / spilled (wastage entries)
+  expiry?: string; // "YYYY-MM" — medical shops: stock-IN par optional expiry mahina
   by: string; // staff name who entered it
+  serverId?: string;
 }
-const STOCK_ENTRIES_KEY = "canteen-pos-stock-entries-v1";
-export function loadStockEntries(): StockEntry[] {
-  if (typeof window === "undefined") return [];
+
+// ── CANTEEN DEALS (KFC-style combos) ────────────────────────────────────────
+// Ek deal = kai menu items, EK deal price. Bikri par deal EK order line
+// banti hai (itemId "deal:<id>", naam "🎁 <Deal Name>", price = deal
+// price) jiss ke sath components ka snapshot lagta hai — Kitchen har
+// component alag dikhata hai aur stock asal items se katta hai (server
+// transaction ke andar). Deal ki kul qeemat hamesha CURRENT menu prices
+// se banti hai (dealValue) — owner ko bachat wazeh dikhta hai.
+export interface Deal {
+  id: string;
+  name: string;
+  items: { menuItemId: string; qty: number }[];
+  price: number; // Rs — deal ki apni price (kul qeemat se kam)
+  active: boolean;
+}
+
+export const SAMPLE_DEALS: Deal[] = [
+  {
+    id: "deal-student", name: "Student Deal", price: 600, active: true,
+    items: [
+      { menuItemId: "fast-2", qty: 1 }, // Zinger Burger 450
+      { menuItemId: "fast-4", qty: 1 }, // Fries (Regular) 150
+      { menuItemId: "cold-1", qty: 1 }, // Soft Drink (Can) 80 → kul 680
+    ],
+  },
+  {
+    id: "deal-family", name: "Family Deal", price: 850, active: true,
+    items: [
+      { menuItemId: "fast-5", qty: 2 }, // Chicken Biryani ×2 = 600
+      { menuItemId: "fast-6", qty: 1 }, // Daal Chawal 220
+      { menuItemId: "cold-2", qty: 1 }, // Soft Drink 1.5L 180 → kul 1000
+    ],
+  },
+];
+
+/** Deal ke components — menu ke sath resolve karke (missing items skip). */
+export function dealComponents(deal: Deal, menu: MenuItem[]): { item: MenuItem; qty: number }[] {
+  return deal.items
+    .map((i) => ({ item: menu.find((m) => m.id === i.menuItemId), qty: i.qty }))
+    .filter((c): c is { item: MenuItem; qty: number } => !!c.item && c.qty > 0);
+}
+
+/** Deal ki kul qeemat CURRENT menu prices par (bachat ka hisaab). */
+export function dealValue(deal: Deal, menu: MenuItem[]): number {
+  return dealComponents(deal, menu).reduce((s, c) => s + c.item.price * c.qty, 0);
+}
+
+/** "Zinger Burger ×1 · Fries (Regular) ×1 · Soft Drink (Can) ×1" */
+export function dealContentsText(deal: Deal, menu: MenuItem[]): string {
+  return dealComponents(deal, menu).map((c) => `${c.item.name} ×${c.qty}`).join(" · ");
+}
+
+/** Deal ko order line mein badlein — components snapshot ke sath. */
+export function dealOrderLine(deal: Deal, menu: MenuItem[], qty = 1): OrderLine {
+  return {
+    itemId: `deal:${deal.id}`,
+    name: `🎁 ${deal.name}`,
+    price: deal.price,
+    qty,
+    components: dealComponents(deal, menu).map((c) => ({ itemId: c.item.id, name: c.item.name, qty: c.qty })),
+  };
+}
+
+// ── EXPENSES (Kharchay) — P&L ka kharcha register ───────────────────────────
+// Dukaan ke kharchay (bijli, gas, tankhwah, kiraya…) owner yahan darj
+// karta hai; P&L report inhein Kharchay ki line mein gin ti hai. "both"
+// wala kharcha sirf combined column mein ginta hai (server rule).
+export interface Expense {
+  id: string;
+  dateISO: string; // "YYYY-MM-DD"
+  title: string;
+  amount: number; // Rs
+  shop: "canteen" | "grocery" | "both";
+  note?: string;
+}
+
+// ── Medical expiry helpers ──────────────────────────────────────────────────
+const EXPIRY_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "2026-11" → "Nov 2026" */
+export function expiryLabel(ym: string): string {
+  const m = ym.match(/^(\d{4})-(\d{2})$/);
+  if (!m) return ym;
+  return `${EXPIRY_MONTHS[Number(m[2]) - 1] ?? m[2]} ${m[1]}`;
+}
+
+/**
+ * Expiry ke qareeb (ya guzri hui) products — har product ki SAB SE JALDI
+ * wali recorded stock-IN expiry se. Mahina khatam hone ki tareekh us
+ * mahine ka aakhri din mani jati hai. 30 din ke andar ya guzar chuki
+ * entries, sab se jaldi wali pehle. NOTE: ye sirf warning hai —
+ * batch-wise hisaab (konsi batch pehle biki) is version mein nahi hai.
+ */
+export function expiringProducts(
+  items: GroceryItem[],
+  entries: StockEntry[],
+  now = new Date()
+): { item: GroceryItem; expiry: string; daysLeft: number }[] {
+  const soonest = new Map<string, string>();
+  for (const e of entries) {
+    if (e.kind !== "grocery" || e.type !== "add" || !e.expiry) continue;
+    const cur = soonest.get(e.itemId);
+    if (!cur || e.expiry < cur) soonest.set(e.itemId, e.expiry);
+  }
+  const out: { item: GroceryItem; expiry: string; daysLeft: number }[] = [];
+  for (const item of items) {
+    const ym = soonest.get(item.id);
+    if (!ym) continue;
+    const m = ym.match(/^(\d{4})-(\d{2})$/);
+    if (!m) continue;
+    const end = new Date(Number(m[1]), Number(m[2]), 0, 23, 59, 59); // mahine ka aakhri din
+    const daysLeft = Math.ceil((end.getTime() - now.getTime()) / 86400000);
+    if (daysLeft <= 30) out.push({ item, expiry: ym, daysLeft });
+  }
+  return out.sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FACADE CORE — cache, shadow, hydration, realtime, write queue
+// ─────────────────────────────────────────────────────────────────────────────
+const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+
+const cache = {
+  shop: { ...SHOP_DEFAULTS } as ShopSettings,
+  menu: clone(SAMPLE_MENU) as MenuItem[],
+  orders: [] as Order[],
+  grocery: clone(SAMPLE_GROCERY) as GroceryItem[],
+  heads: clone(GROCERY_HEADS_SEED) as GroceryHead[],
+  subs: clone(GROCERY_SUBHEADS_SEED) as GrocerySubHead[],
+  deals: clone(SAMPLE_DEALS) as Deal[],
+  expenses: [] as Expense[],
+  staffList: clone(STAFF_SEED) as StaffMember[],
+  staffMember: null as StaffMember | null,
+  entries: [] as StockEntry[],
+  customer: null as CustomerAccount | null,
+};
+// Last-known SERVER state (DTO shapes) — saves diff against these.
+const shadow = {
+  menu: [] as MenuItem[],
+  grocery: [] as GroceryItem[],
+  heads: [] as GroceryHead[],
+  subs: [] as GrocerySubHead[],
+  deals: [] as Deal[],
+  expenses: [] as Expense[],
+  staffList: [] as StaffMember[],
+  entries: [] as StockEntry[],
+  orders: new Map<string, Order>(), // keyed by the CACHE (local) order id
+};
+
+function fire(name: string) {
+  try { window.dispatchEvent(new Event(name)); } catch { /* ignore */ }
+}
+function fireOrders() {
+  fire("canteen-orders-changed");
+  try { const bc = new BroadcastChannel("canteen-pos-orders"); bc.postMessage("changed"); bc.close(); } catch { /* ignore */ }
+}
+function syncFail(what: string, e: unknown) {
+  // eslint-disable-next-line no-console
+  console.error(`[pos-sync] ${what} failed:`, e);
+  try { window.dispatchEvent(new CustomEvent("pos-sync-error", { detail: { what, error: String(e) } })); } catch { /* ignore */ }
+}
+
+// Serialised write queue — catalogue/order saves never interleave.
+let mq: Promise<unknown> = Promise.resolve();
+function enqueue<T>(fn: () => Promise<T>): Promise<T> {
+  const p = mq.then(fn, fn);
+  mq = p.then(() => undefined, () => undefined);
+  return p;
+}
+
+// ── Tiny client prefs (sessionStorage): id aliases, idempotency keys,
+// guest order access tokens. NOT business data. ──
+function prefGet<T>(key: string): Record<string, T> {
+  try { return JSON.parse(sessionStorage.getItem(key) ?? "{}") as Record<string, T>; } catch { return {}; }
+}
+function prefSet(key: string, map: Record<string, unknown>) {
+  try { sessionStorage.setItem(key, JSON.stringify(map)); } catch { /* ignore */ }
+}
+function aliasGet(localId: string): string {
+  return prefGet<string>("pos-id-alias")[localId] ?? localId;
+}
+function aliasSet(localId: string, serverId: string) {
+  if (localId === serverId) return;
+  const m = prefGet<string>("pos-id-alias");
+  m[localId] = serverId;
+  prefSet("pos-id-alias", m);
+}
+function clientRequestIdFor(localOrderId: string): string {
+  const m = prefGet<string>("pos-req-ids");
+  if (!m[localOrderId]) {
+    m[localOrderId] = typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    prefSet("pos-req-ids", m);
+  }
+  return m[localOrderId];
+}
+function storeGuestToken(serverOrderId: string, token: string) {
+  const m = prefGet<string>("pos-guest-orders");
+  m[serverOrderId] = token;
+  prefSet("pos-guest-orders", m);
+}
+
+// ── Refreshers (each tolerates 401/403 — logged-out is a normal state) ──
+async function refreshShop() {
   try {
-    const raw = window.localStorage.getItem(STOCK_ENTRIES_KEY);
-    return raw ? (JSON.parse(raw) as StockEntry[]) : [];
-  } catch { return []; }
+    const r = await apiGet<{ settings: ShopSettings }>("/bootstrap");
+    cache.shop = r.settings;
+    fire("shop-updated");
+  } catch { /* keep cache */ }
+}
+async function refreshCatalog() {
+  try {
+    const r = await apiGet<{ menu: MenuItem[]; heads: GroceryHead[]; subs: GrocerySubHead[]; items: GroceryItem[]; deals?: Deal[] }>("/catalog");
+    cache.menu = r.menu; shadow.menu = clone(r.menu);
+    cache.heads = r.heads; shadow.heads = clone(r.heads);
+    cache.subs = r.subs; shadow.subs = clone(r.subs);
+    cache.grocery = r.items; shadow.grocery = clone(r.items);
+    if (r.deals) { cache.deals = r.deals; shadow.deals = clone(r.deals); }
+    fire("pos-catalog-changed");
+  } catch { /* keep cache */ }
+}
+async function refreshExpenses() {
+  try {
+    const r = await apiGet<{ expenses: Expense[] }>("/owner/expenses");
+    cache.expenses = r.expenses;
+    shadow.expenses = clone(r.expenses);
+    fire("expenses-changed");
+  } catch { /* owner tab grant required — ignore */ }
+}
+async function refreshStaffList() {
+  try {
+    const r = await apiGet<{ staff: StaffMember[] }>("/auth/staff/list");
+    cache.staffList = withOwnerGuard(r.staff);
+    shadow.staffList = clone(r.staff);
+    fire("staff-updated");
+  } catch { /* keep cache */ }
+}
+async function refreshMe() {
+  try {
+    const r = await apiGet<{ member: StaffMember }>("/auth/staff/me");
+    cache.staffMember = r.member;
+    fire("staff-updated");
+  } catch {
+    if (cache.staffMember) { cache.staffMember = null; fire("staff-updated"); }
+  }
+}
+function normalizeAccount(a: Partial<CustomerAccount> & { name: string; mobile: string }): CustomerAccount {
+  return {
+    name: a.name,
+    mobile: a.mobile,
+    password: "",
+    email: a.email,
+    emailVerified: a.emailVerified,
+    mobileVerified: a.mobileVerified,
+    placeType: (a.placeType ?? "Other") as CustomerAccount["placeType"],
+    placeDetail: a.placeDetail ?? "",
+    placeLabel: a.placeLabel,
+    studentId: a.studentId,
+    createdAt: a.createdAt ?? Date.now(),
+  };
+}
+async function refreshCustomerMe() {
+  try {
+    const r = await apiGet<{ account: CustomerAccount }>("/auth/customer/me");
+    cache.customer = normalizeAccount(r.account);
+    fire("customer-updated");
+  } catch {
+    if (cache.customer) { cache.customer = null; fire("customer-updated"); }
+  }
+}
+function withOwnerGuard(list: StaffMember[]): StaffMember[] {
+  if (!Array.isArray(list) || list.length === 0) return clone(STAFF_SEED);
+  if (!list.some((s) => s.isOwner && s.tabs.includes("owner"))) {
+    return [...list, { ...STAFF_SEED[0], tabs: [...STAFF_SEED[0].tabs] }];
+  }
+  return list;
+}
+function mergeServerOrders(list: Order[]) {
+  for (const dto of list) {
+    const existing = cache.orders.find((o) => o.serverId === dto.id || (o.clientRequestId && o.clientRequestId === dto.clientRequestId));
+    if (existing) {
+      const localId = existing.id;
+      Object.assign(existing, dto, { id: localId, serverId: dto.id });
+      shadow.orders.set(localId, clone(dto));
+    } else {
+      const entry: Order = { ...dto, serverId: dto.id };
+      cache.orders.push(entry);
+      shadow.orders.set(dto.id, clone(dto));
+    }
+  }
+  cache.orders.sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+  fireOrders();
+}
+async function refreshOrders() {
+  if (cache.staffMember || cache.customer) {
+    try {
+      const r = await apiGet<{ orders: Order[] }>("/orders");
+      mergeServerOrders(r.orders);
+      return;
+    } catch { /* fall through to guest refresh */ }
+  }
+  // Guest / table orders placed from THIS browser: poll their public status.
+  const tokens = prefGet<string>("pos-guest-orders");
+  const ids = Object.keys(tokens);
+  if (!ids.length) return;
+  let changed = false;
+  for (const serverId of ids) {
+    try {
+      const r = await apiGet<{ order: { status: string; token: number; paymentStatus?: OrderPaymentStatus; rejectReason?: string; billNo?: string } }>(
+        `/public/orders/${serverId}/status?token=${encodeURIComponent(tokens[serverId])}`
+      );
+      const entry = cache.orders.find((o) => o.serverId === serverId);
+      if (entry) {
+        const before = JSON.stringify([entry.status, entry.token, entry.paymentStatus]);
+        entry.status = r.order.status as Order["status"];
+        entry.token = r.order.token;
+        if (r.order.paymentStatus !== undefined) entry.paymentStatus = r.order.paymentStatus;
+        if (r.order.rejectReason !== undefined) entry.rejectReason = r.order.rejectReason;
+        if (r.order.billNo) entry.billNo = r.order.billNo;
+        const sh = shadow.orders.get(entry.id);
+        if (sh) { sh.status = entry.status; sh.token = entry.token; sh.paymentStatus = entry.paymentStatus; }
+        if (before !== JSON.stringify([entry.status, entry.token, entry.paymentStatus])) changed = true;
+      }
+    } catch { /* token stale — ignore */ }
+  }
+  if (changed) fireOrders();
+}
+async function refreshEntries() {
+  try {
+    const r = await apiGet<{ entries: StockEntry[] }>("/staff/stock-entries?limit=500");
+    cache.entries = r.entries;
+    shadow.entries = clone(r.entries);
+    fire("pos-entries-changed");
+  } catch { /* stock tab grant required — ignore */ }
+}
+
+let started = false;
+let es: EventSource | null = null;
+function handleRealtime(type: string) {
+  if (type.startsWith("order.") || type.startsWith("dashboard.") || type.startsWith("table_session.")) void refreshOrders();
+  if (type.startsWith("catalog.") || type.startsWith("stock.")) { void refreshCatalog(); void refreshEntries(); }
+  if (type === "settings.changed") void refreshShop();
+  if (type === "staff.changed") { void refreshStaffList(); void refreshMe(); }
+}
+function ensureStarted() {
+  if (started || typeof window === "undefined") return;
+  started = true;
+  void (async () => {
+    await refreshShop();
+    await refreshCatalog();
+    await refreshStaffList();
+    await refreshMe();
+    await refreshCustomerMe();
+    await refreshOrders();
+    await refreshEntries();
+    await refreshExpenses();
+  })();
+  // Realtime: SSE (snapshot already loaded via REST above). The browser
+  // auto-reconnects with Last-Event-ID; the server replays missed events.
+  try {
+    es = new EventSource("/api/v1/events");
+    es.onmessage = (ev) => {
+      try { handleRealtime((JSON.parse(ev.data) as { type: string }).type); } catch { /* heartbeat */ }
+    };
+  } catch { /* polling fallback below still runs */ }
+  // Polling fallback (plan: 15–30s; 5s here keeps the kitchen snappy even
+  // if a proxy kills the SSE stream).
+  setInterval(() => { if (!document.hidden) void refreshOrders(); }, 5000);
+  setInterval(() => { if (!document.hidden) { void refreshCatalog(); void refreshEntries(); } }, 30000);
+}
+
+// ── SHOP SETTINGS ───────────────────────────────────────────────────────────
+export function loadShop(): ShopSettings {
+  ensureStarted();
+  return cache.shop;
+}
+export function useShop(): ShopSettings {
+  const [s, setS] = useState<ShopSettings>(() => cache.shop);
+  useEffect(() => {
+    ensureStarted();
+    const read = () => setS({ ...cache.shop });
+    read();
+    window.addEventListener("shop-updated", read);
+    const t = setInterval(read, 3000);
+    return () => { window.removeEventListener("shop-updated", read); clearInterval(t); };
+  }, []);
+  return s;
+}
+export function saveShop(nextSettings: ShopSettings): void {
+  cache.shop = { ...nextSettings };
+  fire("shop-updated");
+  void enqueue(async () => {
+    try {
+      const r = await apiPatch<{ settings: ShopSettings }>("/owner/settings", nextSettings);
+      cache.shop = r.settings;
+      fire("shop-updated");
+    } catch (e) { syncFail("settings save", e); }
+  });
+}
+
+// ── CUSTOMER ACCOUNTS (server-backed) ───────────────────────────────────────
+// The Phase 1 signatures were synchronous over localStorage; Phase 2 makes
+// register/login async (they hit the API). The online page awaits them.
+export function loadAccounts(): CustomerAccount[] {
+  // Accounts are server records now — a client-side list is never exposed.
+  return [];
+}
+export interface DeliveryState { delivered: boolean; state: "sent" | "NOT_CONFIGURED" | "FAILED"; detail?: string }
+export interface RegisterResult {
+  status: "ok" | "exists";
+  // Pehle email code ki delivery halat — UI honestly dikhati hai ke code
+  // gaya ya deployment par email configure hone par jayega.
+  emailDelivery?: DeliveryState;
+}
+
+export async function registerAccount(a: Omit<CustomerAccount, "createdAt">): Promise<RegisterResult> {
+  ensureStarted();
+  try {
+    const r = await apiPost<{ account: CustomerAccount; verification?: { emailDelivery: DeliveryState } }>("/auth/customer/register", {
+      name: a.name, mobile: a.mobile, password: a.password, email: a.email,
+      placeType: a.placeType, placeDetail: a.placeDetail, studentId: a.studentId,
+    });
+    cache.customer = normalizeAccount(r.account);
+    fire("customer-updated");
+    void refreshOrders();
+    return { status: "ok", emailDelivery: r.verification?.emailDelivery };
+  } catch (e) {
+    if ((e as { code?: string }).code === "ACCOUNT_EXISTS" || (e as { code?: string }).code === "MOBILE_EXISTS") return { status: "exists" };
+    throw e;
+  }
+}
+
+// ── Account verification (email lazmi, mobile ikhtiyari) ────────────────────
+// Teeno functions server ki ASAL halat wapas karte hain — ghalat code par
+// error throw hota hai (message UI ko dikhta hai), resend par delivery
+// state (NOT_CONFIGURED समेत) wapas ati hai.
+/**
+ * Pehla Business Setup (fresh install, login se pehle) — server ka
+ * /setup/complete endpoint sirf setup_done=false par khula hota hai;
+ * us ke baad ye hamesha 403 dega aur tabdeeli Owner Settings se hogi.
+ * Change-mode (setup pehle ho chuka) ke liye saveShop() hi sahi rasta hai.
+ */
+export async function completeFirstSetup(next: ShopSettings): Promise<void> {
+  const r = await apiPost<{ settings: ShopSettings }>("/setup/complete", {
+    hasCanteen: next.hasCanteen, retailType: next.retailType, groceryName: next.groceryName,
+  });
+  cache.shop = r.settings;
+  fire("shop-updated");
+  // Template seed server par hua ho to catalogue bhi naya hoga.
+  await refreshCatalog();
+}
+
+export async function verifyEmailCode(code: string): Promise<void> {
+  await apiPost("/auth/customer/verify-email", { code });
+  await refreshCustomerMe();
+}
+export async function verifyMobileCode(code: string): Promise<void> {
+  await apiPost("/auth/customer/verify-mobile", { code });
+  await refreshCustomerMe();
+}
+export async function resendVerificationCode(channel: "email" | "mobile"): Promise<DeliveryState> {
+  const r = await apiPost<{ delivery: DeliveryState }>("/auth/customer/resend-code", { channel });
+  return r.delivery;
+}
+export async function loginAccount(mobile: string, password: string): Promise<CustomerAccount | null> {
+  ensureStarted();
+  try {
+    const r = await apiPost<{ account: CustomerAccount }>("/auth/customer/login", { mobile, password });
+    cache.customer = normalizeAccount(r.account);
+    fire("customer-updated");
+    void refreshOrders();
+    return cache.customer;
+  } catch { return null; }
+}
+export function setSession(mobile: string | null) {
+  if (mobile === null) {
+    cache.customer = null;
+    fire("customer-updated");
+    void apiPost("/auth/customer/logout").catch(() => undefined);
+  }
+  // Non-null: login/register already established the server session.
+}
+export function getSessionAccount(): CustomerAccount | null {
+  ensureStarted();
+  return cache.customer;
+}
+
+// ── MENU ────────────────────────────────────────────────────────────────────
+export function loadMenu(): MenuItem[] {
+  ensureStarted();
+  return [...cache.menu];
+}
+function menuPayload(m: MenuItem) {
+  return {
+    name: m.name, price: m.price, category: m.category, emoji: m.emoji,
+    image: m.image ?? null, sku: m.sku ?? null, lowStock: m.lowStock ?? 5,
+    cost: m.cost ?? null, // Lagat (P&L) — null = nahi bhari
+    // NOTE: stock is deliberately NOT sent — stock moves only through
+    // orders / stock entries / payment transitions (exactly-once rule).
+  };
+}
+function menuChanged(a: MenuItem, b: MenuItem): boolean {
+  return a.name !== b.name || a.price !== b.price || a.category !== b.category || a.emoji !== b.emoji
+    || (a.image ?? "") !== (b.image ?? "") || (a.sku ?? "") !== (b.sku ?? "") || (a.lowStock ?? 5) !== (b.lowStock ?? 5)
+    || (a.cost ?? null) !== (b.cost ?? null);
+}
+export function saveMenu(menu: MenuItem[]): void {
+  cache.menu = [...menu];
+  void enqueue(async () => {
+    try {
+      const shById = new Map(shadow.menu.map((m) => [m.id, m]));
+      const seen = new Set<string>();
+      for (const it of menu) {
+        const sid = aliasGet(it.id);
+        seen.add(sid);
+        const sh = shById.get(sid);
+        if (!sh) {
+          const r = await apiPost<{ id: string }>("/owner/canteen/items", menuPayload(it));
+          aliasSet(it.id, r.id);
+        } else if (menuChanged(sh, it)) {
+          await apiPatch(`/owner/canteen/items/${sid}`, menuPayload(it));
+        }
+      }
+      for (const sh of shadow.menu) {
+        if (!seen.has(sh.id)) await apiDelete(`/owner/canteen/items/${sh.id}`).catch(() => undefined);
+      }
+      await refreshCatalog();
+    } catch (e) { syncFail("menu save", e); }
+  });
+}
+
+// ── ORDERS ──────────────────────────────────────────────────────────────────
+export function loadOrders(): Order[] {
+  ensureStarted();
+  return [...cache.orders];
+}
+function parseLineName(o: Order, l: OrderLine): { variantName?: string; packingLabel?: string } {
+  if (o.mode !== "grocery" || !l.name.includes("(")) return {};
+  const item = cache.grocery.find((g) => g.id === l.itemId);
+  if (!item || l.name === item.name) return {};
+  const m = l.name.match(/\(([^()]*)\)\s*$/);
+  const inner = m?.[1]?.trim();
+  if (!inner || inner === "kg") return {};
+  if (inner.includes(" · ")) {
+    const [v, p] = inner.split(" · ").map((s) => s.trim());
+    return { variantName: v, packingLabel: p };
+  }
+  return { packingLabel: inner };
+}
+function toCreateInput(o: Order) {
+  return {
+    clientRequestId: clientRequestIdFor(o.id),
+    shopKind: o.mode === "grocery" ? "grocery" : "canteen",
+    priceType: o.priceType ?? "retail",
+    lines: o.lines.map((l) => ({
+      itemId: l.itemId.startsWith("deal:") ? `deal:${aliasGet(l.itemId.slice("deal:".length))}` : aliasGet(l.itemId),
+      qty: l.qty,
+      ...(l.serials?.length ? { serials: l.serials } : {}),
+      ...parseLineName(o, l),
+    })),
+    discount: o.discount ?? 0,
+    payment: o.payment,
+    tendered: o.tendered,
+    udhaarName: o.udhaarName,
+    identityType: o.identityType,
+    customerName: o.customerName,
+    customerMobile: o.customerMobile,
+    customerExternalId: o.customerId,
+    placeLabel: o.placeLabel,
+    orderType: o.orderType,
+    tableNo: o.tableNo,
+    paymentProof: o.paymentProof
+      ? { method: o.paymentProof.method, txnId: o.paymentProof.txnId, amount: o.paymentProof.amount, proofImage: o.paymentProof.proofImage }
+      : undefined,
+  };
+}
+export function saveOrders(nextOrders: Order[]): void {
+  cache.orders = [...nextOrders];
+  fireOrders();
+  void enqueue(async () => {
+    // Creates (idempotency: the same clientRequestId never double-posts).
+    for (const o of nextOrders) {
+      if (shadow.orders.has(o.id)) continue;
+      try {
+        const input = toCreateInput(o);
+        const res = await apiPost<{ order: Order; accessToken?: string }>("/orders", input);
+        const dto = res.order;
+        o.serverId = dto.id;
+        o.clientRequestId = input.clientRequestId;
+        o.billNo = dto.billNo;
+        o.token = dto.token;
+        o.total = dto.total;
+        o.subtotal = dto.subtotal;
+        o.discount = dto.discount;
+        if (res.accessToken) storeGuestToken(dto.id, res.accessToken);
+        shadow.orders.set(o.id, clone(dto));
+      } catch (e) { syncFail("order create", e); }
+    }
+    // Updates: kitchen status + payment-proof transitions.
+    for (const o of nextOrders) {
+      const sh = shadow.orders.get(o.id);
+      if (!sh || !o.serverId) continue;
+      try {
+        if (o.status !== sh.status) {
+          const r = await apiPatch<{ order: Order }>(`/orders/${o.serverId}/status`, { status: o.status });
+          shadow.orders.set(o.id, clone(r.order));
+          o.token = r.order.token;
+          sh.status = o.status;
+        }
+        if ((o.paymentStatus ?? null) !== (sh.paymentStatus ?? null)) {
+          if (o.paymentStatus === "confirmed") {
+            const r = await apiPost<{ order: Order }>(`/orders/${o.serverId}/payment`, { action: "confirm" });
+            shadow.orders.set(o.id, clone(r.order));
+            o.token = r.order.token;
+          } else if (o.paymentStatus === "rejected") {
+            const r = await apiPost<{ order: Order }>(`/orders/${o.serverId}/payment`, { action: "reject", reason: o.rejectReason ?? "" });
+            shadow.orders.set(o.id, clone(r.order));
+          } else if (o.paymentStatus === "proof_pending" && sh.paymentStatus === "rejected") {
+            const r = await apiPost<{ order: Order }>(`/orders/${o.serverId}/payment`, { action: "reproof", proof: o.paymentProof });
+            shadow.orders.set(o.id, clone(r.order));
+          }
+          const cur = shadow.orders.get(o.id);
+          if (cur) sh.paymentStatus = cur.paymentStatus;
+        }
+      } catch (e) { syncFail("order update", e); }
+    }
+    fireOrders();
+  });
+}
+
+/**
+ * Move an order's stock visually in the local cache (dir -1 deducts, +1
+ * restores). Phase 2: the SERVER moves real stock inside the order/payment
+ * transactions — this only keeps the on-screen numbers in step until the
+ * next catalogue refresh lands (catalogue saves never write stock).
+ */
+export function adjustStockForOrder(order: Order, dir: 1 | -1): void {
+  if (typeof window === "undefined") return;
+  const per = new Map<string, number>();
+  order.lines.forEach((l) => {
+    // Deal line ka stock us ke asal items se katta/wapas hota hai —
+    // components snapshot ko expand karein (Phase 1 semantics).
+    if (l.components?.length) {
+      l.components.forEach((c) => per.set(c.itemId, (per.get(c.itemId) ?? 0) + c.qty * l.qty));
+    } else {
+      per.set(l.itemId, (per.get(l.itemId) ?? 0) + l.qty);
+    }
+  });
+  if (!per.size) return;
+  if (order.mode === "grocery") {
+    cache.grocery = cache.grocery.map((it) => {
+      const q = per.get(it.id);
+      return q ? { ...it, stock: Math.max(0, Math.round((it.stock + dir * q) * 10) / 10) } : it;
+    });
+  } else {
+    cache.menu = cache.menu.map((m) => {
+      const q = per.get(m.id);
+      return q ? { ...m, stock: Math.max(0, (m.stock ?? 0) + dir * q) } : m;
+    });
+  }
+  fire("pos-catalog-changed");
+}
+
+// ── GROCERY CATALOGUE ───────────────────────────────────────────────────────
+export function loadGroceryHeads(): GroceryHead[] {
+  ensureStarted();
+  return [...cache.heads];
+}
+export function saveGroceryHeads(list: GroceryHead[]): void {
+  cache.heads = [...list];
+  void enqueue(async () => {
+    try {
+      const shById = new Map(shadow.heads.map((h) => [h.id, h]));
+      const seen = new Set<string>();
+      for (const h of list) {
+        const sid = aliasGet(h.id);
+        seen.add(sid);
+        const sh = shById.get(sid);
+        const payload = { name: h.name, emoji: h.emoji, image: h.image ?? null };
+        if (!sh) {
+          const r = await apiPost<{ id: string }>("/owner/grocery/heads", payload);
+          aliasSet(h.id, r.id);
+        } else if (sh.name !== h.name || sh.emoji !== h.emoji || (sh.image ?? "") !== (h.image ?? "")) {
+          await apiPatch(`/owner/grocery/heads/${sid}`, payload);
+        }
+      }
+      for (const sh of shadow.heads) {
+        if (!seen.has(sh.id)) await apiDelete(`/owner/grocery/heads/${sh.id}`).catch(() => undefined);
+      }
+      await refreshCatalog();
+    } catch (e) { syncFail("heads save", e); }
+  });
+}
+export function loadGrocerySubHeads(): GrocerySubHead[] {
+  ensureStarted();
+  return [...cache.subs];
+}
+export function saveGrocerySubHeads(list: GrocerySubHead[]): void {
+  cache.subs = [...list];
+  void enqueue(async () => {
+    try {
+      const shById = new Map(shadow.subs.map((s) => [s.id, s]));
+      const seen = new Set<string>();
+      for (const s of list) {
+        const sid = aliasGet(s.id);
+        seen.add(sid);
+        const sh = shById.get(sid);
+        const payload = { headId: aliasGet(s.headId), name: s.name, image: s.image ?? null };
+        if (!sh) {
+          const r = await apiPost<{ id: string }>("/owner/grocery/sub-heads", payload);
+          aliasSet(s.id, r.id);
+        } else if (sh.name !== s.name || sh.headId !== aliasGet(s.headId) || (sh.image ?? "") !== (s.image ?? "")) {
+          await apiPatch(`/owner/grocery/sub-heads/${sid}`, payload);
+        }
+      }
+      for (const sh of shadow.subs) {
+        if (!seen.has(sh.id)) await apiDelete(`/owner/grocery/sub-heads/${sh.id}`).catch(() => undefined);
+      }
+      await refreshCatalog();
+    } catch (e) { syncFail("sub-heads save", e); }
+  });
+}
+export function loadGrocery(): GroceryItem[] {
+  ensureStarted();
+  return [...cache.grocery];
+}
+function productPayload(it: GroceryItem) {
+  return {
+    name: it.name,
+    brand: it.brand ?? undefined,
+    subId: aliasGet(it.subId),
+    sku: it.sku,
+    barcode: it.barcode ?? null,
+    retailPrice: it.retailPrice,
+    wholesalePrice: it.wholesalePrice,
+    wholesaleMinQty: it.wholesaleMinQty ?? null,
+    unit: it.unit,
+    lowStock: it.lowStock ?? (it.unit === "kg" ? 2 : 5),
+    boardOffer: it.boardOffer ?? false,
+    offerPrice: it.offerPrice && it.offerPrice > 0 ? it.offerPrice : null,
+    trackSerial: it.trackSerial ?? false,
+    emoji: it.emoji,
+    image: it.image ?? null,
+    // Packings of the Standard variant (label, prices, own barcode,
+    // containsQty sealed packs, per-packing wholesale minimum).
+    packings: (it.packings ?? []).map((k) => ({
+      label: k.label,
+      retailPrice: k.retailPrice,
+      wholesalePrice: k.wholesalePrice,
+      barcode: k.barcode ?? null,
+      containsQty: k.containsQty,
+      wholesaleMinQty: k.wholesaleMinQty,
+    })),
+    // NOTE: stock intentionally NOT sent (exactly-once stock rule).
+  };
+}
+function productChanged(a: GroceryItem, b: GroceryItem): boolean {
+  const proj = (x: GroceryItem) => JSON.stringify({
+    name: x.name, brand: x.brand ?? null, subId: x.subId, sku: x.sku, barcode: x.barcode ?? null,
+    retailPrice: x.retailPrice, wholesalePrice: x.wholesalePrice, wholesaleMinQty: x.wholesaleMinQty ?? null,
+    unit: x.unit, lowStock: x.lowStock ?? null, boardOffer: x.boardOffer ?? false, offerPrice: x.offerPrice ?? null, trackSerial: x.trackSerial ?? false, emoji: x.emoji, image: x.image ?? null,
+    packings: (x.packings ?? []).map((k) => [k.label, k.retailPrice, k.wholesalePrice, k.barcode ?? null, k.containsQty ?? null, k.wholesaleMinQty ?? null]),
+  });
+  return proj(a) !== proj(b);
+}
+export function saveGrocery(items: GroceryItem[]): void {
+  cache.grocery = [...items];
+  void enqueue(async () => {
+    try {
+      const shById = new Map(shadow.grocery.map((g) => [g.id, g]));
+      const seen = new Set<string>();
+      for (const it of items) {
+        const sid = aliasGet(it.id);
+        seen.add(sid);
+        const sh = shById.get(sid);
+        if (!sh) {
+          const r = await apiPost<{ id: string }>("/owner/grocery/products", productPayload(it));
+          aliasSet(it.id, r.id);
+        } else if (productChanged({ ...sh, subId: it.subId }, it)) {
+          await apiPatch(`/owner/grocery/products/${sid}`, productPayload(it));
+        }
+      }
+      for (const sh of shadow.grocery) {
+        if (!seen.has(sh.id)) await apiDelete(`/owner/grocery/products/${sh.id}`).catch(() => undefined);
+      }
+      await refreshCatalog();
+    } catch (e) { syncFail("grocery save", e); }
+  });
+}
+
+// ── STAFF ───────────────────────────────────────────────────────────────────
+export function loadStaff(): StaffMember[] {
+  ensureStarted();
+  return withOwnerGuard([...cache.staffList]);
+}
+export function saveStaff(list: StaffMember[]): void {
+  cache.staffList = withOwnerGuard([...list]);
+  fire("staff-updated");
+  void enqueue(async () => {
+    try {
+      const shById = new Map(shadow.staffList.map((s) => [s.id, s]));
+      const seen = new Set<string>();
+      for (const m of list) {
+        seen.add(m.id);
+        const sh = shById.get(m.id);
+        if (!sh) {
+          await apiPost("/owner/staff", { name: m.name, pin: m.pin || "0000", tabs: m.tabs });
+        } else {
+          const patch: { name?: string; pin?: string } = {};
+          if (sh.name !== m.name) patch.name = m.name;
+          if (m.pin) patch.pin = m.pin; // a PIN is only sent when the owner typed a new one
+          if (Object.keys(patch).length) await apiPatch(`/owner/staff/${m.id}`, patch);
+          const tabsChanged = JSON.stringify([...sh.tabs].sort()) !== JSON.stringify([...m.tabs].sort());
+          if (tabsChanged) await apiPut(`/owner/staff/${m.id}/grants`, { tabs: m.tabs });
+        }
+      }
+      for (const sh of shadow.staffList) {
+        if (!seen.has(sh.id) && !sh.isOwner) await apiDelete(`/owner/staff/${sh.id}`).catch(() => undefined);
+      }
+      await refreshStaffList();
+      await refreshMe();
+    } catch (e) { syncFail("staff save", e); }
+  });
+}
+/** Real staff login — verifies the PIN on the server (Phase 2). */
+export async function staffLogin(memberId: string, pin: string): Promise<StaffMember | null> {
+  ensureStarted();
+  try {
+    const r = await apiPost<{ member: StaffMember }>("/auth/staff/login", { staffId: memberId, pin });
+    cache.staffMember = r.member;
+    fire("staff-updated");
+    void refreshOrders();
+    void refreshEntries();
+    return r.member;
+  } catch { return null; }
+}
+export function setStaffSession(id: string | null) {
+  if (id === null) {
+    cache.staffMember = null;
+    fire("staff-updated");
+    void apiPost("/auth/staff/logout").catch(() => undefined);
+  }
+  // Non-null sessions are established by staffLogin() (server-verified).
+}
+export function getStaffSessionMember(): StaffMember | null {
+  ensureStarted();
+  return cache.staffMember;
+}
+export function useStaffSession(): StaffMember | null {
+  const [m, setM] = useState<StaffMember | null>(() => cache.staffMember);
+  useEffect(() => {
+    ensureStarted();
+    const read = () => setM(cache.staffMember ? { ...cache.staffMember } : null);
+    read();
+    window.addEventListener("staff-updated", read);
+    const t = setInterval(read, 3000);
+    return () => { window.removeEventListener("staff-updated", read); clearInterval(t); };
+  }, []);
+  return m;
+}
+
+// ── STOCK ENTRIES ───────────────────────────────────────────────────────────
+export function loadStockEntries(): StockEntry[] {
+  ensureStarted();
+  return [...cache.entries];
 }
 export function saveStockEntries(entries: StockEntry[]): void {
-  try { window.localStorage.setItem(STOCK_ENTRIES_KEY, JSON.stringify(entries)); } catch {}
+  cache.entries = [...entries];
+  void enqueue(async () => {
+    try {
+      const shIds = new Set(shadow.entries.map((e) => e.id));
+      for (const e of entries) {
+        if (shIds.has(e.id)) continue;
+        const r = await apiPost<{ entry: StockEntry }>("/staff/stock-entries", {
+          kind: e.kind, itemId: aliasGet(e.itemId), type: e.type, qty: e.qty,
+          rate: e.rate, supplier: e.supplier, reason: e.reason, expiry: e.expiry,
+        });
+        e.serverId = r.entry.id;
+      }
+      await refreshEntries();
+      await refreshCatalog();
+    } catch (err) { syncFail("stock entries save", err); }
+  });
 }
 
-// ── UDHAAR KHATA — customer credit identity + WASOOLI (repayments) ─────────
-// Udhaar CHARGES are not a separate record: they are the bills themselves —
-// every Order with payment === "Udhaar". The customer's identity is exactly
-// what the charge carries, and accounts are keyed by it (never a new
-// identity model):
-//   • Counter bills (canteen + grocery) store a free-text name only —
-//     Order.udhaarName (e.g. "Ahmed — Staff"); no separate ID field.
-//   • Online Udhaar orders store the ID separately (Order.customerId) AND
-//     embed it in the stored name: Order.udhaarName = "Name (ID: STU-1024)".
-// udhaarCustomerOf normalises both shapes to { name, id } + a stable key.
-export interface UdhaarCustomer { key: string; name: string; id?: string }
-export function udhaarCustomerOf(o: Order): UdhaarCustomer {
-  let name = (o.udhaarName ?? "").trim();
-  let id = (o.customerId ?? "").trim() || undefined;
-  const m = name.match(/^(.*?)\s*\(ID:\s*([^)]+)\)\s*$/);
-  if (m) {
-    name = m[1].trim();
-    if (!id) id = m[2].trim() || undefined;
-  }
-  if (!name) name = (o.customerName ?? "").trim() || "—";
-  return { key: `${name.toLowerCase()}||${(id ?? "").toLowerCase()}`, name, id };
+// ── DEALS ───────────────────────────────────────────────────────────────────
+export function loadDeals(): Deal[] {
+  ensureStarted();
+  return [...cache.deals];
+}
+function dealPayload(d: Deal) {
+  return {
+    name: d.name, price: d.price, active: d.active,
+    items: d.items.map((i) => ({ menuItemId: aliasGet(i.menuItemId), qty: i.qty })),
+  };
+}
+function dealChanged(a: Deal, b: Deal): boolean {
+  return a.name !== b.name || a.price !== b.price || a.active !== b.active
+    || JSON.stringify(a.items) !== JSON.stringify(b.items);
+}
+export function saveDeals(deals: Deal[]): void {
+  cache.deals = [...deals];
+  fire("pos-catalog-changed");
+  void enqueue(async () => {
+    try {
+      const shById = new Map(shadow.deals.map((d) => [d.id, d]));
+      const seen = new Set<string>();
+      for (const d of deals) {
+        const sid = aliasGet(d.id);
+        seen.add(sid);
+        const sh = shById.get(sid);
+        if (!sh) {
+          const r = await apiPost<{ deal: Deal }>("/owner/deals", dealPayload(d));
+          if (r.deal?.id) aliasSet(d.id, r.deal.id);
+        } else if (dealChanged(sh, d)) {
+          await apiPatch(`/owner/deals/${sid}`, dealPayload(d));
+        }
+      }
+      for (const sh of shadow.deals) {
+        if (!seen.has(sh.id)) await apiDelete(`/owner/deals/${sh.id}`).catch(() => undefined);
+      }
+      await refreshCatalog();
+    } catch (e) { syncFail("deals save", e); }
+  });
 }
 
-// WASOOLI = a repayment against a customer's khata, recorded by staff in
-// Owner Dashboard → Udhaar Khata. Wasooli entries are their OWN persisted
-// list; every balance anywhere is derived as (udhaar charges − wasooli).
-// The bill flow is untouched — wasooli never edits orders.
-export type WasooliMethod = "Cash" | "JazzCash" | "Easypaisa" | "Raast" | "Bank";
-export const WASOOLI_METHODS: WasooliMethod[] = ["Cash", "JazzCash", "Easypaisa", "Raast", "Bank"];
-export interface UdhaarWasooli {
-  id: string;
-  customerKey: string; // udhaarCustomerOf key — the same identity the charges carry
-  customerName: string; // display name as stored on the charges
-  customerId?: string; // student/staff ID where the charges carry one
-  amount: number; // Rs repaid
-  method: WasooliMethod;
-  note?: string;
-  by: string; // staff member who recorded it (entered-by)
-  at: string; // ISO date/time
+// ── EXPENSES ────────────────────────────────────────────────────────────────
+export function loadExpenses(): Expense[] {
+  ensureStarted();
+  return [...cache.expenses];
 }
-const UDHAAR_WASOOLI_KEY = "canteen-pos-udhaar-wasooli-v1";
-export function loadUdhaarWasooli(): UdhaarWasooli[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(UDHAAR_WASOOLI_KEY);
-    const parsed = raw ? (JSON.parse(raw) as UdhaarWasooli[]) : [];
-    return Array.isArray(parsed) ? parsed.filter((w) => w && typeof w.amount === "number" && typeof w.customerKey === "string") : [];
-  } catch { return []; }
+export function saveExpenses(expenses: Expense[]): void {
+  cache.expenses = [...expenses];
+  fire("expenses-changed");
+  void enqueue(async () => {
+    try {
+      const shById = new Map(shadow.expenses.map((e) => [e.id, e]));
+      const seen = new Set<string>();
+      for (const e of expenses) {
+        const sid = aliasGet(e.id);
+        seen.add(sid);
+        const sh = shById.get(sid);
+        const payload = { dateISO: e.dateISO, title: e.title, amount: e.amount, shop: e.shop, note: e.note };
+        if (!sh) {
+          const r = await apiPost<{ expense: Expense }>("/owner/expenses", payload);
+          if (r.expense?.id) aliasSet(e.id, r.expense.id);
+        } else if (sh.dateISO !== e.dateISO || sh.title !== e.title || sh.amount !== e.amount || sh.shop !== e.shop || (sh.note ?? "") !== (e.note ?? "")) {
+          await apiPatch(`/owner/expenses/${sid}`, payload);
+        }
+      }
+      for (const sh of shadow.expenses) {
+        if (!seen.has(sh.id)) await apiDelete(`/owner/expenses/${sh.id}`).catch(() => undefined);
+      }
+      await refreshExpenses();
+    } catch (e) { syncFail("expenses save", e); }
+  });
 }
-export function saveUdhaarWasooli(list: UdhaarWasooli[]): void {
-  try { window.localStorage.setItem(UDHAAR_WASOOLI_KEY, JSON.stringify(list)); } catch {}
-  try { window.dispatchEvent(new Event("udhaar-wasooli-changed")); } catch {}
-}
-
-// Legacy constant — the owner PIN now lives in the staff list (seed: Owner /
-// 1234, changeable in Owner Dashboard → Staff Access). Kept for reference.
-export const OWNER_PIN = "1234";
