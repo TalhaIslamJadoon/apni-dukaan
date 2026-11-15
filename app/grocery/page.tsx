@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import TopBar from "@/components/TopBar";
 import StaffGate from "@/components/StaffGate";
+import { RetailOnly } from "@/components/BusinessGate";
 import OrderAlerts from "@/components/OrderAlerts";
 import Receipt, { paymentPayload } from "@/components/Receipt";
 import QRCode from "react-qr-code";
 import {
   GroceryItem, GroceryHead, GrocerySubHead, GroceryVariant, PackingOption, Order, PaymentMethod,
   loadGrocery, saveGrocery, loadGroceryHeads, loadGrocerySubHeads, groceryImage, loadOrders, saveOrders, nextToken, nextBillNo, isToday, isPaymentCleared, getStaffSessionMember, useShop,
+  offerActive, effectiveRetail, effectivePackingRetail, lineIsOffer,
 } from "@/lib/store";
 
 // A cart line is one product — in one VARIANT (flavour/type) and/or one
@@ -212,7 +214,9 @@ function GroceryScreen() {
     splitOnline(next);
   }
 
-  const priceOf = (it: GroceryItem) => (priceType === "retail" ? it.retailPrice : it.wholesalePrice);
+  // Retail respects an ACTIVE offer price (boardOffer + offerPrice <
+  // retail): the base price follows effectiveRetail; wholesale never does.
+  const priceOf = (it: GroceryItem) => (priceType === "retail" ? effectiveRetail(it) : it.wholesalePrice);
   const total = useMemo(() => cart.reduce((s, l) => s + l.price * l.qty, 0), [cart]);
   const discountVal = parseFloat(discountInput) || 0;
   const discountAmt = Math.min(total, discountType === "Rs" ? discountVal : Math.round((total * discountVal) / 100));
@@ -238,14 +242,14 @@ function GroceryScreen() {
     return true;
   });
 
-  const priceOfPacking = (p: PackingOption) => (priceType === "retail" ? p.retailPrice : p.wholesalePrice);
+  const priceOfPacking = (it: GroceryItem, p: PackingOption) => (priceType === "retail" ? effectivePackingRetail(it, p) : p.wholesalePrice);
   // Total qty of a product across ALL its bill lines (used by packing tiles,
   // whose lines are per-packing).
   const cartQtyOf = (item: GroceryItem) => cart.filter((l) => l.item.id === item.id).reduce((s, l) => s + l.qty, 0);
 
   function add(item: GroceryItem, packing?: PackingOption, variantName?: string) {
     const step = packing ? 1 : item.unit === "kg" ? 0.5 : 1;
-    const price = packing ? priceOfPacking(packing) : priceOf(item);
+    const price = packing ? priceOfPacking(item, packing) : priceOf(item);
     const key = lineKey({ item, packing, variant: variantName });
     setCart((c) => {
       const f = c.find((l) => lineKey(l) === key);
@@ -287,8 +291,8 @@ function GroceryScreen() {
     setCart((c) => c.map((l) => ({
       ...l,
       price: l.packing
-        ? (t === "retail" ? l.packing.retailPrice : l.packing.wholesalePrice)
-        : (t === "retail" ? l.item.retailPrice : l.item.wholesalePrice),
+        ? (t === "retail" ? effectivePackingRetail(l.item, l.packing) : l.packing.wholesalePrice)
+        : (t === "retail" ? effectiveRetail(l.item) : l.item.wholesalePrice),
     })));
   }
 
@@ -354,10 +358,20 @@ function GroceryScreen() {
     scanRef.current?.focus(); // instantly ready for the next scan
   }
 
+  // MOBILE serial/IMEI (Talha, 15 Nov 2026): trackSerial wale product ki
+  // line par har unit ka IMEI lazmi hai — pay modal mein inputs ate hain,
+  // serials order line par save hote hain aur receipt par print hote hain.
+  const [serials, setSerials] = useState<Record<string, string[]>>({});
+  const serialLines = cart.filter((l) => l.item.trackSerial);
+  const serialsMissing = serialLines.some((l) => {
+    const arr = serials[lineKey(l)] ?? [];
+    return Array.from({ length: Math.max(1, Math.floor(l.qty)) }, (_, i) => (arr[i] ?? "").trim()).some((s) => !s);
+  });
+
   const change = tendered - grand;
   // Wholesale bills with a below-minimum line can NOT complete (the server
   // refuses them too — WHOLESALE_MIN_QTY).
-  const canComplete = cart.length > 0 && !anyBelowWholesaleMin && (method !== "Cash" || tendered >= grand);
+  const canComplete = cart.length > 0 && !anyBelowWholesaleMin && !serialsMissing && (method !== "Cash" || tendered >= grand);
 
   function complete() {
     if (!canComplete) return;
@@ -368,8 +382,16 @@ function GroceryScreen() {
       cashier: getStaffSessionMember()?.name ?? "Counter 1",
       mode: "grocery",
       priceType,
-      token: nextToken(orders),
-      lines: cart.map((l) => ({ itemId: l.item.id, name: l.variant || l.packing ? lineDisplayName(l) : `${l.item.name}${l.item.unit === "kg" ? " (kg)" : ""}`, price: l.price, qty: l.qty })),
+      token: nextToken(orders, "grocery"),
+      // Offer-priced lines carry a tiny "(Offer)" tag in the receipt name —
+      // the server stamps the same tag from its is_offer snapshot.
+      lines: cart.map((l) => ({
+        itemId: l.item.id,
+        name: `${l.variant || l.packing ? lineDisplayName(l) : `${l.item.name}${l.item.unit === "kg" ? " (kg)" : ""}`}${priceType === "retail" && lineIsOffer(l.item, l.packing) ? " (Offer)" : ""}`,
+        price: l.price, qty: l.qty,
+        // Serial-tracked (mobile) lines carry one IMEI per unit
+        ...(l.item.trackSerial ? { serials: (serials[lineKey(l)] ?? []).map((s) => s.trim()).filter(Boolean) } : {}),
+      })),
       subtotal: Math.round(total),
       discount: Math.round(discountAmt),
       total: Math.round(grand),
@@ -391,6 +413,7 @@ function GroceryScreen() {
     setItems(next); saveGrocery(next);
     setDone(order);
     setCart([]);
+    setSerials({});
     setPayOpen(false);
     applyTendered(0);
     setUdhaarName("");
@@ -528,7 +551,7 @@ function GroceryScreen() {
                     </div>
                     <ul className="mt-2 space-y-0.5 text-sm">
                       {o.lines.map((l, i) => (
-                        <li key={`${l.itemId}-${i}`} className="flex justify-between border-b border-dashed border-stone-200 pb-0.5"><span>{l.name}</span><b>× {fmtQty(l.qty)}</b></li>
+                        <li key={`${l.itemId}-${i}`} className="flex justify-between gap-2 border-b border-dashed border-stone-200 pb-0.5"><span className="flex-1 min-w-0 leading-snug">{l.name}</span><b className="shrink-0">× {fmtQty(l.qty)}</b></li>
                       ))}
                     </ul>
                     <div className="flex justify-between font-black mt-2"><span>Total · {o.payment}</span><span>Rs {o.total.toLocaleString()}</span></div>
@@ -552,7 +575,7 @@ function GroceryScreen() {
               const lineQty = hasPackings ? undefined : cart.find((l) => l.item.id === item.id && !l.packing)?.qty;
               const low = item.stock <= (item.unit === "kg" ? 10 : 15);
               const TINTS = ["#FFFBEB", "#EFF6FF", "#F0FDF4", "#FDF2F8", "#F5F3FF", "#FFF7ED"];
-              const minPacking = hasPackings ? Math.min(...item.packings!.map((p) => priceOfPacking(p))) : 0;
+              const minPacking = hasPackings ? Math.min(...item.packings!.map((p) => priceOfPacking(item, p))) : 0;
               const img = groceryImage(item, heads, subs); // product → sub-head → head → emoji
               return (
                 <div key={item.id} onClick={() => tileTap(item)} data-testid="grocery-tile" data-name={item.name} role="button" aria-label={`Add ${item.name}`}
@@ -565,6 +588,9 @@ function GroceryScreen() {
                   <div className="mt-1 font-extrabold" style={{ color: "#F97316" }}>
                     {hasPackings ? <>{money(minPacking)}<span className="text-xs text-stone-500"> se start</span></> : <>{money(priceOf(item))}{item.unit === "kg" ? <span className="text-xs text-stone-500"> / kg</span> : null}</>}
                   </div>
+                  {priceType === "retail" && offerActive(item) && (
+                    <span className="inline-block mt-0.5 text-[10px] font-black px-1.5 py-0.5 rounded-full text-white" style={{ background: "#DC2626" }}>🎉 OFFER {money(item.offerPrice as number)}</span>
+                  )}
                   <div className="text-xs text-stone-500 mt-0.5">
                     SKU {item.sku}{item.barcode ? <> · 🏷️ {item.barcode}</> : ""} · Stock: <b style={{ color: low ? "#DC2626" : "#16A34A" }}>{fmtQty(item.stock)} {item.unit === "kg" ? "kg" : "pcs"}</b>
                     {!hasPackings && priceType === "retail" && <span> · WS {money(item.wholesalePrice)}</span>}
@@ -630,7 +656,7 @@ function GroceryScreen() {
               return (
               <div key={key} className={`flex items-center gap-2 rounded-xl bg-orange-50/60 border border-orange-100 px-3 py-2 ${flashId === l.item.id ? "scan-flash" : ""}`}>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">{lineDisplayName(l)}</div>
+                  <div className="font-bold text-sm leading-tight">{lineDisplayName(l)}</div>
                   <div className="text-xs text-stone-500">{money(l.price)}{l.item.unit === "kg" ? "/kg" : ""} × {fmtQty(l.qty)}{l.item.unit === "kg" ? " kg" : ""} = <b>{money(l.price * l.qty)}</b></div>
                   {lineBelowWholesaleMin(l) && (
                     <div className="text-xs font-bold" style={{ color: "#DC2626" }}>⚠️ Wholesale ke liye kam az kam {wholesaleMinOf(l)} lazmi hai</div>
@@ -738,8 +764,14 @@ function GroceryScreen() {
                       <div key={p.label} className="w-full flex items-center justify-between rounded-2xl border-[3px] px-4 py-3 transition"
                         style={q > 0 ? { borderColor: "#F97316", background: "#FFF7ED" } : { borderColor: "#E7E5E4" }}>
                         <span className="min-w-0">
-                          <span className="font-black text-lg block truncate">📦 {p.label}</span>
-                          <span className="font-black" style={{ color: "#F97316" }}>{money(priceOfPacking(p))}</span>
+                          <span className="font-black text-lg block leading-tight">📦 {p.label}</span>
+                          {priceType === "retail" && lineIsOffer(chooserItem, p) ? (
+                            <span className="font-black whitespace-nowrap" style={{ color: "#F97316" }}>
+                              <s className="text-stone-400 font-bold text-sm">{money(p.retailPrice)}</s> {money(priceOfPacking(chooserItem, p))} <span className="text-[10px] px-1.5 py-0.5 rounded-full text-white align-middle" style={{ background: "#DC2626" }}>🎉 OFFER</span>
+                            </span>
+                          ) : (
+                            <span className="font-black" style={{ color: "#F97316" }}>{money(priceOfPacking(chooserItem, p))}</span>
+                          )}
                         </span>
                         {q === 0 ? (
                           <button onClick={() => add(chooserItem, p, vName)} className="w-10 h-10 rounded-full text-white text-2xl font-black leading-none shrink-0" style={{ background: "#F97316" }} aria-label={`Add ${p.label}`}>+</button>
@@ -838,6 +870,24 @@ function GroceryScreen() {
             {(method === "JazzCash" || method === "Easypaisa") && (
               <p className="mb-4 text-stone-500 text-center">Confirm the {method} payment has been received, then complete.</p>
             )}
+            {serialLines.length > 0 && (
+              <div className="mb-4 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: "#1976D2", background: "#EFF6FF" }} data-testid="serial-panel">
+                <div className="font-black mb-1">📱 IMEI / Serial Number — lazmi</div>
+                <p className="text-xs font-bold text-stone-500 mb-2">Har unit ka apna IMEI/serial likhein — ye bill par print hoga (warranty / record ke liye).</p>
+                {serialLines.map((l) => (
+                  <div key={lineKey(l)} className="mb-2">
+                    <div className="font-bold text-sm mb-1">{l.item.emoji} {l.item.name}{l.packing ? ` (${l.packing.label})` : ""} × {Math.floor(l.qty)}</div>
+                    {Array.from({ length: Math.max(1, Math.floor(l.qty)) }, (_, i) => (
+                      <input key={i} value={serials[lineKey(l)]?.[i] ?? ""}
+                        onChange={(e) => setSerials((prev) => { const arr = [...(prev[lineKey(l)] ?? [])]; arr[i] = e.target.value; return { ...prev, [lineKey(l)]: arr }; })}
+                        placeholder={`IMEI / Serial #${i + 1}`} data-testid={`serial-input-${l.item.id}-${i}`}
+                        className="w-full rounded-xl border-2 border-stone-200 px-4 py-2.5 mb-1.5 font-bold outline-none focus:border-blue-600 bg-white" />
+                    ))}
+                  </div>
+                ))}
+                {serialsMissing && <p className="text-xs font-black" style={{ color: "#DC2626" }}>⚠️ Saare IMEI bharein — tab hi sale complete hogi</p>}
+              </div>
+            )}
             <button disabled={!canComplete} onClick={complete}
               className="w-full rounded-2xl py-4 text-xl font-black text-white disabled:opacity-40" style={{ background: "#16A34A" }}>
               ✓ Complete Sale
@@ -867,10 +917,13 @@ function GroceryScreen() {
 }
 
 // Staff side — role-gated: only staff whose tabs include Grocery see this.
+// Business gate: retail setup mein off ho to RetailOnly notice deta hai.
 export default function GroceryPage() {
   return (
     <StaffGate tab="grocery">
-      <GroceryScreen />
+      <RetailOnly>
+        <GroceryScreen />
+      </RetailOnly>
     </StaffGate>
   );
 }
