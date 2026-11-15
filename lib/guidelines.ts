@@ -12,6 +12,7 @@ export type GuidelineKey =
   | "owner-labels"
   | "owner-staff"
   | "owner-settings"
+  | "owner-devices"
   | "owner-tables"
   | "owner-pnl"
   | "owner-setup";
@@ -36,6 +37,7 @@ export const GUIDELINE_KEYS: GuidelineKey[] = [
   "owner-labels",
   "owner-staff",
   "owner-settings",
+  "owner-devices",
   "owner-tables",
   "owner-pnl",
   "owner-setup",
@@ -278,6 +280,23 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
     tips: [
       "Dhyaan dein: Shop Status switch foran save hota hai, lekin contact number, naam, payment numbers aur wholesale minimums ke liye Save Settings lazmi hai.",
       "Jab shop band ho to customers ko sirf Closed popup, contact number aur Call / WhatsApp button nazar ate hain — koi order place nahi hota.",
+    ],
+  },
+
+  "owner-devices": {
+    title: "🖨️ Owner — Printers & Devices",
+    steps: [
+      "Printers chalane wala chhota program (print-agent) dukaan ke PC par chalta hai. Is tab par sab se upar us ki halat simple alfaz mein likhi ati hai: ✅ Chal raha hai ya ❌ Band hai. Band ho to usi PC par print-agent chalana hoga — baghair us ke koi bill print nahi hoga.",
+      "Print program pehli dafa jorna (pairing): neeche 🔗 Pairing wale hisse mein program ka naam likh kar Pair dabayein — ek lamba code milega jo SIRF ek dafa dikhta hai. Wo code print-agent ki config file (print-agent.config.json) mein agentToken ki jagah daalein aur program dobara chalain; halat ✅ ho jayegi.",
+      "Printer chunnna: Bill Printer, Kitchen Printer aur Label Printer — teeno dropdowns mein wohi naam ate hain jo print program ne khud dhoondhe hain (USB/Network printers). Har kaam ke liye usi ka printer chunein aur 💾 Save dabayein. Naam ya IP haath se kabhi nahi likhna parta.",
+      "Test print: har printer ke samne 🧪 Test Print dabayein — ek chhoti test parchi/sticker print hogi. Neeche jobs ki halat simple alfaz mein ati hai (⏳ gaya hai / ✅ print ho gaya / ❌ nahi hua — wajah ke sath). Kagaz par test aa jaye to printer tayyar hai.",
+      "Cash drawer: drawer bill printer ke sath juda ho to har CASH bill par khud khul jata hai — koi alag setting nahi. JazzCash/Easypaisa/Udhaar wale bill par drawer nahi khulta.",
+      "Barcode scanner: scanner ki USB taang PC mein lagayein — koi driver ya setting nahi hoti. Isi tab ke 🔫 Scanner Test mein kisi bhi cheez ka barcode scan karein: sabz message aa jaye to scanner tayyar hai. Amber message ka matlab hai scanner ne parh liya hai lekin wo cheez system mein nahi — pehle product add karein.",
+      "Printer dropdown mein naam na aye to: printer ON karein, USB taang check karein, print program chal raha ho — printer lagte hi naam khud aa jata hai.",
+    ],
+    tips: [
+      "Label printer alag chunein — stickers sirf usi par jate hain; bill printer par sticker sahi nahi ayega.",
+      "Test print wali parchi par 'TEST' likha ata hai taake asal bills se alag pehchani jaye.",
     ],
   },
 
