@@ -5,6 +5,7 @@ import TopBar from "@/components/TopBar";
 import StaffGate from "@/components/StaffGate";
 import { RetailOnly } from "@/components/BusinessGate";
 import OrderAlerts from "@/components/OrderAlerts";
+import ScannerTest from "@/components/ScannerTest";
 import Receipt, { paymentPayload } from "@/components/Receipt";
 import QRCode from "react-qr-code";
 import {
@@ -61,6 +62,7 @@ function GroceryScreen() {
   const [scanToast, setScanToast] = useState<{ ok: boolean; text: string; key: number } | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [camOpen, setCamOpen] = useState(false);
+  const [scannerTestOpen, setScannerTestOpen] = useState(false);
   const [camMsg, setCamMsg] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
@@ -116,7 +118,9 @@ function GroceryScreen() {
   const scanAddRef = useRef<(code: string) => boolean>(() => false);
   scanAddRef.current = (code: string) => scanAdd(code);
   const modalOpenRef = useRef(false);
-  modalOpenRef.current = payOpen || !!done || !!chooserItem;
+  // Scanner Test khula ho to bursts sirf test panel ko jayein — bill mein
+  // item add na ho (warna ek scan do jagah asar karega).
+  modalOpenRef.current = payOpen || !!done || !!chooserItem || scannerTestOpen;
 
   // The scan field is ALWAYS ready: focus it on open, after every scan the
   // form keeps focus, and "New Sale" refocuses it (see success screen).
@@ -441,7 +445,13 @@ function GroceryScreen() {
                 className="rounded-xl border-2 border-dashed border-stone-300 bg-white px-4 py-3 flex-1 min-w-0 text-base outline-none focus:border-orange-500" />
               <button type="submit" className="rounded-xl px-4 font-extrabold text-white" style={{ background: "#0F172A" }}>Add</button>
               <button type="button" onClick={openCamera} className="rounded-xl px-4 font-extrabold text-white whitespace-nowrap" style={{ background: "#1976D2" }}>📷 Camera Scan</button>
+              <button type="button" onClick={() => setScannerTestOpen((v) => !v)} data-testid="scanner-test-toggle" className="rounded-xl px-4 font-extrabold text-white whitespace-nowrap" style={{ background: "#78716C" }}>🔫 Scanner Test</button>
             </form>
+            {scannerTestOpen && (
+              <div className="mt-3 rounded-2xl bg-white p-1">
+                <ScannerTest />
+              </div>
+            )}
           </div>
           {/* Head chips (row 1) — Main Head → Sub Head → Product. Only heads
               that HAVE products get a chip (empty heads stay owner-side
