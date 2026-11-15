@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import TopBar from "@/components/TopBar";
 import StaffGate from "@/components/StaffGate";
 import OrderAlerts from "@/components/OrderAlerts";
@@ -10,6 +10,7 @@ import Barcode128 from "@/components/Barcode128";
 import { GuidelineButton, GuidelineIndexButton } from "@/components/Guideline";
 import UdhaarKhataSection from "@/components/UdhaarKhata";
 import MerchantQrSection from "@/components/MerchantQr";
+import ScannerTest from "@/components/ScannerTest";
 import Link from "next/link";
 import {
   CATEGORIES, Category, Deal, Expense, GroceryHead, GroceryItem, GrocerySubHead, MenuItem, Order, StaffMember, TabKey, TABS_META,
@@ -18,7 +19,7 @@ import {
   loadDeals, saveDeals, dealValue, dealContentsText, loadExpenses, saveExpenses, expiringProducts, expiryLabel, loadStockEntries, hasRetail,
 } from "@/lib/store";
 import { templateOf } from "@/lib/templates";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 
 // Emoji choices for a NEW grocery head (owner picks one from this row).
 const HEAD_EMOJIS = ["🌾", "🫙", "☕", "🥛", "🍪", "🧼", "🧴", "🥐", "🧊", "🏠", "🥤", "🍫", "👶", "🥜", "🌶️", "🛒"];
@@ -519,6 +520,236 @@ function ProfitLossSection({ shop }: { shop: ShopSettings }) {
   );
 }
 
+// ── Printers & Devices ───────────────────────────────────────────────────────
+// Device Setup (Talha): printer pairing, printer chunnna aur scanner test —
+// sab system ke ANDAR se, simple alfaz mein, aam bande ke liye. Print
+// program (agent) apne printers khud dhoondh kar server ko bhejta hai; owner
+// yahan sirf dropdown se chunta hai — naam/IP haath se kabhi nahi likhta.
+type DeviceRole = "receipt" | "kitchen" | "label";
+const DEVICE_ROLES: { role: DeviceRole; label: string; jobType: string; hint: string }[] = [
+  { role: "receipt", label: "🧾 Bill Printer", jobType: "receipt", hint: "Customer ke bills is par print honge" },
+  { role: "kitchen", label: "👨‍🍳 Kitchen Printer", jobType: "kitchen_ticket", hint: "Kitchen ki parchiyan (token wali) is par jayengi" },
+  { role: "label", label: "🏷️ Label Printer", jobType: "barcode_label", hint: "Barcode stickers sirf is par print honge" },
+];
+interface DeviceAgentDto {
+  id: string; displayName: string; machineName: string | null; version: string | null;
+  lastSeenAt: string | null; online: boolean;
+  availablePrinters: { name: string; kind: string; address?: string }[];
+}
+interface DevicesDto {
+  agents: DeviceAgentDto[];
+  assignments: Record<DeviceRole, { printerId: string; name: string; agentId: string | null } | null>;
+  recentJobs: { id: string; type: string; status: string; isTest: boolean; lastError: string | null; createdAt: string }[];
+}
+
+function agoText(iso: string | null): string {
+  if (!iso) return "kabhi nahi";
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return "abhi abhi";
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} minute pehle`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} ghante pehle`;
+  return `${Math.round(h / 24)} din pehle`;
+}
+
+function DevicesSection() {
+  const [data, setData] = useState<DevicesDto | null>(null);
+  const [loadErr, setLoadErr] = useState("");
+  const [picks, setPicks] = useState<Record<DeviceRole, string>>({ receipt: "", kitchen: "", label: "" });
+  const picksInitFor = useRef<string>("");
+  const [msg, setMsg] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [testBusy, setTestBusy] = useState<DeviceRole | null>(null);
+  const [pairName, setPairName] = useState("");
+  const [pairToken, setPairToken] = useState("");
+  const [pairMsg, setPairMsg] = useState("");
+
+  const load = async () => {
+    try {
+      const d = await apiGet<DevicesDto>("/owner/devices");
+      setData(d);
+      setLoadErr("");
+      // Dropdowns ki ibtidai value sirf pehli dafa (ya agent badalne par) —
+      // har poll par owner ki adhoori tabdeeli na urayein.
+      const first = d.agents[0];
+      const key = first ? first.id : "none";
+      if (picksInitFor.current !== key) {
+        picksInitFor.current = key;
+        setPicks({
+          receipt: d.assignments.receipt?.name ?? "",
+          kitchen: d.assignments.kitchen?.name ?? "",
+          label: d.assignments.label?.name ?? "",
+        });
+      }
+    } catch {
+      setLoadErr("Devices ki halat load nahi hui — page refresh karke dobara dekhein.");
+    }
+  };
+  useEffect(() => {
+    void load();
+    const t = setInterval(() => { void load(); }, 4000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const agent = data?.agents[0] ?? null;
+  const available = agent?.availablePrinters ?? [];
+
+  async function savePicks() {
+    if (!agent) return;
+    setSaving(true); setMsg("");
+    try {
+      const assignments: Record<DeviceRole, { name: string; kind: string; address?: string } | null> = { receipt: null, kitchen: null, label: null };
+      for (const { role } of DEVICE_ROLES) {
+        const name = picks[role];
+        if (!name) { assignments[role] = null; continue; }
+        const found = available.find((p) => p.name === name);
+        assignments[role] = { name, kind: found?.kind ?? "windows", ...(found?.address ? { address: found.address } : {}) };
+      }
+      const d = await apiPut<DevicesDto>("/owner/devices", { agentId: agent.id, assignments });
+      setData(d);
+      setMsg("✓ Printers save ho gaye — ab bills inhi printers par jayenge");
+    } catch {
+      setMsg("❌ Save nahi hua — dobara try karein");
+    } finally { setSaving(false); }
+  }
+
+  async function testPrint(role: DeviceRole) {
+    setTestBusy(role); setMsg("");
+    try {
+      await apiPost("/owner/devices/test-print", { role });
+      setMsg("🧪 Test print bhej diya hai — printer se parchi/sticker nikalna chahiye. Neeche halat dekhein.");
+      void load();
+    } catch {
+      setMsg("❌ Test print nahi gaya — print program chal raha hai? Upar halat dekhein.");
+    } finally { setTestBusy(null); }
+  }
+
+  async function pair() {
+    const name = pairName.trim();
+    if (!name) { setPairMsg("⚠️ Pehle print program ka naam likhein (masalan: Counter PC)"); return; }
+    setPairMsg("");
+    try {
+      const r = await apiPost<{ token: string }>("/owner/print-agents", { displayName: name });
+      setPairToken(r.token);
+      setPairName("");
+      void load();
+    } catch {
+      setPairMsg("❌ Pairing nahi hui — dobara try karein");
+    }
+  }
+
+  const testStatusOf = (jobType: string) => data?.recentJobs.find((j) => j.isTest && j.type === jobType) ?? null;
+  const statusLine = (j: DevicesDto["recentJobs"][number] | null) => {
+    if (!j) return null;
+    switch (j.status) {
+      case "queued": return { text: "⏳ Test print program tak ja raha hai…", color: "#D97706" };
+      case "sent": return { text: "🖨️ Print ho raha hai…", color: "#D97706" };
+      case "printed": return { text: "✅ Print ho gaya — parchi/sticker check kar lein", color: "#16A34A" };
+      case "failed": return { text: `❌ Print nahi hua${j.lastError ? ` — ${j.lastError}` : ""}`, color: "#DC2626" };
+      default: return { text: `Halat: ${j.status}`, color: "#78716C" };
+    }
+  };
+
+  return (
+    <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4" data-testid="devices-section">
+      <h2 className="font-extrabold mb-1">🖨️ Printers & Devices — sab setup yahin se</h2>
+      <p className="text-sm text-stone-500 mb-4">Printer jorna, printer chunnna, test print aur barcode scanner ka test — sab kuch yahin se, simple alfaz mein. Kahin koi naam ya IP haath se nahi likhna parta.</p>
+
+      {/* ── Print program (agent) ki halat ── */}
+      <div className="rounded-2xl border-2 p-3 mb-4" style={agent?.online ? { borderColor: "#BBF7D0", background: "#F0FDF4" } : { borderColor: "#FECACA", background: "#FEF2F2" }}>
+        {!agent && (
+          <div className="font-bold" style={{ color: "#DC2626" }}>
+            ❌ Print program abhi jura hi nahi hai — pehle neeche 🔗 Pairing se program jodein, warna koi bill print nahi hoga.
+          </div>
+        )}
+        {agent && (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+            <span className="font-extrabold">
+              Print program ({agent.displayName}): {agent.online
+                ? <span style={{ color: "#16A34A" }}>✅ Chal raha hai</span>
+                : <span style={{ color: "#DC2626" }}>❌ Band hai — dukaan ke PC par print program (print-agent) chalana hoga</span>}
+            </span>
+            <span className="text-sm font-semibold text-stone-500">Aakhri rabta: {agoText(agent.lastSeenAt)}</span>
+            {agent.machineName && <span className="text-sm font-semibold text-stone-500">PC: {agent.machineName}</span>}
+          </div>
+        )}
+        {loadErr && <div className="text-sm font-bold mt-1" style={{ color: "#DC2626" }}>{loadErr}</div>}
+      </div>
+
+      {/* ── Pairing ── */}
+      <div className="rounded-2xl border-2 border-dashed border-stone-200 p-3 mb-4">
+        <div className="font-extrabold mb-1">🔗 Print Program Jodein (Pairing) — sirf pehli dafa</div>
+        <p className="text-sm text-stone-500 mb-2">Program ka naam likh kar Pair dabayein — ek code milega jo <b>sirf ek dafa</b> dikhega. Wo code PC par print-agent ki config file (<b>print-agent.config.json</b>) mein <b>agentToken</b> ki jagah daal kar program chalain.</p>
+        <div className="flex flex-wrap gap-2">
+          <input value={pairName} onChange={(e) => setPairName(e.target.value)} placeholder="Program ka naam — masalan: Counter PC"
+            className="rounded-xl border-2 border-stone-200 px-3 py-2.5 flex-1 min-w-[200px] outline-none focus:border-orange-500" />
+          <button onClick={() => { void pair(); }} className="rounded-xl px-5 py-2.5 font-extrabold text-white" style={{ background: "#0F172A" }}>🔗 Pair karein</button>
+        </div>
+        {pairMsg && <div className="font-bold text-sm mt-2" style={{ color: "#DC2626" }}>{pairMsg}</div>}
+        {pairToken && (
+          <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3">
+            <div className="text-xs font-extrabold text-stone-500 mb-1">AAP KA PAIRING CODE — sirf ek dafa dikh raha hai, abhi copy kar lein:</div>
+            <code className="block break-all font-bold text-sm bg-white rounded-lg border border-amber-200 px-2 py-1.5" data-testid="pair-token">{pairToken}</code>
+          </div>
+        )}
+      </div>
+
+      {/* ── Printer chunein ── */}
+      <div className="font-extrabold mb-1">🖨️ Har Kaam Ka Printer Chunein</div>
+      {agent && available.length === 0 && (
+        <p className="text-sm font-bold mb-3" style={{ color: "#D97706" }}>
+          Abhi print program ko koi printer nahi mila. Printer <b>ON</b> karein aur us ki <b>USB taang check karein</b> — print program chal raha ho to printer lagte hi us ka naam yahan khud aa jayega.
+        </p>
+      )}
+      <div className="space-y-3 mb-3">
+        {DEVICE_ROLES.map(({ role, label, jobType, hint }) => {
+          const st = statusLine(testStatusOf(jobType));
+          const assignedName = data?.assignments[role]?.name ?? "";
+          const options = [...available];
+          if (assignedName && !options.some((p) => p.name === assignedName)) {
+            options.push({ name: assignedName, kind: "windows" });
+          }
+          return (
+            <div key={role} className="rounded-2xl border border-orange-100 bg-orange-50/50 p-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="block flex-1 min-w-[220px]">
+                  <span className="block text-[11px] font-bold uppercase tracking-wide text-stone-500 mb-0.5">{label}</span>
+                  <select value={picks[role]} onChange={(e) => setPicks({ ...picks, [role]: e.target.value })}
+                    data-testid={`printer-pick-${role}`}
+                    className="w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 bg-white outline-none focus:border-orange-500 font-bold">
+                    <option value="">— Koi nahi —</option>
+                    {options.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
+                  </select>
+                  <span className="block text-xs text-stone-400 mt-0.5">{hint}</span>
+                </label>
+                <button onClick={() => { void testPrint(role); }} disabled={testBusy === role || !picks[role]}
+                  data-testid={`test-print-${role}`}
+                  className="rounded-xl px-4 py-2.5 font-extrabold text-white disabled:opacity-50" style={{ background: "#F97316" }}>
+                  {testBusy === role ? "Bhej raha hai…" : "🧪 Test Print"}
+                </button>
+              </div>
+              {st && <div className="font-bold text-sm mt-2" style={{ color: st.color }}>{st.text}</div>}
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <button onClick={() => { void savePicks(); }} disabled={saving || !agent}
+          className="rounded-xl px-5 py-2.5 font-extrabold text-white disabled:opacity-50" style={{ background: "#16A34A" }}>
+          {saving ? "Save ho raha hai…" : "💾 Printers Save Karein"}
+        </button>
+        {msg && <span className="font-bold text-sm" style={{ color: msg.startsWith("✓") ? "#16A34A" : msg.startsWith("🧪") ? "#0F172A" : "#DC2626" }}>{msg}</span>}
+      </div>
+      <p className="text-sm font-semibold text-stone-500 mb-4">💰 Cash drawer bill printer ke sath juda ho to <b>cash bill par khud khul jayega</b> — koi alag setting nahi. JazzCash / Easypaisa / Udhaar par drawer nahi khulta.</p>
+
+      {/* ── Scanner test ── */}
+      <ScannerTest />
+    </section>
+  );
+}
+
 function OwnerScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
@@ -615,7 +846,7 @@ function OwnerScreen() {
   // Owner Dashboard section tabs — one section at a time instead of one
   // endless stacked scroll. Print overlays (label sheet / receipt view)
   // stay OUTSIDE this switch so print flows never break.
-  const [ownerTab, setOwnerTab] = useState<"overview" | "menu" | "grocery" | "udhaar" | "pnl" | "heads" | "labels" | "staff" | "settings" | "tables">("overview");
+  const [ownerTab, setOwnerTab] = useState<"overview" | "menu" | "grocery" | "udhaar" | "pnl" | "heads" | "labels" | "devices" | "staff" | "settings" | "tables">("overview");
   // Heads manager — sub-heads collapsed by default; a head expands on ▶.
   const [expandedHeads, setExpandedHeads] = useState<Record<string, boolean>>({});
   const [subDrafts, setSubDrafts] = useState<Record<string, string>>({});
@@ -916,6 +1147,7 @@ function OwnerScreen() {
     { id: "udhaar", label: "💰 Udhaar Khata" },
     { id: "pnl", label: "📈 Munafa Nuqsan" },
     ...(retailOn ? [{ id: "heads" as const, label: "🗂️ Heads" }, { id: "labels" as const, label: "🏷️ Labels" }] : []),
+    { id: "devices", label: "🖨️ Printers & Devices" },
     { id: "staff", label: "🔐 Staff" },
     { id: "settings", label: "⚙️ Settings" },
     ...(shop.hasCanteen ? [{ id: "tables" as const, label: "🪑 Tables QR" }] : []),
@@ -1056,6 +1288,13 @@ function OwnerScreen() {
         </div>
 
         </div>)}
+
+        {ownerTab === "devices" && (<>
+          <div className="flex justify-end mb-3">
+            <GuidelineButton entry="owner-devices" />
+          </div>
+          <DevicesSection />
+        </>)}
 
         {ownerTab === "staff" && (<>
           <div className="flex justify-end mb-3">
