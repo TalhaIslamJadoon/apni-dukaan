@@ -3,15 +3,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import TopBar from "@/components/TopBar";
 import StaffGate from "@/components/StaffGate";
+import { CanteenOnly, SetupGate } from "@/components/BusinessGate";
 import OrderAlerts from "@/components/OrderAlerts";
+import DealContentsRows from "@/components/DealContents";
 import Receipt, { paymentPayload } from "@/components/Receipt";
 import QRCode from "react-qr-code";
 import {
-  CATEGORIES, CATEGORY_STYLE, Category, MenuItem, Order, PaymentMethod,
+  CATEGORIES, CATEGORY_STYLE, Category, Deal, MenuItem, Order, PaymentMethod,
   loadMenu, saveMenu, loadOrders, saveOrders, nextToken, nextBillNo, getStaffSessionMember,
+  loadDeals, dealValue, dealContentsText, dealOrderLine,
 } from "@/lib/store";
 
 interface CartLine { item: MenuItem; qty: number; }
+interface DealCartLine { deal: Deal; qty: number; }
 
 const PAYMENTS: { name: PaymentMethod; emoji: string; color: string }[] = [
   { name: "Cash", emoji: "💵", color: "#16A34A" },
@@ -22,8 +26,10 @@ const PAYMENTS: { name: PaymentMethod; emoji: string; color: string }[] = [
 
 function PosPage() {
   const [menu, setMenu] = useState<MenuItem[]>([]);
-  const [cat, setCat] = useState<Category | "All">("All");
+  const [cat, setCat] = useState<Category | "All" | "Deals">("All");
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealCart, setDealCart] = useState<DealCartLine[]>([]);
   const [payOpen, setPayOpen] = useState(false);
   const [method, setMethod] = useState<PaymentMethod>("Cash");
   const [discountType, setDiscountType] = useState<"Rs" | "%">("Rs");
@@ -48,6 +54,9 @@ function PosPage() {
 
   useEffect(() => {
     setMenu(loadMenu());
+    setDeals(loadDeals());
+    const refreshDeals = () => setDeals(loadDeals());
+    window.addEventListener("storage", refreshDeals);
     refreshToday();
     const refreshProof = () => setProofPending(loadOrders().filter((o) =>
       o.source === "online" && o.mode !== "grocery" && o.paymentStatus === "proof_pending" &&
@@ -56,7 +65,7 @@ function PosPage() {
     const t = setInterval(refreshProof, 2000);
     window.addEventListener("storage", refreshProof);
     window.addEventListener("canteen-orders-changed", refreshProof);
-    return () => { clearInterval(t); window.removeEventListener("storage", refreshProof); window.removeEventListener("canteen-orders-changed", refreshProof); };
+    return () => { clearInterval(t); window.removeEventListener("storage", refreshProof); window.removeEventListener("canteen-orders-changed", refreshProof); window.removeEventListener("storage", refreshDeals); };
   }, []);
 
   function refreshToday() {
@@ -66,10 +75,15 @@ function PosPage() {
   }
 
   const total = useMemo(() => cart.reduce((s, l) => s + l.item.price * l.qty, 0), [cart]);
+  // 🎁 Deals bill at the DEAL PRICE exactly — a deal line contributes
+  // deal.price × qty, never the sum of its contents.
+  const dealTotal = useMemo(() => dealCart.reduce((s, l) => s + l.deal.price * l.qty, 0), [dealCart]);
+  const billTotal = total + dealTotal;
   const discountVal = parseFloat(discountInput) || 0;
-  const discountAmt = Math.min(total, discountType === "Rs" ? discountVal : Math.round((total * discountVal) / 100));
-  const grand = total - discountAmt;
-  const visible = cat === "All" ? menu : menu.filter((m) => m.category === cat);
+  const discountAmt = Math.min(billTotal, discountType === "Rs" ? discountVal : Math.round((billTotal * discountVal) / 100));
+  const grand = billTotal - discountAmt;
+  const visible = cat === "All" || cat === "Deals" ? menu : menu.filter((m) => m.category === cat);
+  const activeDeals = deals.filter((d) => d.active);
 
   // Stepper guard: the tile's press animation shifts the tile mid-press, so a
   // real press on a tile's −/+ can land its click on the TILE (which adds).
@@ -93,8 +107,22 @@ function PosPage() {
   }
   function removeLine(id: string) { setCart((c) => c.filter((l) => l.item.id !== id)); }
 
+  function addDeal(deal: Deal) {
+    setDealCart((c) => {
+      const f = c.find((l) => l.deal.id === deal.id);
+      return f ? c.map((l) => (l.deal.id === deal.id ? { ...l, qty: l.qty + 1 } : l)) : [...c, { deal, qty: 1 }];
+    });
+  }
+  function decDeal(id: string) {
+    setDealCart((c) => c.map((l) => (l.deal.id === id ? { ...l, qty: l.qty - 1 } : l)).filter((l) => l.qty > 0));
+  }
+  function incDeal(id: string) {
+    setDealCart((c) => c.map((l) => (l.deal.id === id ? { ...l, qty: l.qty + 1 } : l)));
+  }
+  function removeDealLine(id: string) { setDealCart((c) => c.filter((l) => l.deal.id !== id)); }
+
   const change = tendered - grand;
-  const canComplete = cart.length > 0 && (method !== "Cash" || tendered >= grand);
+  const canComplete = (cart.length > 0 || dealCart.length > 0) && (method !== "Cash" || tendered >= grand);
 
   function complete() {
     if (!canComplete) return;
@@ -102,11 +130,16 @@ function PosPage() {
     const order: Order = {
       id: `ord-${Date.now()}`,
       mode: "canteen",
-      token: nextToken(orders),
+      token: nextToken(orders, "canteen"),
       billNo: pendingBillNo || nextBillNo(orders),
       cashier: getStaffSessionMember()?.name ?? "Counter 1",
-      lines: cart.map((l) => ({ itemId: l.item.id, name: l.item.name, price: l.item.price, qty: l.qty })),
-      subtotal: total,
+      // Menu lines first, then ONE line per deal (deal price exactly, with
+      // its components attached for the kitchen + receipt + stock).
+      lines: [
+        ...cart.map((l) => ({ itemId: l.item.id, name: l.item.name, price: l.item.price, qty: l.qty })),
+        ...dealCart.map((l) => dealOrderLine(l.deal, menu, l.qty)),
+      ],
+      subtotal: billTotal,
       discount: discountAmt,
       total: grand,
       payment: method,
@@ -117,15 +150,20 @@ function PosPage() {
       createdAt: new Date().toISOString(),
     };
     saveOrders([order, ...orders]);
-    // Deduct canteen stock — same single stock state the Stock screen reads.
+    // Deduct canteen stock — same single stock state the Stock screen
+    // reads. Usage = plain cart lines + every deal's components × deal qty.
+    const usage = new Map<string, number>();
+    cart.forEach((l) => usage.set(l.item.id, (usage.get(l.item.id) ?? 0) + l.qty));
+    dealCart.forEach((l) => l.deal.items.forEach((di) => usage.set(di.menuItemId, (usage.get(di.menuItemId) ?? 0) + di.qty * l.qty)));
     const nextMenu = loadMenu().map((m) => {
-      const line = cart.find((l) => l.item.id === m.id);
-      return line ? { ...m, stock: Math.max(0, (m.stock ?? 0) - line.qty) } : m;
+      const used = usage.get(m.id);
+      return used ? { ...m, stock: Math.max(0, (m.stock ?? 0) - used) } : m;
     });
     saveMenu(nextMenu);
     setMenu(nextMenu);
     setDone(order);
     setCart([]);
+    setDealCart([]);
     setPayOpen(false);
     applyTendered(0);
     setUdhaarName("");
@@ -161,6 +199,11 @@ function PosPage() {
         {/* LEFT ~70% — menu */}
         <main className="flex-1 p-3 lg:p-4 overflow-y-auto">
           <div className="flex flex-wrap gap-2 mb-3">
+            <button onClick={() => setCat("Deals")} data-testid="deals-tab"
+              className="rounded-full px-5 py-2.5 text-base font-bold border-2 transition"
+              style={cat === "Deals" ? { background: "#DC2626", borderColor: "#DC2626", color: "#fff" } : { background: "#FEF2F2", borderColor: "#FECACA", color: "#991B1B" }}>
+              🎁 Deals{activeDeals.length ? ` (${activeDeals.length})` : ""}
+            </button>
             {(["All", ...CATEGORIES] as const).map((c) => {
               const active = cat === c;
               const color = c === "All" ? "#F97316" : CATEGORY_STYLE[c].chip;
@@ -174,13 +217,59 @@ function PosPage() {
             })}
           </div>
 
+          {cat === "Deals" ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+            {activeDeals.map((deal) => {
+              const value = dealValue(deal, menu);
+              const inCart = dealCart.find((l) => l.deal.id === deal.id)?.qty;
+              const guardId = `deal:${deal.id}`;
+              return (
+                <div key={deal.id} onClick={() => { if (!stepperJustPressed(guardId)) addDeal(deal); }} data-testid="deal-tile" data-name={deal.name} role="button" aria-label={`Add ${deal.name}`}
+                  className="tile-3d relative rounded-2xl p-4 text-left shadow-sm border-2 cursor-pointer select-none flex flex-col"
+                  style={{ background: "#FEF2F2", borderColor: inCart ? "#DC2626" : "transparent" }}>
+                  {/* Header — gift + FULL deal name (wraps, never cut) + DEAL chip */}
+                  <div className="flex items-start gap-2">
+                    <span className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-white/70 shadow-sm text-2xl shrink-0">🎁</span>
+                    <div className="flex-1 min-w-0 font-extrabold leading-tight text-[15px]">{deal.name}</div>
+                    <span className="shrink-0 text-[10px] font-bold text-white rounded-full px-2 py-0.5" style={{ background: "#DC2626" }}>🎁 DEAL</span>
+                  </div>
+                  {/* Deal ke ANDAR ki cheezein — pic + poora naam + ×qty */}
+                  <DealContentsRows deal={deal} menu={menu} />
+                  {/* Footer — deal price (kul qeemat kati hui) + stepper / + */}
+                  <div className="mt-auto pt-2 flex items-end justify-between gap-2">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-extrabold text-lg" style={{ color: "#DC2626" }}>Rs {deal.price}</span>
+                      {value > deal.price && <s className="text-sm font-bold text-stone-400">Rs {value}</s>}
+                    </div>
+                    {inCart ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/90 shadow px-1 py-1" data-testid="deal-tile-stepper" onClick={(e) => e.stopPropagation()}>
+                        <button type="button" aria-label={`Remove one ${deal.name}`}
+                          onPointerDown={(e) => { e.stopPropagation(); stepperPressed(guardId); decDeal(deal.id); }}
+                          onClick={(e) => { e.stopPropagation(); if (e.detail === 0) decDeal(deal.id); }}
+                          className="w-8 h-8 rounded-full bg-white border-2 border-stone-300 text-base font-black leading-none active:scale-95">−</button>
+                        <span className="min-w-6 text-center font-black text-[15px]" data-testid="deal-tile-qty">{inCart}</span>
+                        <button type="button" aria-label={`Add one ${deal.name}`}
+                          onPointerDown={(e) => { e.stopPropagation(); stepperPressed(guardId); incDeal(deal.id); }}
+                          onClick={(e) => { e.stopPropagation(); if (e.detail === 0) incDeal(deal.id); }}
+                          className="w-8 h-8 rounded-full text-white text-base font-black leading-none active:scale-95" style={{ background: "#DC2626" }}>+</button>
+                      </span>
+                    ) : (
+                      <span className="w-8 h-8 rounded-full bg-white/80 border-2 border-stone-200 shadow-sm flex items-center justify-center text-lg font-black text-stone-500 shrink-0">+</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {activeDeals.length === 0 && <p className="text-stone-500 p-4 col-span-full">Abhi koi deal active nahi. Owner Dashboard → Canteen Menu → 🎁 Deals se deal banayein.</p>}
+          </div>
+          ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
             {visible.map((item) => {
               const st = CATEGORY_STYLE[item.category];
               const inCart = cart.find((l) => l.item.id === item.id)?.qty;
               return (
                 <div key={item.id} onClick={() => { if (!stepperJustPressed(item.id)) add(item); }} data-testid="canteen-tile" data-name={item.name} role="button" aria-label={`Add ${item.name}`}
-                  className="tile-3d relative rounded-2xl p-4 text-left shadow-sm border-2 min-h-[118px] cursor-pointer select-none"
+                  className={`tile-3d relative rounded-2xl p-4 text-left shadow-sm border-2 min-h-[118px] cursor-pointer select-none ${inCart ? "pb-12" : ""}`}
                   style={{ background: st.bg, borderColor: inCart ? st.ring : "transparent" }}>
                   <div className="mb-1">{item.image
                     ? <img src={item.image} alt={item.name} loading="lazy" className="w-12 h-12 rounded-2xl object-cover shadow-sm" />
@@ -214,23 +303,37 @@ function PosPage() {
               );
             })}
           </div>
-          {visible.length === 0 && <p className="text-stone-500 p-4">No items in this category yet. Add them from the Owner dashboard.</p>}
+          )}
+          {cat !== "Deals" && visible.length === 0 && <p className="text-stone-500 p-4">No items in this category yet. Add them from the Owner dashboard.</p>}
         </main>
 
         {/* RIGHT ~30% — always-visible bill */}
         <aside className="lg:w-[340px] xl:w-[380px] shrink-0 bg-white border-t lg:border-t-0 lg:border-l border-orange-100 flex flex-col max-h-[52vh] lg:max-h-none">
           <div className="px-4 pt-3 pb-2 flex items-center justify-between">
             <h2 className="font-extrabold text-lg">Current Bill</h2>
-            {cart.length > 0 && (
-              <button onClick={() => setCart([])} className="text-sm font-bold" style={{ color: "#DC2626" }}>Clear ✕</button>
+            {(cart.length > 0 || dealCart.length > 0) && (
+              <button onClick={() => { setCart([]); setDealCart([]); }} className="text-sm font-bold" style={{ color: "#DC2626" }}>Clear ✕</button>
             )}
           </div>
           <div className="flex-1 overflow-y-auto px-4 space-y-2 pb-2">
-            {cart.length === 0 && <p className="text-stone-400 text-center py-8">Tap an item to start the bill 👈</p>}
+            {cart.length === 0 && dealCart.length === 0 && <p className="text-stone-400 text-center py-8">Tap an item to start the bill 👈</p>}
+            {dealCart.map((l) => (
+              <div key={l.deal.id} className="flex items-center gap-2 rounded-xl bg-red-50/70 border border-red-200 px-3 py-2" data-testid="bill-deal-line">
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm leading-tight">🎁 {l.deal.name}</div>
+                  <div className="text-xs text-stone-500 leading-snug">{dealContentsText(l.deal, menu)}</div>
+                  <div className="text-xs text-stone-500">Rs {l.deal.price} × {l.qty} = <b>Rs {l.deal.price * l.qty}</b></div>
+                </div>
+                <button onClick={() => decDeal(l.deal.id)} className="w-9 h-9 rounded-full bg-white border-2 border-stone-200 text-lg font-extrabold">−</button>
+                <span className="w-6 text-center font-extrabold">{l.qty}</span>
+                <button onClick={() => incDeal(l.deal.id)} className="w-9 h-9 rounded-full bg-white border-2 border-stone-200 text-lg font-extrabold">+</button>
+                <button onClick={() => removeDealLine(l.deal.id)} className="w-8 h-8 rounded-full text-white font-bold" style={{ background: "#DC2626" }}>✕</button>
+              </div>
+            ))}
             {cart.map((l) => (
               <div key={l.item.id} className="flex items-center gap-2 rounded-xl bg-orange-50/60 border border-orange-100 px-3 py-2">
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">{l.item.name}</div>
+                  <div className="font-bold text-sm leading-tight">{l.item.name}</div>
                   <div className="text-xs text-stone-500">Rs {l.item.price} × {l.qty} = <b>Rs {l.item.price * l.qty}</b></div>
                 </div>
                 <button onClick={() => dec(l.item.id)} className="w-9 h-9 rounded-full bg-white border-2 border-stone-200 text-lg font-extrabold">−</button>
@@ -242,7 +345,7 @@ function PosPage() {
           </div>
           <div className="p-4 border-t-2 border-stone-800/70 bg-[#FFFBF5]">
             <div className="flex justify-between text-sm py-0.5 border-b border-dashed border-stone-300">
-              <span className="font-bold text-stone-500">Subtotal</span><span className="font-bold">Rs {total.toLocaleString()}</span>
+              <span className="font-bold text-stone-500">Subtotal</span><span className="font-bold">Rs {billTotal.toLocaleString()}</span>
             </div>
             {discountAmt > 0 && (
               <div className="flex justify-between text-sm py-0.5 border-b border-dashed border-stone-300">
@@ -253,7 +356,7 @@ function PosPage() {
               <span className="font-black text-stone-600">GRAND TOTAL</span>
               <span className="text-4xl font-black" style={{ color: "#F97316" }}>Rs {grand.toLocaleString()}</span>
             </div>
-            <button disabled={cart.length === 0} onClick={() => { setMethod("Cash"); applyTendered(0); setPendingBillNo(nextBillNo(loadOrders())); setPayOpen(true); }}
+            <button disabled={cart.length === 0 && dealCart.length === 0} onClick={() => { setMethod("Cash"); applyTendered(0); setPendingBillNo(nextBillNo(loadOrders())); setPayOpen(true); }}
               className="w-full rounded-2xl py-4 text-xl font-black text-white disabled:opacity-40 active:scale-[0.99]"
               style={{ background: "#F97316" }}>
               PAY / Charge →
@@ -271,7 +374,7 @@ function PosPage() {
               <button onClick={() => setPayOpen(false)} className="text-2xl font-bold text-stone-400">✕</button>
             </div>
             <div className="text-center text-3xl font-black mb-2" style={{ color: "#F97316" }}>Rs {grand.toLocaleString()}</div>
-            <div className="text-center text-xs text-stone-400 font-bold mb-3">Bill {pendingBillNo} · Subtotal Rs {total.toLocaleString()}{discountAmt > 0 ? ` · Discount −Rs ${discountAmt.toLocaleString()}` : ""}</div>
+            <div className="text-center text-xs text-stone-400 font-bold mb-3">Bill {pendingBillNo} · Subtotal Rs {billTotal.toLocaleString()}{discountAmt > 0 ? ` · Discount −Rs ${discountAmt.toLocaleString()}` : ""}</div>
 
             {/* Payment QR — customer scans live at the counter (DEMO merchant) */}
             <div className="rounded-2xl border-2 border-dashed border-stone-300 bg-orange-50/50 p-3 mb-4 text-center pop-in">
@@ -368,10 +471,16 @@ function PosPage() {
 }
 
 // Staff side — role-gated: only staff whose tabs include Canteen see this.
+// Business gates (SALE version): pehla setup (SetupGate) login se pehle
+// ata hai; canteen setup mein off ho to CanteenOnly notice deta hai.
 export default function CanteenPosPage() {
   return (
-    <StaffGate tab="canteen">
-      <PosPage />
-    </StaffGate>
+    <SetupGate>
+      <StaffGate tab="canteen">
+        <CanteenOnly>
+          <PosPage />
+        </CanteenOnly>
+      </StaffGate>
+    </SetupGate>
   );
 }
