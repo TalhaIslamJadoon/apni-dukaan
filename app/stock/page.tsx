@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import TopBar from "@/components/TopBar";
 import StaffGate from "@/components/StaffGate";
+import ScannerTest from "@/components/ScannerTest";
 import { RetailOnly } from "@/components/BusinessGate";
 import {
   GroceryItem, MenuItem, StockEntry,
@@ -162,6 +163,11 @@ function StockScreen() {
   // owner-only (nothing here can create or edit a product).
   const scanSelectRef = useRef<(code: string) => boolean>(() => false);
   scanSelectRef.current = (code: string) => scanSelect(code);
+  // Scanner Test panel — khula ho to bursts sirf test ko jayein, product
+  // select na ho (ek scan, ek asar).
+  const [scannerTestOpen, setScannerTestOpen] = useState(false);
+  const scannerTestOpenRef = useRef(false);
+  scannerTestOpenRef.current = scannerTestOpen;
 
   useEffect(() => { scanRef.current?.focus(); }, []);
 
@@ -178,6 +184,7 @@ function StockScreen() {
     let buf = "";
     let last = 0;
     const onKey = (e: KeyboardEvent) => {
+      if (scannerTestOpenRef.current) return; // test panel khula hai — burst us ka hai
       const el = document.activeElement as HTMLElement | null;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
       const now = performance.now();
@@ -412,7 +419,16 @@ function StockScreen() {
                 Scan hote hi product select ho jayega — Quantity, Purchase Rate aur Supplier aap khud likhenge.
                 Product system mein na ho to pehle Owner ko Dashboard se add karna hoga; Stock Wala product ya price nahi bana sakta.
               </p>
+              <button type="button" onClick={() => setScannerTestOpen((v) => !v)} data-testid="scanner-test-toggle"
+                className="mt-2 rounded-xl px-4 py-2 font-extrabold text-white" style={{ background: "#78716C" }}>
+                🔫 Scanner Test — scanner check karein
+              </button>
             </form>
+            {scannerTestOpen && (
+              <div className="mb-3 rounded-2xl bg-white p-1">
+                <ScannerTest />
+              </div>
+            )}
 
             <div className="flex rounded-xl overflow-hidden border-2 border-stone-200 mb-3">
               <button onClick={() => setMode("add")} className="flex-1 py-3 font-extrabold"
