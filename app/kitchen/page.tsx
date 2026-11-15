@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import TopBar from "@/components/TopBar";
 import StaffGate from "@/components/StaffGate";
+import { CanteenOnly } from "@/components/BusinessGate";
 import OrderAlerts from "@/components/OrderAlerts";
 import { Order, loadOrders, saveOrders, isToday, isPaymentCleared } from "@/lib/store";
 
@@ -86,8 +87,17 @@ function KitchenScreen() {
               </div>
               <ul className="mt-3 space-y-1 text-lg">
                 {o.lines.map((l) => (
-                  <li key={l.itemId} className="flex justify-between border-b border-dashed border-stone-200 pb-1">
-                    <span>{l.name}</span><b>× {l.qty}</b>
+                  <li key={l.itemId} className="border-b border-dashed border-stone-200 pb-1">
+                    <div className="flex justify-between">
+                      <span className={`flex-1 min-w-0 pr-2 leading-snug ${l.components?.length ? "font-extrabold" : ""}`}>{l.name}</span><b className="shrink-0">× {l.qty}</b>
+                    </div>
+                    {/* 🎁 Deal: the kitchen must make EVERY component —
+                        totals = per-deal qty × deal qty, nothing missed. */}
+                    {l.components?.map((c) => (
+                      <div key={c.itemId} className="flex justify-between pl-5 text-base text-stone-600" data-testid="kitchen-deal-component">
+                        <span className="flex-1 min-w-0 pr-2 leading-snug">↳ {c.name}</span><b className="shrink-0">× {c.qty * l.qty}</b>
+                      </div>
+                    ))}
                   </li>
                 ))}
               </ul>
@@ -119,10 +129,13 @@ function KitchenScreen() {
 }
 
 // Staff side — role-gated: only staff whose tabs include Kitchen see this.
+// Business gate: kitchen canteen ka hissa hai — canteen off ho to notice.
 export default function KitchenPage() {
   return (
     <StaffGate tab="kitchen">
-      <KitchenScreen />
+      <CanteenOnly what="Kitchen">
+        <KitchenScreen />
+      </CanteenOnly>
     </StaffGate>
   );
 }
