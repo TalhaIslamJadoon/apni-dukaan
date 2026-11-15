@@ -3,10 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import TopBar from "@/components/TopBar";
 import StaffGate from "@/components/StaffGate";
+import { RetailOnly } from "@/components/BusinessGate";
 import {
-  GroceryItem, MenuItem, PackingOption, StockEntry,
-  loadMenu, saveMenu, loadGrocery, saveGrocery, loadGroceryHeads, loadStockEntries, saveStockEntries, useStaffSession,
+  GroceryItem, MenuItem, StockEntry,
+  expiringProducts, expiryLabel,
+  loadMenu, saveMenu, loadGrocery, saveGrocery, loadGroceryHeads, loadStockEntries, saveStockEntries, useShop, useStaffSession,
 } from "@/lib/store";
+import { apiGet } from "@/lib/api";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STOCK screen — the stock keeper's backend screen (Talha, 14 Nov 2026).
@@ -32,11 +35,25 @@ interface StockView {
   codeLabel: string; // category (canteen) or SKU/barcode (grocery)
 }
 
+interface ScanContext {
+  itemId: string;
+  code: string;
+  variantName?: string;
+  packingLabel: string;
+  containsQty?: number;
+}
+
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const fmtQty = (q: number) => (Number.isInteger(q) ? String(q) : q.toFixed(1));
 
 function StockScreen() {
   const member = useStaffSession();
+  const shop = useShop();
+  // MEDICAL expiry (Talha, 15 Nov 2026): sirf Medical Store setup mein —
+  // stock-IN entry ke sath dawai ki expiry (mahina/saal "YYYY-MM") save
+  // hoti hai; qareeb expiry wali cheezein warning list mein ati hain.
+  const medical = shop.retailType === "medical";
+  const [expiry, setExpiry] = useState("");
   const [menu, setMenuState] = useState<MenuItem[]>(() => loadMenu());
   const [grocery, setGroceryState] = useState<GroceryItem[]>(() => loadGrocery());
   const [entries, setEntries] = useState<StockEntry[]>(() => loadStockEntries());
@@ -49,15 +66,39 @@ function StockScreen() {
   const [supplier, setSupplier] = useState("");
   const [reason, setReason] = useState("Expired");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  // Barcode entry for stock: the scanner only SELECTS an existing grocery
-  // product into the shared entry form — it never creates a product and it
-  // never fills Quantity / Purchase Rate / Supplier.
   const [scanCode, setScanCode] = useState("");
+  const [scanContext, setScanContext] = useState<ScanContext | null>(null);
   const [scanToast, setScanToast] = useState<{ ok: boolean; text: string; key: number } | null>(null);
-  const [scanFlashId, setScanFlashId] = useState<string | null>(null);
   const scanRef = useRef<HTMLInputElement>(null);
-  const scanSelectRef = useRef<(code: string) => boolean>(() => false);
-  scanSelectRef.current = (code: string) => scanSelect(code);
+  const qtyRef = useRef<HTMLInputElement>(null);
+
+  // The server cache can finish hydrating the entries log just after this
+  // screen mounts (notably on a hard reload) — mirror the store's pattern
+  // and pick those entries up instead of freezing the first empty snapshot.
+  useEffect(() => {
+    const read = () => setEntries(loadStockEntries());
+    read();
+    window.addEventListener("pos-entries-changed", read);
+    const t = setInterval(read, 3000);
+    return () => { window.removeEventListener("pos-entries-changed", read); clearInterval(t); };
+  }, []);
+
+  // Exact balances for THIS screen come from the stock-granted inventory
+  // endpoint. The shared catalogue cache is public-safe (stock 1/0) until a
+  // staff session exists, which would otherwise leave the keeper looking at
+  // availability flags instead of real quantities.
+  useEffect(() => {
+    if (!member?.id) return;
+    let cancelled = false;
+    apiGet<{ menu: MenuItem[]; items: GroceryItem[] }>("/staff/inventory")
+      .then((r) => {
+        if (cancelled) return;
+        setMenuState(r.menu);
+        setGroceryState(r.items);
+      })
+      .catch(() => { /* keep the cached snapshot if the fetch fails */ });
+    return () => { cancelled = true; };
+  }, [member?.id]);
 
   const views: StockView[] = useMemo(() => {
     if (inv === "canteen") {
@@ -101,27 +142,42 @@ function StockScreen() {
 
   const selected = views.find((v) => v.id === selId) ?? null;
 
-  // The scan field is ready as soon as the Stock screen opens.
+  // Canteen setup mein OFF ho to inventory hamesha grocery rehti hai.
+  useEffect(() => {
+    if (!shop.hasCanteen && inv !== "grocery") setInv("grocery");
+  }, [shop.hasCanteen, inv]);
+
+  // ⏰ Expiry Qareeb — medical setup mein: har product ki sab se qareeb
+  // recorded expiry (stock-IN entries se) jo 30 din ke andar ya guzar
+  // chuki ho. NOTE: ye sirf WARNING hai — batch-wise deduction (konsi
+  // batch ki dawai pehle biki) is version mein track nahi hoti.
+  const expiryWarnings = medical ? expiringProducts(grocery, entries) : [];
+
+  // ── Barcode scanner (hardware HID + page-level burst listening) ────────
+  // Same scan discipline as Grocery POS: one lookup order — a variant
+  // packing's own EAN first, then the product barcode, then SKU/PLU. The
+  // catalogue here is the server-hydrated one, so the stock keeper resolves
+  // exactly the products the counter sells. A scan only SELECTS a product;
+  // quantity, purchase rate and supplier stay manual, and prices remain
+  // owner-only (nothing here can create or edit a product).
+  const scanSelectRef = useRef<(code: string) => boolean>(() => false);
+  scanSelectRef.current = (code: string) => scanSelect(code);
+
   useEffect(() => { scanRef.current?.focus(); }, []);
+
   useEffect(() => {
     if (!scanToast) return;
-    const id = setTimeout(() => setScanToast(null), 3600);
+    const id = setTimeout(() => setScanToast(null), 2200);
     return () => clearTimeout(id);
   }, [scanToast]);
-  useEffect(() => {
-    if (!scanFlashId) return;
-    const id = setTimeout(() => setScanFlashId(null), 900);
-    return () => clearTimeout(id);
-  }, [scanFlashId]);
 
-  // If focus is lost, a hardware scanner's fast key burst + Enter is still
-  // captured at page level — the same pattern as Grocery POS. Typing inside
-  // ANY field is left completely alone, and an open guideline is respected.
+  // USB/Bluetooth scanners "type" the code very fast and finish with Enter.
+  // Like Grocery POS, bursts are captured only when NO field has focus —
+  // typing in quantity/rate/supplier/search is never hijacked.
   useEffect(() => {
     let buf = "";
     let last = 0;
     const onKey = (e: KeyboardEvent) => {
-      if (document.querySelector('[data-testid="guideline-modal"]')) return;
       const el = document.activeElement as HTMLElement | null;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
       const now = performance.now();
@@ -138,8 +194,8 @@ function StockScreen() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Tiny WebAudio feedback, copied from Grocery POS: high blip = found,
-  // low buzz = not found. It is a nicety only and can never break an entry.
+  // Tiny WebAudio beep — same pattern as Grocery POS (success = short high
+  // blip, not-found = low buzz). Wrapped so audio can never break an entry.
   function beep(ok: boolean) {
     try {
       const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -157,31 +213,59 @@ function StockScreen() {
   }
   function showScanToast(ok: boolean, text: string) { setScanToast({ ok, text, key: Date.now() }); }
 
-  // Lookup order: a packing EAN when one is present in the saved data, then
-  // the product barcode, then SKU/PLU. (This Phase 1 catalogue stores EANs on
-  // products; the packing check also covers records that carry one.)
+  function selectScanned(item: GroceryItem, context: Omit<ScanContext, "itemId"> | null) {
+    setInv("grocery");
+    setSelId(item.id);
+    setScanContext(context ? { ...context, itemId: item.id } : null);
+    setMsg(null);
+    beep(true);
+    const contextLabel = context
+      ? `${context.variantName ? `${context.variantName} · ` : ""}${context.packingLabel}`
+      : null;
+    showScanToast(true, contextLabel ? `✓ Selected: ${item.name} (${contextLabel})` : `✓ Selected: ${item.name}`);
+    // The keeper's next keystrokes are the quantity — land them there.
+    setTimeout(() => qtyRef.current?.focus(), 40);
+  }
+
   function scanSelect(raw: string): boolean {
     const code = raw.trim();
     if (!code) return false;
-    const packingBarcode = (p: PackingOption) => (p as PackingOption & { barcode?: string }).barcode;
-    const found =
-      grocery.find((it) => it.packings?.some((p) => packingBarcode(p) === code)) ||
-      grocery.find((it) => it.barcode && it.barcode === code) ||
-      grocery.find((it) => it.sku === code);
+    // 1) A packing's OWN EAN (under any variant, incl. "Standard").
+    for (const item of grocery) {
+      for (const variant of item.variants ?? []) {
+        const packing = variant.packings.find((k) => k.barcode && k.barcode === code);
+        if (packing) {
+          selectScanned(item, {
+            code,
+            ...(variant.name !== "Standard" ? { variantName: variant.name } : {}),
+            packingLabel: packing.label,
+            ...(packing.containsQty ? { containsQty: packing.containsQty } : {}),
+          });
+          return true;
+        }
+      }
+      // Standard-variant packings are also mirrored on item.packings.
+      const packing = (item.packings ?? []).find((k) => k.barcode && k.barcode === code);
+      if (packing) {
+        selectScanned(item, {
+          code,
+          packingLabel: packing.label,
+          ...(packing.containsQty ? { containsQty: packing.containsQty } : {}),
+        });
+        return true;
+      }
+    }
+    // 2) Product barcode, then 3) SKU/PLU — the server lookup's order.
+    const found = grocery.find((x) => x.barcode && x.barcode === code) || grocery.find((x) => x.sku === code);
     if (found) {
-      // The entry form has ONE shared selection, so this product is used by
-      // both Stock IN and Wastage — only the mode/fields differ.
-      setInv("grocery");
-      setSelId(found.id);
-      setQuery(found.name);
-      setMsg(null);
-      beep(true);
-      setScanFlashId(found.id);
-      showScanToast(true, `✓ Stock entry ke liye select ho gaya: ${found.name} — ab Quantity / Rate / Supplier bharein`);
+      selectScanned(found, null);
       return true;
     }
     beep(false);
-    showScanToast(false, `✕ Product system mein nahi hai — code ${code}. Owner se add karwayein.`);
+    const text = `✕ Product nahi mila — code ${code}. Ye product system mein nahi hai; pehle Owner ko Dashboard se ye product add karna hoga.`;
+    setMsg({ ok: false, text });
+    showScanToast(false, text);
+    setTimeout(() => scanRef.current?.focus(), 40);
     return false;
   }
 
@@ -189,7 +273,6 @@ function StockScreen() {
     e.preventDefault();
     scanSelect(scanCode);
     setScanCode("");
-    scanRef.current?.focus();
   }
 
   function jumpToCode() {
@@ -197,7 +280,7 @@ function StockScreen() {
     const q = query.trim();
     if (!q || inv !== "grocery") return;
     const g = grocery.find((x) => x.barcode === q || x.sku === q);
-    if (g) { setSelId(g.id); setMsg(null); }
+    if (g) { setSelId(g.id); setScanContext(null); setMsg(null); }
   }
 
   function saveEntry() {
@@ -208,11 +291,18 @@ function StockScreen() {
     if (mode === "add") {
       rateNum = parseFloat(rate);
       if (isNaN(rateNum) || rateNum <= 0) { setMsg({ ok: false, text: "Purchase rate (Rs) likhein — stock-in entry ke liye lazmi hai" }); return; }
-    } else if (q > selected.stock) {
+    }
+    // Stock is kept as ONE product-level pool of base units. When the entry
+    // was scanned from a packing, the typed quantity counts THAT packing —
+    // a Full Dabba of 6 adds 6 base packs per dabba typed.
+    const activeScan = inv === "grocery" && scanContext && scanContext.itemId === selected.id ? scanContext : null;
+    const contains = activeScan?.containsQty && activeScan.containsQty > 0 ? activeScan.containsQty : 1;
+    const entryQty = round1(q * contains);
+    if (mode === "wastage" && entryQty > selected.stock) {
       setMsg({ ok: false, text: `Stock sirf ${fmtQty(selected.stock)} ${selected.unitLabel} hai — is se zyada wastage nahi ho sakti` });
       return;
     }
-    const delta = mode === "add" ? q : -q;
+    const delta = mode === "add" ? entryQty : -entryQty;
     if (inv === "canteen") {
       const next = menu.map((m) => (m.id === selected.id ? { ...m, stock: Math.max(0, round1((m.stock ?? 0) + delta)) } : m));
       setMenuState(next); saveMenu(next);
@@ -227,17 +317,22 @@ function StockScreen() {
       itemId: selected.id,
       itemName: selected.name,
       type: mode,
-      qty: q,
+      qty: entryQty,
       unit: selected.unitLabel,
       rate: mode === "add" ? rateNum : undefined,
       supplier: mode === "add" ? (supplier.trim() || undefined) : undefined,
       reason: mode === "wastage" ? reason : undefined,
+      // Medical: dawai ki expiry is stock-IN batch ke sath save hoti hai
+      expiry: mode === "add" && inv === "grocery" && medical && expiry ? expiry : undefined,
       by: member?.name ?? "Staff",
     };
     const nextEntries = [entry, ...entries];
     setEntries(nextEntries); saveStockEntries(nextEntries);
-    setQty(""); setRate(""); setSupplier("");
-    setMsg({ ok: true, text: mode === "add" ? `✓ Stock IN: ${selected.name} +${fmtQty(q)} ${selected.unitLabel}` : `✓ Wastage: ${selected.name} −${fmtQty(q)} ${selected.unitLabel} (${reason})` });
+    setQty(""); setRate(""); setSupplier(""); setExpiry("");
+    const conversionNote = activeScan && contains !== 1
+      ? ` (${fmtQty(q)} × ${activeScan.packingLabel} × ${fmtQty(contains)} base)`
+      : activeScan ? ` (${activeScan.variantName ? `${activeScan.variantName} · ` : ""}${activeScan.packingLabel})` : "";
+    setMsg({ ok: true, text: mode === "add" ? `✓ Stock IN: ${selected.name} +${fmtQty(entryQty)} ${selected.unitLabel}${conversionNote}` : `✓ Wastage: ${selected.name} −${fmtQty(entryQty)} ${selected.unitLabel} (${reason})${conversionNote}` });
   }
 
   return (
@@ -252,9 +347,11 @@ function StockScreen() {
         {/* Inventory switch */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-2xl overflow-hidden border-2 border-stone-200">
-            <button onClick={() => { setInv("canteen"); setSelId(null); setMsg(null); }} className="px-6 py-3 font-extrabold"
-              style={inv === "canteen" ? { background: "#F97316", color: "#fff" } : { background: "#fff", color: "#44403C" }}>🍽️ Canteen Stock</button>
-            <button onClick={() => { setInv("grocery"); setSelId(null); setMsg(null); }} className="px-6 py-3 font-extrabold"
+            {shop.hasCanteen && (
+              <button onClick={() => { setInv("canteen"); setSelId(null); setScanContext(null); setMsg(null); }} className="px-6 py-3 font-extrabold"
+                style={inv === "canteen" ? { background: "#F97316", color: "#fff" } : { background: "#fff", color: "#44403C" }}>🍽️ Canteen Stock</button>
+            )}
+            <button onClick={() => { setInv("grocery"); setSelId(null); setScanContext(null); setMsg(null); }} className="px-6 py-3 font-extrabold"
               style={inv === "grocery" ? { background: "#F97316", color: "#fff" } : { background: "#fff", color: "#44403C" }}>🛒 Grocery Stock</button>
           </div>
           {lowCount > 0 && (
@@ -265,39 +362,57 @@ function StockScreen() {
           <span className="text-sm font-bold text-stone-400">Prices yahan sirf dikhte hain — price badalna Owner ka kaam hai.</span>
         </div>
 
+        {/* ⏰ Expiry Qareeb — sirf Medical Store setup mein */}
+        {medical && (
+          <section className="bg-white rounded-2xl border-2 border-amber-200 shadow-sm p-4" data-testid="expiry-warning-panel">
+            <h2 className="font-extrabold">⏰ Expiry Qareeb — Dawaiyan</h2>
+            <p className="text-xs font-bold text-stone-400 mb-3">
+              Jin dawaiyon ki kisi stock-IN entry ki expiry 30 din ke andar hai ya guzar chuki hai.
+              NOTE: ye sirf warning hai — batch-wise hisaab (konsi batch ki dawai pehle biki) is version mein nahi hai; expiry wali dawai pehle nikaalna staff ki zimmedari hai.
+            </p>
+            {expiryWarnings.length === 0 ? (
+              <p className="text-sm font-bold text-stone-400">✓ Abhi koi dawai expiry ke qareeb nahi (ya kisi entry mein expiry nahi di gayi).</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {expiryWarnings.map((w) => (
+                  <li key={w.item.id} data-testid="expiry-warning-row" className="flex items-center gap-2.5 rounded-xl border px-3 py-2"
+                    style={{ borderColor: w.daysLeft < 0 ? "#FECACA" : "#FDE68A", background: w.daysLeft < 0 ? "#FEF2F2" : "#FFFBEB" }}>
+                    <span className="text-2xl">{w.item.emoji}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block font-bold text-sm leading-snug">{w.item.name}</span>
+                      <span className="block text-xs text-stone-500">Expiry: {expiryLabel(w.expiry)} · Stock {fmtQty(w.item.stock)} {w.item.unit === "kg" ? "kg" : "pcs"}</span>
+                    </span>
+                    <span className="font-black text-sm shrink-0" style={{ color: w.daysLeft < 0 ? "#DC2626" : "#D97706" }}>
+                      {w.daysLeft < 0 ? `⚠️ EXPIRED ${-w.daysLeft} din pehle` : `⏰ ${w.daysLeft} din baqi`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* ── Entry form + item picker ── */}
           <section className="min-w-0 bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
-            {/* Barcode scan — selects an existing grocery product into this
-                ONE shared form (Stock IN and Wastage use the same selection).
-                Quantity / rate / supplier stay manual; unknown products are
-                NOT created here — the owner adds them. */}
-            <div className="mb-3 rounded-2xl border-2 border-dashed border-green-300 bg-green-50/70 p-3" data-testid="stock-scan-panel">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <label htmlFor="stock-scan-input" className="font-extrabold text-sm" style={{ color: "#15803D" }}>🔫 Barcode Scan — Product Select Karein</label>
-                <span className="text-[11px] font-black text-stone-500">Stock IN + Wastage — shared selection</span>
-              </div>
-              <form onSubmit={submitScan} className="mt-2 flex gap-2">
-                <input id="stock-scan-input" ref={scanRef} value={scanCode} onChange={(e) => setScanCode(e.target.value)}
-                  placeholder="Packing EAN / barcode / SKU-PLU scan ya type karke Enter"
-                  data-testid="stock-scan-input"
-                  className="min-w-0 flex-1 rounded-xl border-2 border-green-200 bg-white px-4 py-3 text-base font-bold outline-none focus:border-green-500" />
-                <button type="submit" data-testid="stock-scan-submit"
-                  className="shrink-0 rounded-xl px-5 py-3 font-extrabold text-white active:scale-[0.98]" style={{ background: "#16A34A" }}>
-                  Select
-                </button>
-              </form>
-              <p className="mt-2 text-xs font-bold leading-relaxed text-stone-500">
-                Scan milte hi product select ho jayega — Quantity, Purchase Rate aur Supplier aap khud bhareinge. Product system mein na ho to yahan add nahi hota; Owner se add karwayein.
+            {/* Barcode scan — shared by Stock IN and Wastage because both use
+                the same selected product below. */}
+            <form onSubmit={submitScan} className="mb-3 rounded-2xl border-2 border-green-200 bg-green-50/60 p-3">
+              <label className="block">
+                <span className="text-xs font-extrabold text-stone-500">BARCODE SCAN — GROCERY PRODUCT SELECT KAREIN</span>
+                <span className="mt-1 flex gap-2">
+                  <input ref={scanRef} value={scanCode} onChange={(e) => setScanCode(e.target.value)}
+                    placeholder="🔫 Barcode scan karein ya code likh kar Enter"
+                    data-testid="stock-scan-input"
+                    className="min-w-0 flex-1 rounded-xl border-2 border-stone-200 bg-white px-3 py-3 font-bold outline-none focus:border-green-600" />
+                  <button type="submit" className="shrink-0 rounded-xl px-4 py-3 font-extrabold text-white" style={{ background: "#16A34A" }}>Select</button>
+                </span>
+              </label>
+              <p className="mt-2 text-xs font-bold text-stone-500">
+                Scan hote hi product select ho jayega — Quantity, Purchase Rate aur Supplier aap khud likhenge.
+                Product system mein na ho to pehle Owner ko Dashboard se add karna hoga; Stock Wala product ya price nahi bana sakta.
               </p>
-            </div>
-            {scanToast && (
-              <div key={scanToast.key} data-testid="stock-scan-toast"
-                className={`fixed left-1/2 bottom-6 z-[70] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-2xl px-5 py-3 text-center text-base font-black text-white shadow-2xl pop-in ${scanToast.ok ? "" : "shake"}`}
-                style={{ background: scanToast.ok ? "#16A34A" : "#DC2626" }}>
-                {scanToast.text}
-              </div>
-            )}
+            </form>
 
             <div className="flex rounded-xl overflow-hidden border-2 border-stone-200 mb-3">
               <button onClick={() => setMode("add")} className="flex-1 py-3 font-extrabold"
@@ -314,8 +429,8 @@ function StockScreen() {
               {filtered.map((v) => {
                 const sel = selId === v.id;
                 return (
-                  <button key={v.id} onClick={() => { setSelId(v.id); setMsg(null); }} data-testid={`stock-picker-${v.id}`}
-                    className={`w-full flex items-center gap-2.5 rounded-xl border-2 px-3 py-2 text-left transition active:scale-[0.99] ${scanFlashId === v.id ? "scan-flash" : ""}`}
+                  <button key={v.id} onClick={() => { setSelId(v.id); setScanContext(null); setMsg(null); }}
+                    className="w-full flex items-center gap-2.5 rounded-xl border-2 px-3 py-2 text-left transition active:scale-[0.99]"
                     style={sel ? { borderColor: "#F97316", background: "#FFF7ED" } : { borderColor: v.low ? "#F59E0B" : "#F5F5F4", background: v.low ? "#FFFBEB" : "#fff" }}>
                     <span className="text-2xl">{v.emoji}</span>
                     <span className="flex-1 min-w-0">
@@ -334,15 +449,23 @@ function StockScreen() {
             </div>
 
             {selected && (
-              <div className="mt-3 rounded-xl bg-orange-50/70 border border-orange-100 px-3 py-2 font-bold text-sm">
+              <div className="mt-3 rounded-xl bg-orange-50/70 border border-orange-100 px-3 py-2 font-bold text-sm" data-testid="stock-selected">
                 Selected: <b>{selected.emoji} {selected.name}</b> — mojooda stock <b>{fmtQty(selected.stock)} {selected.unitLabel}</b>
+                {inv === "grocery" && scanContext && scanContext.itemId === selected.id && (
+                  <span className="block mt-1 text-green-700">
+                    🔫 Scanned packing: <b>{scanContext.variantName ? `${scanContext.variantName} · ` : ""}{scanContext.packingLabel}</b>
+                    {scanContext.containsQty && scanContext.containsQty !== 1
+                      ? <> — Quantity is packing mein likhein; 1 packing = {fmtQty(scanContext.containsQty)} base {selected.unitLabel}, entry product ke shared stock pool mein base quantity se save hogi.</>
+                      : <> — stock product ke shared pool mein count hoga.</>}
+                  </span>
+                )}
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-2 mt-3">
               <label className="block">
-                <span className="text-xs font-extrabold text-stone-500">QUANTITY ({selected?.unitLabel ?? "pcs"})</span>
-                <input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" placeholder={selected ? `step ${selected.step}` : "0"}
+                <span className="text-xs font-extrabold text-stone-500">QUANTITY ({inv === "grocery" && scanContext && selected && scanContext.itemId === selected.id ? `${scanContext.packingLabel} packs` : selected?.unitLabel ?? "pcs"})</span>
+                <input ref={qtyRef} value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" placeholder={selected ? `step ${selected.step}` : "0"} data-testid="stock-qty-input"
                   className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-3 text-lg font-bold outline-none focus:border-orange-500" />
               </label>
               {mode === "add" ? (
@@ -371,8 +494,16 @@ function StockScreen() {
                   className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-3 font-bold outline-none focus:border-orange-500" />
               </label>
             )}
+            {mode === "add" && inv === "grocery" && medical && (
+              <label className="block mt-2">
+                <span className="text-xs font-extrabold text-stone-500">EXPIRY — DAWAI KI EXPIRY (mahina / saal)</span>
+                <input type="month" value={expiry} onChange={(e) => setExpiry(e.target.value)} data-testid="stock-expiry-input"
+                  className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-3 font-bold outline-none focus:border-orange-500 bg-white" />
+                <span className="block mt-1 text-xs font-bold text-stone-400">Ye batch kab expire hoga — expiry qareeb ane par ⏰ warning list mein ayega.</span>
+              </label>
+            )}
             {msg && <p className="mt-3 font-bold text-sm" style={{ color: msg.ok ? "#16A34A" : "#DC2626" }}>{msg.text}</p>}
-            <button onClick={saveEntry} className="mt-3 w-full rounded-2xl py-4 text-xl font-black text-white active:scale-[0.99]"
+            <button onClick={saveEntry} data-testid="stock-save-entry" className="mt-3 w-full rounded-2xl py-4 text-xl font-black text-white active:scale-[0.99]"
               style={{ background: mode === "add" ? "#16A34A" : "#DC2626" }}>
               {mode === "add" ? "➕ Stock IN — Save Entry" : "🗑️ Wastage — Save Entry"}
             </button>
@@ -394,6 +525,7 @@ function StockScreen() {
                     </div>
                     <div className="text-xs text-stone-500">
                       {e.type === "add" ? <>Rate Rs {e.rate}{e.supplier ? ` · ${e.supplier}` : ""}</> : <>Wajah: {e.reason}</>}
+                      {e.expiry ? <> · ⏰ Exp {expiryLabel(e.expiry)}</> : null}
                       {" · "}👤 {e.by} · {new Date(e.at).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
@@ -424,15 +556,27 @@ function StockScreen() {
           </div>
         </section>
       </main>
+
+      {scanToast && (
+        <div key={scanToast.key} data-testid="stock-scan-toast"
+          className={`fixed left-1/2 bottom-6 z-[70] w-[min(92vw,720px)] -translate-x-1/2 rounded-2xl px-5 py-3 text-center text-base font-black text-white shadow-2xl pop-in ${scanToast.ok ? "" : "shake"}`}
+          style={{ background: scanToast.ok ? "#16A34A" : "#DC2626" }}>
+          {scanToast.text}
+        </div>
+      )}
     </div>
   );
 }
 
 // Staff side — role-gated: only staff whose tabs include Stock see this.
+// Business gate: retail setup mein off ho to RetailOnly notice deta hai
+// (stock tab khud retail par band hai; ye andar ka doosra darwaza hai).
 export default function StockPage() {
   return (
     <StaffGate tab="stock">
-      <StockScreen />
+      <RetailOnly what="Stock">
+        <StockScreen />
+      </RetailOnly>
     </StaffGate>
   );
 }
