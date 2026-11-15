@@ -1,24 +1,21 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 🖥️ ORDER BOARD (/display) — customer-facing TV screen for the shop front.
+// 🖥️ CANTEEN ORDER BOARD (/display) — customer-facing TV for the canteen.
 // KFC-style live status board: token numbers move Ordered → Preparing →
 // Taiyar as the kitchen works. VIEW-ONLY: no PIN, no staff controls — it
-// only READS the shared order store (lib/store.ts facade, whose cache is
-// hydrated from the server via SSE + poll), using exactly the Kitchen
-// page's sync pattern (1s poll of loadOrders() + `storage` +
-// `canteen-orders-changed` + BroadcastChannel — all fired by the store
-// whenever the server state moves), so a status change made on ANY device
-// shows here without a refresh.
+// only READS the shared order store, using exactly the Kitchen page's sync
+// pattern (1s poll + `storage` + `canteen-orders-changed` + BroadcastChannel),
+// so a status change in any other tab shows here without a refresh.
 //
 // STATUS MAPPING (the app's real Order.status values):
 //   "pending"   → 🧾 Ordered
-//   "preparing" → 👨‍🍳 Preparing (canteen: kitchen started · grocery: packing)
+//   "preparing" → 👨‍🍳 Preparing (kitchen started)
 //   "ready"     → ✅ Taiyar — Delivered (ready for pickup)
-// Included: all canteen orders (counter + online) and GROCERY ONLINE orders
-// (the packing queue — they share the same three statuses; tagged 🛒).
-// Grocery COUNTER bills are created already-"ready" and handed over on the
-// spot, so they never enter a queue and are not board material.
+// Included: CANTEEN orders ONLY (counter + online) — Talha's rule (15 Nov
+// 2026): dono store ki screens alag alag hon. Grocery online orders live
+// on their own board at /display-grocery; grocery counter bills are
+// created already-"ready" and never enter a queue anyway.
 // Payment-proof gate matches the Kitchen: proof_pending / rejected online
 // orders (token 0, not yet released) never appear.
 //
@@ -29,12 +26,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Order, isPaymentCleared, isToday, loadOrders, useShop } from "@/lib/store";
+import { CanteenOnly } from "@/components/BusinessGate";
 
 const TAIYAR_KEEP_MS = 10 * 60 * 1000;
 const TAIYAR_CAP = 12;
 
 function tagOf(o: Order): string {
-  if (o.mode === "grocery") return "🛒 Grocery";
   if (o.orderType === "dine-in" && o.tableNo) return `🍽️ Table ${o.tableNo}`;
   if (o.source === "online" && o.placeLabel) return `🌐 ${o.placeLabel}`;
   if (o.source === "online" && o.orderType === "takeaway") return "🥡 Takeaway";
@@ -51,7 +48,7 @@ function useClock(): Date {
   return now;
 }
 
-export default function DisplayPage() {
+function DisplayBoard() {
   const shop = useShop();
   const now = useClock();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -117,8 +114,7 @@ export default function DisplayPage() {
   }, []);
 
   const onBoard = orders.filter(
-    (o) => isToday(o) && isPaymentCleared(o) && o.token > 0 &&
-      (o.mode !== "grocery" || o.source === "online")
+    (o) => isToday(o) && isPaymentCleared(o) && o.token > 0 && o.mode !== "grocery"
   );
   const ordered = onBoard.filter((o) => o.status === "pending").sort((a, b) => a.token - b.token);
   const preparing = onBoard.filter((o) => o.status === "preparing").sort((a, b) => a.token - b.token);
@@ -140,10 +136,10 @@ export default function DisplayPage() {
       <header className="flex items-center gap-4 px-6 sm:px-10 pt-6 pb-4">
         <div className="text-5xl sm:text-6xl">🏪</div>
         <div className="flex-1 min-w-0">
-          <div className="font-black leading-none truncate" style={{ fontSize: "clamp(1.9rem, 4.5vw, 3.8rem)" }}>
+          <div className="font-black leading-tight line-clamp-2" style={{ fontSize: "clamp(1.9rem, 4.5vw, 3.8rem)" }}>
             {shop.canteenName}
           </div>
-          <div className="opacity-60 font-bold truncate mt-1" style={{ fontSize: "clamp(0.85rem, 1.4vw, 1.25rem)" }}>
+          <div className="opacity-60 font-bold line-clamp-2 mt-1" style={{ fontSize: "clamp(0.85rem, 1.4vw, 1.25rem)" }}>
             {shop.collegeName ? `${shop.collegeName} · ` : ""}Apna token number dekhein — taiyar honay par yahan ayega
           </div>
         </div>
@@ -185,7 +181,7 @@ export default function DisplayPage() {
                       <div className="font-black leading-none" style={{ color: "#0F172A", fontSize: "clamp(2.4rem, 4.6vw, 4.6rem)" }}>
                         {o.token}
                       </div>
-                      <div className="font-extrabold mt-1 truncate px-1" style={{ color: col.color, fontSize: "clamp(0.7rem, 1.15vw, 1.05rem)" }}>
+                      <div className="font-extrabold mt-1 leading-tight line-clamp-2 px-1" style={{ color: col.color, fontSize: "clamp(0.7rem, 1.15vw, 1.05rem)" }}>
                         {tagOf(o)}
                       </div>
                     </div>
@@ -208,5 +204,15 @@ export default function DisplayPage() {
         ✕ Band karein
       </button>
     </div>
+  );
+}
+
+// Business gate (SALE version): ye screen sirf tab chalti hai jab us ki
+// dukaan business setup mein ON ho — warna polite notice.
+export default function DisplayPage() {
+  return (
+    <CanteenOnly what="Canteen Order Screen">
+      <DisplayBoard />
+    </CanteenOnly>
   );
 }
