@@ -168,6 +168,15 @@ function StockScreen() {
   const [scannerTestOpen, setScannerTestOpen] = useState(false);
   const scannerTestOpenRef = useRef(false);
   scannerTestOpenRef.current = scannerTestOpen;
+  // Camera scanning (getUserMedia + built-in BarcodeDetector, Chrome/Android)
+  // — Grocery POS wali hi implementation: phone/tablet ka camera hi scanner
+  // ban jata hai, alag barcode scanner kharidna lazmi nahi.
+  const [camOpen, setCamOpen] = useState(false);
+  const [camMsg, setCamMsg] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const camStreamRef = useRef<MediaStream | null>(null);
+  const camTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastCamCodeRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
 
   useEffect(() => { scanRef.current?.focus(); }, []);
 
@@ -200,6 +209,61 @@ function StockScreen() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Camera scanning (getUserMedia + built-in BarcodeDetector, Chrome/Android)
+  // — Grocery POS se mirror ki hui implementation. Detected code wohi
+  // scanSelect path leta hai jo physical scanner leta hai (packing EAN →
+  // product barcode → SKU), taake ek scan ka ek hi asar ho. Scanner Test
+  // panel khula ho to camera bhi khamosh rehta hai — test wala scan product
+  // select nahi karta (burst listener wali hi stand-down discipline).
+  useEffect(() => {
+    if (!camOpen) return;
+    let cancelled = false;
+    (async () => {
+      type Detector = new (opts: object) => { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> };
+      const BD = (window as unknown as { BarcodeDetector?: Detector }).BarcodeDetector;
+      if (!BD) {
+        setCamMsg("⚠️ Is browser mein camera scan nahi hai — barcode / SKU type karke Enter dabayein. (Camera scan Chrome / Android par chalta hai)");
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        camStreamRef.current = stream;
+        const video = videoRef.current;
+        if (video) { video.srcObject = stream; await video.play().catch(() => {}); }
+        const detector = new BD({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "qr_code"] });
+        camTimerRef.current = setInterval(async () => {
+          const v = videoRef.current;
+          if (!v || v.readyState < 2) return;
+          if (scannerTestOpenRef.current) return; // test panel khula hai — scan us ka hai
+          try {
+            const codes = await detector.detect(v);
+            const raw = codes?.[0]?.rawValue?.trim();
+            if (raw) {
+              const now = Date.now();
+              // 1.5s cooldown per code so holding one product doesn't re-select 20×
+              if (!(lastCamCodeRef.current.code === raw && now - lastCamCodeRef.current.at < 1500)) {
+                lastCamCodeRef.current = { code: raw, at: now };
+                scanSelectRef.current(raw);
+              }
+            }
+          } catch { /* frame not ready yet */ }
+        }, 250);
+      } catch {
+        if (!cancelled) setCamMsg("⚠️ Camera ki ijazat nahi mili — barcode / SKU type karke Enter dabayein.");
+      }
+    })();
+    return () => { cancelled = true; stopCameraTracks(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camOpen]);
+
+  function stopCameraTracks() {
+    if (camTimerRef.current) { clearInterval(camTimerRef.current); camTimerRef.current = null; }
+    if (camStreamRef.current) { camStreamRef.current.getTracks().forEach((t) => t.stop()); camStreamRef.current = null; }
+  }
+  function openCamera() { setCamMsg(""); setCamOpen(true); }
+  function closeCamera() { stopCameraTracks(); setCamOpen(false); setCamMsg(""); scanRef.current?.focus(); }
 
   // Tiny WebAudio beep — same pattern as Grocery POS (success = short high
   // blip, not-found = low buzz). Wrapped so audio can never break an entry.
@@ -423,10 +487,31 @@ function StockScreen() {
                 className="mt-2 rounded-xl px-4 py-2 font-extrabold text-white" style={{ background: "#78716C" }}>
                 🔫 Scanner Test — scanner check karein
               </button>
+              <button type="button" onClick={() => (camOpen ? closeCamera() : openCamera())} data-testid="stock-camera-toggle"
+                className="mt-2 ml-2 rounded-xl px-4 py-2 font-extrabold text-white" style={{ background: "#1976D2" }}>
+                📷 Camera se Scan
+              </button>
             </form>
             {scannerTestOpen && (
               <div className="mb-3 rounded-2xl bg-white p-1">
                 <ScannerTest />
+              </div>
+            )}
+            {/* Camera scan panel — getUserMedia + BarcodeDetector (Chrome/Android).
+                Phone/tablet ka camera hi scanner hai; detected code wohi
+                scanSelect path leta hai jo physical scanner leta hai. */}
+            {camOpen && (
+              <div className="mb-3 rounded-2xl p-3 text-white pop-in" style={{ background: "#0F172A" }}>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="font-extrabold">📷 Camera Scan — product ka barcode camera ke samne rakhein</span>
+                  <button onClick={closeCamera} className="rounded-lg px-3 py-1.5 font-extrabold text-white whitespace-nowrap" style={{ background: "#DC2626" }}>✕ Band karein</button>
+                </div>
+                {camMsg ? (
+                  <p className="font-bold rounded-xl bg-white/10 p-3">{camMsg}</p>
+                ) : (
+                  <video ref={videoRef} className="w-full max-h-64 rounded-xl bg-black object-cover" muted playsInline />
+                )}
+                <p className="text-xs opacity-70 mt-2">Scan hote hi product select ho jayega — camera khula rahega, agla item scan karein.</p>
               </div>
             )}
 
