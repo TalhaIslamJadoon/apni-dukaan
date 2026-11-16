@@ -24,6 +24,7 @@ export interface ShopSettingsDTO {
   hasCanteen: boolean;
   retailType: string | null;
   setupDone: boolean;
+  boardColor: string; // display boards ka background rang (owner-selected)
 }
 
 export async function shopSettingsDTO(): Promise<ShopSettingsDTO> {
@@ -45,6 +46,7 @@ export async function shopSettingsDTO(): Promise<ShopSettingsDTO> {
     hasCanteen: s?.has_canteen ?? true,
     retailType: s?.retail_type ?? "grocery",
     setupDone: s?.setup_done ?? true,
+    boardColor: /^#[0-9a-f]{6}$/i.test(s?.board_color ?? "") ? s.board_color : "#FFC61A",
   };
 }
 

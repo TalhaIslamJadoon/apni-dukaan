@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
   wholesale_min_kg numeric(12,3) NOT NULL DEFAULT 5,
   shop_open boolean NOT NULL DEFAULT true,  -- closed-shop popup switch (owner toggle)
   closed_contact_number text NOT NULL DEFAULT '0300-0000000 (demo)',  -- number shown in the closed popup
+  board_color text NOT NULL DEFAULT '#FFC61A',  -- display boards ka background rang (owner-selected, 16 Nov 2026)
   table_count integer NOT NULL DEFAULT 8,  -- dining tables 1..N (owner-adjustable, 1..100)
   -- Business Setup (SALE version, 15 Nov 2026): fresh CREATE gets
   -- setup_done=false so the /setup wizard runs on first open; databases
@@ -50,6 +51,7 @@ INSERT INTO system_settings (id) VALUES (true) ON CONFLICT (id) DO NOTHING;
 -- Closed-shop popup fields on pre-existing databases (idempotent).
 ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS shop_open boolean NOT NULL DEFAULT true;
 ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS closed_contact_number text NOT NULL DEFAULT '0300-0000000 (demo)';
+ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS board_color text NOT NULL DEFAULT '#FFC61A';
 ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS table_count integer NOT NULL DEFAULT 8;
 -- Business Setup fields on pre-existing databases: setup_done defaults
 -- TRUE here (opposite of the fresh CREATE) — an install that already has
