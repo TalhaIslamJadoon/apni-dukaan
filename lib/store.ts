@@ -46,7 +46,23 @@ export interface ShopSettings {
   hasCanteen: boolean;
   retailType: string | null;
   setupDone: boolean;
+  // Board ka Rang (Talha, 16 Nov 2026): display boards (Menu Board +
+  // Grocery Board) ka background rang OWNER khud chunta hai (Settings →
+  // Board ka Rang). Default photo wala peela #FFC61A. Server par
+  // system_settings.board_color mein rehta hai aur public bootstrap se
+  // boards tak pohonchta hai (boards no-login screens hain — naam ki
+  // tarah). Boards rang ki roshni se contrast khud banate hain.
+  boardColor: string;
 }
+// Board rang ke tayyar presets (Owner → Settings mein swatches).
+export const BOARD_COLOR_PRESETS: { name: string; hex: string; dark: boolean }[] = [
+  { name: "Peela", hex: "#FFC61A", dark: false },
+  { name: "Orange", hex: "#F97316", dark: false },
+  { name: "Laal", hex: "#DC2626", dark: true },
+  { name: "Sabz", hex: "#16A34A", dark: true },
+  { name: "Neela", hex: "#2563EB", dark: true },
+  { name: "Gehra Slate", hex: "#0F172A", dark: true },
+];
 
 export const SHOP_DEFAULTS: ShopSettings = {
   collegeName: "",
@@ -65,6 +81,7 @@ export const SHOP_DEFAULTS: ShopSettings = {
   hasCanteen: true,
   retailType: "grocery",
   setupDone: true,
+  boardColor: "#FFC61A",
 };
 
 /** Retail dukaan is setup mein hai ya nahi (retailType null = sirf canteen). */
