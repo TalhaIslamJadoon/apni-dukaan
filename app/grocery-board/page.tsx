@@ -27,6 +27,16 @@
 // head with more products than one slide holds is split into parts.
 // PHOTOS: product → sub-head → head fallback chain (groceryImage), emoji
 // art when there is no photo (or it fails to load).
+// BOARD THEME (Talha, 16 Nov 2026 — "Munch O Clock" wali photo dekh kar,
+// phir usi din ki tabdeeli: rang hard-coded NAHI): board ka background
+// rang OWNER chunta hai (Owner → Settings → 🎨 Board ka Rang; default
+// photo wala peela #FFC61A). Photo-forward white cards, price ek bari
+// orange pill mein (offer price red pill, purani retail kati hui chhoti),
+// offers slide ka title dark tag mein (photo ke "DEAL STATION" ribbon
+// jaisa). Text ka contrast rang ki roshni (HSP) se KHUD banta hai —
+// halka rang → dark slate text wala bright look, gehra rang → white
+// text wala purana dark look. Sirf visual layer hai — rotation,
+// capacity, controls sab pehle jaisa.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -69,6 +79,44 @@ function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
+}
+
+// ── Board theme — owner ke chune hue rang se (upar wala note dekhein) ──
+interface BoardTheme {
+  bg: string; ink: string; subInk: string; badgeBg: string;
+  chipBg: string; chipColor: string; clockBg: string; clockColor: string;
+  heroBg: string; heroColor: string; divider: string; trackBg: string;
+  fill: string; dotOff: string; pausedBg: string; pausedColor: string;
+  cardShadow: string;
+}
+
+function boardTheme(hex: string): BoardTheme {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex ?? "").trim());
+  const n = m ? parseInt(m[1], 16) : 0xffc61a;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const base = `rgb(${r},${g},${b})`;
+  const mixW = (a: number) => `rgb(${Math.round(r + (255 - r) * a)},${Math.round(g + (255 - g) * a)},${Math.round(b + (255 - b) * a)})`;
+  const mixB = (a: number) => `rgb(${Math.round(r * (1 - a))},${Math.round(g * (1 - a))},${Math.round(b * (1 - a))})`;
+  // HSP perceived brightness — 0.5 se upar = halka rang.
+  const hsp = Math.sqrt(0.299 * r * r + 0.587 * g * g + 0.114 * b * b) / 255;
+  if (hsp > 0.5) {
+    return {
+      bg: `linear-gradient(165deg, ${mixW(0.18)} 0%, ${base} 48%, ${mixB(0.07)} 100%)`,
+      ink: "#0F172A", subInk: "rgba(15,23,42,0.62)", badgeBg: "#0F172A",
+      chipBg: "#0F172A", chipColor: base, clockBg: "rgba(255,255,255,0.55)", clockColor: "#0F172A",
+      heroBg: "#0F172A", heroColor: base, divider: "rgba(15,23,42,0.3)", trackBg: "rgba(15,23,42,0.18)",
+      fill: "#0F172A", dotOff: "rgba(15,23,42,0.28)", pausedBg: "#0F172A", pausedColor: "#FBBF24",
+      cardShadow: "0 12px 28px rgba(0,0,0,0.25)",
+    };
+  }
+  return {
+    bg: `linear-gradient(165deg, ${base} 0%, ${mixB(0.3)} 100%)`,
+    ink: "#FFFFFF", subInk: "rgba(255,255,255,0.62)", badgeBg: "rgba(255,255,255,0.16)",
+    chipBg: "#F97316", chipColor: "#FFFFFF", clockBg: "rgba(255,255,255,0.14)", clockColor: "#FFFFFF",
+    heroBg: "#F97316", heroColor: "#FFFFFF", divider: "rgba(255,255,255,0.25)", trackBg: "rgba(255,255,255,0.15)",
+    fill: "#F97316", dotOff: "rgba(255,255,255,0.35)", pausedBg: "rgba(245,158,11,0.92)", pausedColor: "#FFFFFF",
+    cardShadow: "0 10px 26px rgba(0,0,0,0.45)",
+  };
 }
 
 function packingLine(g: GroceryItem): string | undefined {
@@ -117,13 +165,13 @@ function buildSlides(grocery: GroceryItem[], heads: GroceryHead[], subs: Grocery
   return slides;
 }
 
-function ItemCard({ item }: { item: BoardItem }) {
+function ItemCard({ item, theme }: { item: BoardItem; theme: BoardTheme }) {
   const [imgOk, setImgOk] = useState(true);
   const showImg = Boolean(item.image) && imgOk;
   return (
     <div className="rounded-3xl overflow-hidden bg-white flex flex-col min-h-0"
-      style={{ boxShadow: "0 10px 26px rgba(0,0,0,0.45)" }}>
-      <div className="relative flex-1 min-h-0" style={{ background: item.cardBg }}>
+      style={{ boxShadow: theme.cardShadow }}>
+      <div className="relative min-h-0" style={{ background: item.cardBg, flex: "0 1 58%" }}>
         {showImg ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={item.image} alt={item.name} onError={() => setImgOk(false)}
@@ -138,7 +186,7 @@ function ItemCard({ item }: { item: BoardItem }) {
           {item.chip}
         </span>
       </div>
-      <div className="px-4 sm:px-5 py-3 sm:py-4 shrink-0">
+      <div className="px-4 sm:px-5 py-3 sm:py-4" style={{ flex: "1 1 auto" }}>
         {/* FULL name on its own full-width lines (up to 3) — the price sits
             on the row BELOW, so a long name is never squeezed into an
             ellipsis by the price next to it (Talha, 15 Nov 2026). */}
@@ -150,13 +198,14 @@ function ItemCard({ item }: { item: BoardItem }) {
             {item.sub}
           </div>
         )}
-        <div className="flex items-end justify-between gap-3 mt-1">
+        <div className="flex items-end justify-between gap-3 mt-1.5">
           {item.oldPrice !== undefined ? (
             <div className="font-bold whitespace-nowrap line-through" style={{ color: "#A8A29E", fontSize: "clamp(0.9rem, 1.5vw, 1.4rem)" }}>
               Rs {item.oldPrice}{item.priceSuffix ?? ""}
             </div>
           ) : <span />}
-          <div className="font-black whitespace-nowrap" style={{ color: "#F97316", fontSize: "clamp(1.25rem, 2.3vw, 2.2rem)" }}>
+          <div className="font-black whitespace-nowrap leading-none rounded-full px-4 py-2 text-white"
+            style={{ background: item.oldPrice !== undefined ? "#DC2626" : "#F97316", fontSize: "clamp(1.5rem, 2.8vw, 2.7rem)", boxShadow: "0 6px 14px rgba(146,90,0,0.35)" }}>
             Rs {item.price}{item.priceSuffix ?? ""}
           </div>
         </div>
@@ -167,6 +216,7 @@ function ItemCard({ item }: { item: BoardItem }) {
 
 function GroceryBoard() {
   const shop = useShop();
+  const theme = boardTheme(shop.boardColor ?? "#FFC61A");
   const [grocery, setGrocery] = useState<GroceryItem[]>([]);
   const [heads, setHeads] = useState<GroceryHead[]>([]);
   const [subs, setSubs] = useState<GrocerySubHead[]>([]);
@@ -277,38 +327,46 @@ function GroceryBoard() {
   const rows = slide ? Math.max(1, Math.ceil(slide.items.length / cols)) : 1;
 
   return (
-    <div className="h-dvh flex flex-col text-white select-none overflow-hidden" style={{ background: "#0F172A" }}>
-      {/* Header — grocery shop name + clock (name wraps in full) */}
+    <div className="h-dvh flex flex-col select-none overflow-hidden" style={{ background: theme.bg, color: theme.ink }}>
+      {/* Header — circular logo badge + grocery shop name + clock,
+          photo ke boards ki tarah (name wraps in full) */}
       <header className="flex items-center gap-4 px-6 sm:px-10 pt-5 pb-3 shrink-0">
-        <div className="text-4xl sm:text-5xl">🛒</div>
+        <div className="shrink-0 flex items-center justify-center rounded-full" style={{ width: "clamp(3rem, 5vw, 4.6rem)", height: "clamp(3rem, 5vw, 4.6rem)", background: theme.badgeBg, fontSize: "clamp(1.5rem, 2.6vw, 2.4rem)", boxShadow: "0 6px 16px rgba(0,0,0,0.3)" }}>🛒</div>
         <div className="flex-1 min-w-0">
           <div className="font-black leading-tight line-clamp-2" style={{ fontSize: "clamp(1.6rem, 3.6vw, 3rem)" }}>
             {shop.groceryName}
-            <span className="ml-4 font-extrabold hidden min-[500px]:inline" style={{ color: "#F97316", fontSize: "0.62em" }}>{slide?.offers ? "OFFERS" : "GROCERY"}</span>
+            <span className="ml-4 font-extrabold hidden min-[500px]:inline-block rounded-full px-3 py-1 align-middle" style={{ background: theme.chipBg, color: theme.chipColor, fontSize: "0.5em" }}>{slide?.offers ? "OFFERS" : "GROCERY"}</span>
           </div>
           {shop.collegeName && (
-            <div className="opacity-60 font-bold line-clamp-2 mt-0.5" style={{ fontSize: "clamp(0.8rem, 1.2vw, 1.05rem)" }}>{shop.collegeName}</div>
+            <div className="font-bold line-clamp-2 mt-0.5" style={{ color: theme.subInk, fontSize: "clamp(0.8rem, 1.2vw, 1.05rem)" }}>{shop.collegeName}</div>
           )}
         </div>
-        <div className="font-black tabular-nums shrink-0" style={{ color: "#F97316", fontSize: "clamp(1.3rem, 2.6vw, 2.4rem)" }}>
+        <div className="font-black tabular-nums shrink-0 rounded-full px-4 py-1" style={{ background: theme.clockBg, color: theme.clockColor, fontSize: "clamp(1.3rem, 2.6vw, 2.4rem)" }}>
           {clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
       </header>
 
       {slide ? (
         <main key={`${slide.key}-${dataJsonRef.current.length}`} className="fade-slide flex-1 flex flex-col min-h-0 px-4 sm:px-8 pb-4">
-          {/* Slide banner */}
+          {/* Slide banner — offers slide ka title dark tag mein (photo ke
+              "DEAL STATION" ribbon jaisa), baqi slides ka title bara dark */}
           <div className="flex items-end gap-4 shrink-0 pb-3">
-            <h2 data-testid="slide-title" className="font-black leading-none text-white" style={{ fontSize: "clamp(2rem, 4.6vw, 4.2rem)", color: slide.offers ? "#FCA5A5" : undefined }}>
-              {slide.title}
-            </h2>
+            {slide.offers ? (
+              <h2 data-testid="slide-title" className="font-black leading-none rounded-3xl px-6 py-3" style={{ background: theme.heroBg, color: theme.heroColor, fontSize: "clamp(1.7rem, 4vw, 3.6rem)", boxShadow: "0 8px 20px rgba(0,0,0,0.3)" }}>
+                {slide.title}
+              </h2>
+            ) : (
+              <h2 data-testid="slide-title" className="font-black leading-none" style={{ color: theme.ink, fontSize: "clamp(2rem, 4.6vw, 4.2rem)" }}>
+                {slide.title}
+              </h2>
+            )}
             {slide.parts > 1 && (
-              <span className="font-black rounded-full px-4 py-1 mb-2" style={{ background: "#F97316", fontSize: "clamp(0.85rem, 1.3vw, 1.2rem)" }}>
+              <span className="font-black rounded-full px-4 py-1 mb-2" style={{ background: theme.chipBg, color: theme.chipColor, fontSize: "clamp(0.85rem, 1.3vw, 1.2rem)" }}>
                 {slide.part} / {slide.parts}
               </span>
             )}
-            <span className="flex-1 mb-3 hidden sm:block" style={{ borderTop: "3px dashed rgba(255,255,255,0.25)" }} />
-            <span data-testid="slide-pos" className="font-bold opacity-60 mb-1.5 shrink-0" style={{ fontSize: "clamp(0.85rem, 1.3vw, 1.2rem)" }}>
+            <span className="flex-1 mb-3 hidden sm:block" style={{ borderTop: `3px dashed ${theme.divider}` }} />
+            <span data-testid="slide-pos" className="font-bold mb-1.5 shrink-0" style={{ color: theme.subInk, fontSize: "clamp(0.85rem, 1.3vw, 1.2rem)" }}>
               Slide {safeIdx + 1} of {slides.length}
             </span>
           </div>
@@ -316,7 +374,7 @@ function GroceryBoard() {
           {/* Item cards — grid sized by the measured screen capacity */}
           <div className="flex-1 min-h-0 grid gap-4 sm:gap-5"
             style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
-            {slide.items.map((item) => <ItemCard key={item.id} item={item} />)}
+            {slide.items.map((item) => <ItemCard key={item.id} item={item} theme={theme} />)}
           </div>
         </main>
       ) : (
@@ -330,10 +388,10 @@ function GroceryBoard() {
 
       {/* Progress bar + dots — position inside the loop */}
       <footer className="shrink-0 px-6 sm:px-10 pb-5">
-        <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.15)" }}>
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: theme.trackBg }}>
           {slides.length > 1 && (
             <div key={`${safeIdx}-${cycle}`} className="h-full rounded-full"
-              style={{ background: "#F97316", animation: `progressGrow ${sec}s linear forwards`, animationPlayState: paused ? "paused" : "running" }} />
+              style={{ background: theme.fill, animation: `progressGrow ${sec}s linear forwards`, animationPlayState: paused ? "paused" : "running" }} />
           )}
         </div>
         {/* Dots only when the loop is short enough for them to mean
@@ -343,7 +401,7 @@ function GroceryBoard() {
           <div className="flex justify-center gap-2 mt-3 flex-wrap">
             {slides.map((s, i) => (
               <span key={s.key} className="rounded-full transition-all"
-                style={{ width: i === safeIdx ? 26 : 10, height: 10, background: i === safeIdx ? "#F97316" : "rgba(255,255,255,0.35)" }} />
+                style={{ width: i === safeIdx ? 26 : 10, height: 10, background: i === safeIdx ? theme.fill : theme.dotOff }} />
             ))}
           </div>
         )}
@@ -374,8 +432,8 @@ function GroceryBoard() {
           </button>
         </div>
         {paused && (
-          <div data-testid="paused-chip" className="rounded-full px-4 py-2 text-sm font-extrabold text-white"
-            style={{ background: "rgba(245,158,11,0.92)", boxShadow: "0 4px 14px rgba(0,0,0,0.4)" }}>
+          <div data-testid="paused-chip" className="rounded-full px-4 py-2 text-sm font-extrabold"
+            style={{ background: theme.pausedBg, color: theme.pausedColor, boxShadow: "0 4px 14px rgba(0,0,0,0.4)" }}>
             ⏸ Ruki Hui
           </div>
         )}
