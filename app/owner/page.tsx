@@ -15,7 +15,7 @@ import Link from "next/link";
 import {
   CATEGORIES, Category, Deal, Expense, GroceryHead, GroceryItem, GrocerySubHead, MenuItem, Order, StaffMember, TabKey, TABS_META,
   loadMenu, saveMenu, loadOrders, saveOrders, isToday, nextToken, adjustStockForOrder, loadGrocery, saveGrocery, loadGroceryHeads, saveGroceryHeads, loadGrocerySubHeads, saveGrocerySubHeads, billNoOf,
-  loadShop, saveShop, useShop, ShopSettings, SHOP_DEFAULTS, loadStaff, saveStaff, offerActive,
+  loadShop, saveShop, useShop, ShopSettings, SHOP_DEFAULTS, BOARD_COLOR_PRESETS, loadStaff, saveStaff, offerActive,
   loadDeals, saveDeals, dealValue, dealContentsText, loadExpenses, saveExpenses, expiringProducts, expiryLabel, loadStockEntries, hasRetail,
 } from "@/lib/store";
 import { templateOf } from "@/lib/templates";
@@ -1960,6 +1960,35 @@ function OwnerScreen() {
                 <input type="number" min={0} step="0.5" value={shopForm.wholesaleMinKg} onChange={(e) => { setShopForm({ ...shopForm, wholesaleMinKg: parseFloat(e.target.value) || 0 }); setShopSaved(false); }}
                   className="mt-1 w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 font-bold outline-none focus:border-orange-500 bg-[#F6F9FF]" />
               </label>
+            </div>
+          </div>
+          {/* 🎨 Board ka Rang — display boards (Menu Board + Grocery Board)
+              ka background rang. Chun te hi FORAN save ho jata hai (Save
+              Settings ka intezar nahi) — boards agle loop se naye rang
+              mein. Rang ki roshni se boards apna text contrast khud
+              badal lete hain: halka rang → dark text, gehra → white. */}
+          <div className="mt-4 pt-3 border-t border-dashed border-stone-200" data-testid="board-color-block">
+            <div className="font-extrabold mb-1">🎨 Board ka Rang <span className="text-xs font-bold text-stone-400">(Menu Board + Grocery Board screens)</span></div>
+            <p className="text-sm text-stone-500 mb-3">Display screens ka background rang chunein — preset par click karte hi ya apna rang chun kar picker band karte hi <b>foran lag jata hai</b>. Halka rang ho to board par dark text khud aa jata hai, gehra rang ho to white text.</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              {BOARD_COLOR_PRESETS.map((p) => {
+                const active = (shopForm.boardColor ?? "#FFC61A").toLowerCase() === p.hex.toLowerCase();
+                return (
+                  <button key={p.hex} data-testid={`board-color-${p.hex.slice(1)}`} onClick={() => { setShopForm({ ...shopForm, boardColor: p.hex }); saveShop({ ...loadShop(), boardColor: p.hex }); }}
+                    className="rounded-full font-extrabold text-sm px-4 py-2.5"
+                    style={{ background: p.hex, color: p.dark ? "#FFFFFF" : "#0F172A", border: "3px solid rgba(0,0,0,0.15)", boxShadow: active ? "0 0 0 2px #fff, 0 0 0 5px #0F172A" : undefined }}>
+                    {p.name}
+                  </button>
+                );
+              })}
+              <label className="flex items-center gap-2 font-extrabold text-sm cursor-pointer">
+                <input type="color" data-testid="board-color-custom" value={/^#[0-9a-f]{6}$/i.test(shopForm.boardColor ?? "") ? (shopForm.boardColor as string) : "#FFC61A"}
+                  onChange={(e) => setShopForm({ ...shopForm, boardColor: e.target.value })}
+                  onBlur={(e) => saveShop({ ...loadShop(), boardColor: e.target.value })}
+                  className="w-12 h-10 rounded-lg border-2 border-stone-200 cursor-pointer bg-white" />
+                Apna Rang
+              </label>
+              <span className="font-bold text-stone-500 text-sm">Maujooda: <span className="inline-block w-4 h-4 rounded-full align-middle border border-stone-300" style={{ background: shopForm.boardColor ?? "#FFC61A" }} /> {shopForm.boardColor ?? "#FFC61A"}</span>
             </div>
           </div>
           {/* 🏪 Business Setup — dukaan ki qisam (SALE version) */}
