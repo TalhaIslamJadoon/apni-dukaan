@@ -23,7 +23,11 @@ export const PATCH = handler(async (req) => {
     shopOpen?: boolean; closedContactNumber?: string;
     tableCount?: number;
     hasCanteen?: boolean; retailType?: string | null; setupDone?: boolean;
+    boardColor?: string;
   }>(req);
+  // Board rang sirf saaf #RRGGBB hex ho to hi save ho — warna purana rang.
+  const boardColor = b.boardColor !== undefined && /^#[0-9a-f]{6}$/i.test(b.boardColor.trim())
+    ? b.boardColor.trim() : null;
   // Tables are 1..100 — clamp whatever arrives to the sane range.
   const tableCount = b.tableCount === undefined
     ? null
@@ -44,6 +48,7 @@ export const PATCH = handler(async (req) => {
          has_canteen = COALESCE($10, has_canteen),
          retail_type = CASE WHEN $11 THEN $12 ELSE retail_type END,
          setup_done = COALESCE($13, setup_done),
+         board_color = COALESCE($14, board_color),
          updated_at = now() WHERE id = true`,
       [b.collegeName ?? null, b.jazzcashNumber ?? null, b.easypaisaNumber ?? null, b.raastInfo ?? null,
        b.wholesaleMinPieces ?? null, b.wholesaleMinKg ?? null,
@@ -51,7 +56,8 @@ export const PATCH = handler(async (req) => {
        tableCount,
        b.hasCanteen === undefined ? null : b.hasCanteen,
        b.retailType !== undefined, b.retailType ?? null,
-       b.setupDone === undefined ? null : b.setupDone]
+       b.setupDone === undefined ? null : b.setupDone,
+       boardColor]
     );
     // Business Setup confirm: a retail type was chosen → us template ka
     // seed try karein (guard andar hai: data save ho chuka ho to sirf
