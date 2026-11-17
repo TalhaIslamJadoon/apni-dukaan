@@ -31,8 +31,9 @@
 // available height (landscape TV = 2) — items-per-slide = cols × rows,
 // recomputed on resize. A group with more items than one slide holds is
 // split into parts ("Fast Food (2/2)" style headers).
-// PHOTOS: the item's own image, emoji art when there is no photo (or it
-// fails to load).
+// PHOTOS: the item's own photos via PhotoCycle (rental board wala hi
+// system — 8+ photos = tez 900ms spin, 2–7 = 2.5s crossfade turntable,
+// 1 = Ken Burns), emoji art when there is no photo (or it fails to load).
 // BOARD THEME (Talha, 16 Nov 2026 — "Munch O Clock" wali photo dekh kar,
 // phir usi din ki tabdeeli: rang hard-coded NAHI): board ka background
 // rang OWNER chunta hai (Owner → Settings → 🎨 Board ka Rang; default
@@ -46,9 +47,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  CATEGORIES, CATEGORY_STYLE, Deal, MenuItem, loadMenu, loadDeals, dealComponents, dealValue, useShop,
+  CATEGORIES, CATEGORY_STYLE, Deal, MenuItem, loadMenu, loadDeals, dealComponents, dealValue, itemPhotos, useShop,
 } from "@/lib/store";
 import { CanteenOnly } from "@/components/BusinessGate";
+import PhotoCycle from "@/components/PhotoCycle";
 
 // One component inside a deal card: real photo, full name, ×qty.
 interface BoardComp { name: string; qty: number; image?: string; emoji: string }
@@ -62,6 +64,7 @@ interface BoardItem {
   valuePrice?: number; // deal cards: contents value, shown struck-through
   components?: BoardComp[]; // deal cards: what's INSIDE the deal
   image?: string;
+  photos?: string[]; // multi photos (itemPhotos) — card in par ghumta hai
   emoji: string;
   chip: string; // corner label (category name)
   chipBg: string;
@@ -171,7 +174,7 @@ function buildSlides(menu: MenuItem[], deals: Deal[], per: number, dealPer: numb
     if (!items.length) continue;
     const style = CATEGORY_STYLE[cat];
     const cards: BoardItem[] = items.map((m) => ({
-      id: m.id, name: m.name, price: m.price, image: m.image, emoji: m.emoji,
+      id: m.id, name: m.name, price: m.price, image: m.image, photos: itemPhotos(m), emoji: m.emoji,
       chip: style.label, chipBg: style.chip, cardBg: style.bg,
     }));
     const groups = chunk(cards, per);
@@ -181,21 +184,11 @@ function buildSlides(menu: MenuItem[], deals: Deal[], per: number, dealPer: numb
 }
 
 function ItemCard({ item, theme }: { item: BoardItem; theme: BoardTheme }) {
-  const [imgOk, setImgOk] = useState(true);
-  const showImg = Boolean(item.image) && imgOk;
   return (
     <div className="rounded-3xl overflow-hidden bg-white flex flex-col min-h-0"
       style={{ boxShadow: theme.cardShadow }}>
       <div className="relative min-h-0" style={{ background: item.cardBg, flex: "0 1 58%" }}>
-        {showImg ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.image} alt={item.name} onError={() => setImgOk(false)}
-            className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center" style={{ fontSize: "clamp(3.5rem, 7vw, 7.5rem)" }}>
-            {item.emoji}
-          </div>
-        )}
+        <PhotoCycle photos={item.photos ?? (item.image ? [item.image] : [])} name={item.name} emoji={item.emoji} />
         <span className="absolute top-3 left-3 rounded-full px-3 py-1 font-black text-white"
           style={{ background: item.chipBg, fontSize: "clamp(0.7rem, 1.1vw, 1rem)" }}>
           {item.chip}
