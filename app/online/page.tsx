@@ -152,6 +152,7 @@ export default function OnlinePage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   const retailOn = hasRetail(shop);
+  const isGroceryType = shop.retailType === "grocery" || shop.retailType === "supermarket";
 
   useEffect(() => {
     setMenu(loadMenu());
@@ -429,7 +430,7 @@ export default function OnlinePage() {
   const gStep = (it: GroceryItem) => (it.unit === "kg" ? 0.5 : 1);
   function gAdd(item: GroceryItem) {
     // Phase 2 flow: flavours first (variant), then packing — steps that
-    // don't exist are skipped (same rule as the Grocery POS).
+    // don't exist are skipped (same rule as the Sell).
     const named = (item.variants ?? []).filter((v) => v.name !== "Standard");
     if (named.length) { setGChooserItem(item); setGChooserVariant(null); return; }
     if (item.packings && item.packings.length) { setGChooserItem(item); setGChooserVariant("Standard"); return; }
@@ -762,8 +763,8 @@ export default function OnlinePage() {
               {retailOn && (
                 <button onClick={() => setRemoteShop("grocery")} className="tile-3d rounded-3xl p-6 text-left text-white shadow-md" style={{ background: "#388E3C" }}>
                   <div className="text-4xl mb-1">🛒</div>
-                  <div className="text-xl font-black">Grocery Order</div>
-                  <div className="text-sm opacity-85">{shop.groceryName} — samaan pack ho kar grocery counter se pickup</div>
+                  <div className="text-xl font-black">{isGroceryType ? "Grocery Order" : "Shop Order"}</div>
+                  <div className="text-sm opacity-85">{shop.groceryName} — {isGroceryType ? "samaan pack ho kar grocery counter se pickup" : "samaan tayyar ho kar counter se pickup"}</div>
                 </button>
               )}
             </div>
@@ -771,7 +772,7 @@ export default function OnlinePage() {
         )}
         {entry === "remote" && remoteShop && (
           <div className="flex items-center justify-between mb-3 rounded-2xl px-4 py-2.5 text-white font-extrabold pop-in" style={{ background: remoteShop === "grocery" ? "#388E3C" : "#E64A19" }}>
-            <span>{remoteShop === "grocery" ? `🛒 Grocery Order — ${shop.groceryName}` : `🍔 Canteen Order — ${shop.canteenName}`}</span>
+            <span>{remoteShop === "grocery" ? `🛒 ${isGroceryType ? "Grocery" : "Shop"} Order — ${shop.groceryName}` : `🍔 Canteen Order — ${shop.canteenName}`}</span>
             {shop.hasCanteen && retailOn && (
               <button onClick={() => setRemoteShop(null)} className="text-xs font-extrabold rounded-lg bg-white/20 px-2.5 py-1.5">Change Shop</button>
             )}
@@ -1021,13 +1022,13 @@ export default function OnlinePage() {
           </>
         )}
 
-        {/* ── GROCERY products (remote only, after choosing Grocery) — SAME data as the Grocery POS tab ── */}
+        {/* ── GROCERY products (remote only, after choosing Grocery) — SAME data as the Sell tab ── */}
         {entry === "remote" && remoteShop === "grocery" && (
           <>
             <input value={gSearch} onChange={(e) => setGSearch(e.target.value)} placeholder="🔍 Search grocery item…"
               className="w-full rounded-xl border-2 border-stone-200 bg-white px-4 py-3 mb-3 outline-none focus:border-green-600" />
             {/* Head chips (row 1) + sub-head chips (row 2) — same two-row
-                filter as the Grocery POS tab; only heads/subs that HAVE
+                filter as the Sell tab; only heads/subs that HAVE
                 products get a chip */}
             <div className="flex gap-2 mb-2 overflow-x-auto pb-1" data-testid="online-head-chips">
               <button onClick={() => { setGHead("all"); setGSub("all"); }}
