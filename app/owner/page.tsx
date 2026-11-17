@@ -8,6 +8,7 @@ import Receipt from "@/components/Receipt";
 import QRCode from "react-qr-code";
 import Barcode128 from "@/components/Barcode128";
 import { GuidelineButton, GuidelineIndexButton } from "@/components/Guideline";
+import MultiPhotoField, { cleanPhotoList } from "@/components/MultiPhotoField";
 import UdhaarKhataSection from "@/components/UdhaarKhata";
 import MerchantQrSection from "@/components/MerchantQr";
 import ScannerTest from "@/components/ScannerTest";
@@ -17,6 +18,7 @@ import {
   loadMenu, saveMenu, loadOrders, saveOrders, isToday, nextToken, adjustStockForOrder, loadGrocery, saveGrocery, loadGroceryHeads, saveGroceryHeads, loadGrocerySubHeads, saveGrocerySubHeads, billNoOf,
   loadShop, saveShop, useShop, ShopSettings, SHOP_DEFAULTS, BOARD_COLOR_PRESETS, loadStaff, saveStaff, offerActive,
   loadDeals, saveDeals, dealValue, dealContentsText, loadExpenses, saveExpenses, expiringProducts, expiryLabel, loadStockEntries, hasRetail,
+  RentalBooking, loadRentalBookings, rentalIncomeOn, rentalsOn, itemPhotos,
 } from "@/lib/store";
 import { templateOf } from "@/lib/templates";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
@@ -106,7 +108,7 @@ function StaffAccessSection() {
   return (
     <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
       <h2 className="font-extrabold mb-1">🔐 Staff Access — Kis Ko Konsa Tab Milega</h2>
-      <p className="text-sm text-stone-500 mb-3">Har banday ko <b>sirf usi ke tabs</b> nazar aayenge jo yahan tick hain. Ek banday ko kai tabs bhi de sakte hain (masalan Canteen + Grocery). Naam + PIN se woh login karega.</p>
+      <p className="text-sm text-stone-500 mb-3">Har banday ko <b>sirf usi ke tabs</b> nazar aayenge jo yahan tick hain. Ek banday ko kai tabs bhi de sakte hain (masalan Canteen + Sell). Naam + PIN se woh login karega.</p>
       <div className="space-y-1.5 mb-4">
         {staff.map((m) => (
           <div key={m.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-orange-50/60 border border-orange-100 px-3 py-2">
@@ -167,6 +169,8 @@ function StaffAccessSection() {
 //  ❌ Reject  → reason (customer sees it), stock restored, customer can
 //             re-upload a fresh proof from My Orders.
 function PaymentVerificationSection({ orders, onDone }: { orders: Order[]; onDone: () => void }) {
+  const shopS = useShop();
+  const modeChip = shopS.retailType === "grocery" || shopS.retailType === "supermarket" ? "🛒 Grocery" : "🛒 Sell";
   const [zoomProof, setZoomProof] = useState<Order | null>(null);
   const pending = orders
     .filter((o) => o.source === "online" && o.paymentStatus === "proof_pending")
@@ -205,7 +209,7 @@ function PaymentVerificationSection({ orders, onDone }: { orders: Order[]; onDon
             <div key={o.id} className="rounded-2xl border-2 border-amber-100 bg-amber-50/50 p-3" data-testid="verify-card">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-black">{o.mode === "grocery" ? "🛒 Grocery" : "🍔 Canteen"} — {o.customerName ?? "Customer"}</div>
+                  <div className="font-black">{o.mode === "grocery" ? modeChip : "🍔 Canteen"} — {o.customerName ?? "Customer"}</div>
                   <div className="text-xs font-bold text-stone-500">
                     {o.orderType === "dine-in" ? `🍽️ Dine-In — Table ${o.tableNo}` : o.placeLabel ?? "Online"} · {o.customerMobile ?? ""} · {billNoOf(o)} · {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </div>
@@ -258,7 +262,7 @@ function PaymentVerificationSection({ orders, onDone }: { orders: Order[]; onDon
   );
 }
 
-// ── 📈 Munafa Nuqsan (Profit & Loss) ────────────────────────────────────────
+// ── 📈 Profit & Loss (Profit & Loss) ────────────────────────────────────────
 // Report SERVER par banta hai (server/services/pnl.ts) — wahi rules jo
 // Phase 1 mein thay: sale set = payment-cleared orders; bill discount
 // proportional; grocery lagat = packing wholesale; canteen lagat = item
@@ -362,7 +366,7 @@ function ProfitLossSection({ shop }: { shop: ShopSettings }) {
   return (
     <div className="space-y-4" data-testid="pnl-section">
       <section className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4">
-        <h2 className="font-extrabold mb-1">📈 Munafa Nuqsan — Profit &amp; Loss</h2>
+        <h2 className="font-extrabold mb-1">📈 Profit & Loss — Profit &amp; Loss</h2>
         <p className="text-sm text-stone-500 mb-3">
           Bikri sirf <b>payment-clear orders</b> se ginti hai (proof pending/rejected shamil nahi; Udhaar bikri shamil hai).
           Grocery ki lagat = wholesale price; canteen ki lagat = item ki Lagat (Menu form mein bharein).
@@ -422,7 +426,7 @@ function ProfitLossSection({ shop }: { shop: ShopSettings }) {
                     <li key={i} data-testid="pnl-unknown-row">{u.name} — bikri {rs(u.bikri)} <span className="text-stone-400">({u.shop === "grocery" ? "dukaan" : "canteen"})</span></li>
                   ))}
                 </ul>
-                <p className="text-xs font-bold text-stone-500 mt-1">Canteen item ki lagat: Owner → Canteen Menu → item Edit → &quot;LAGAT / COST RS&quot;. Grocery ki lagat = us ka wholesale price (product form).</p>
+                <p className="text-xs font-bold text-stone-500 mt-1">Canteen item ki lagat: Dashboard → Menu → item Edit → &quot;LAGAT / COST RS&quot;. Grocery ki lagat = us ka wholesale price (product form).</p>
               </div>
             )}
           </>
@@ -752,13 +756,19 @@ function DevicesSection() {
 
 function OwnerScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [rentalBookings, setRentalBookingsState] = useState<RentalBooking[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [form, setForm] = useState({ name: "", price: "", cost: "", category: "Snacks" as Category, emoji: "🍽️" });
+  const [mPhotos, setMPhotos] = useState<string[]>([]); // menu item ki photos (multi-photo — pehli = main)
   const [editId, setEditId] = useState<string | null>(null);
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
   const [origin, setOrigin] = useState("http://localhost:3007");
   useEffect(() => { try { setOrigin(window.location.origin); } catch {} }, []);
   const shop = useShop();
+  // Order-mode ka professional naam (naming rule, 18 Nov 2026).
+  const isGroceryType = shop.retailType === "grocery" || shop.retailType === "supermarket";
+  const modeWord = isGroceryType ? "Grocery" : "Sell";
+  const modeChip = `🛒 ${modeWord}`;
   const [shopForm, setShopForm] = useState<ShopSettings>(SHOP_DEFAULTS);
   const [shopInit, setShopInit] = useState(false);
   const [shopSaved, setShopSaved] = useState(false);
@@ -778,6 +788,7 @@ function OwnerScreen() {
   }
   const [grocery, setGrocery] = useState<GroceryItem[]>([]);
   const [gForm, setGForm] = useState({ name: "", brand: "", sku: "", barcode: "", retail: "", wholesale: "", wsMin: "", stock: "", unit: "piece" as "piece" | "kg", emoji: "🛒", headId: "", subId: "", image: "", boardOffer: false, offerPrice: "", trackSerial: false });
+  const [gPhotos, setGPhotos] = useState<string[]>([]); // product ki photos (multi-photo — pehli = main; gForm.image isi se banta hai)
   const [gPackings, setGPackings] = useState<{ label: string; retail: string; wholesale: string; barcode: string; containsQty: string; wsMin: string }[]>([]);
   // Phase 2 variant editor state (variants live server-side per master).
   const [variantDraft, setVariantDraft] = useState("");
@@ -843,7 +854,7 @@ function OwnerScreen() {
   const [prodHead, setProdHead] = useState("all");
   const [prodSub, setProdSub] = useState("all");
   const [prodPage, setProdPage] = useState(1);
-  // Owner Dashboard section tabs — one section at a time instead of one
+  // Dashboard section tabs — one section at a time instead of one
   // endless stacked scroll. Print overlays (label sheet / receipt view)
   // stay OUTSIDE this switch so print flows never break.
   const [ownerTab, setOwnerTab] = useState<"overview" | "menu" | "grocery" | "udhaar" | "pnl" | "heads" | "labels" | "devices" | "staff" | "settings" | "tables">("overview");
@@ -853,11 +864,13 @@ function OwnerScreen() {
 
   // Orders refresh — the payment verification panel must never sit stale.
   useEffect(() => {
-    const read = () => setOrders(loadOrders());
+    const read = () => { setOrders(loadOrders()); setRentalBookingsState(loadRentalBookings()); };
+    read();
     const t = setInterval(read, 2500);
     window.addEventListener("storage", read);
     window.addEventListener("canteen-orders-changed", read);
-    return () => { clearInterval(t); window.removeEventListener("storage", read); window.removeEventListener("canteen-orders-changed", read); };
+    window.addEventListener("rentals-changed", read);
+    return () => { clearInterval(t); window.removeEventListener("storage", read); window.removeEventListener("canteen-orders-changed", read); window.removeEventListener("rentals-changed", read); };
   }, []);
 
   useEffect(() => {
@@ -907,17 +920,19 @@ function OwnerScreen() {
     // mein "lagat baqi" ginti hai, munafa mein NAHI — kabhi 0 nahi).
     const costNum = parseInt(form.cost, 10);
     const cost = !isNaN(costNum) && costNum > 0 ? costNum : undefined;
+    const photos = cleanPhotoList(mPhotos);
+    const photoFields = { image: photos[0] ?? undefined, images: photos.length ? photos : undefined };
     let next: MenuItem[];
     if (editId) {
-      next = menu.map((m) => (m.id === editId ? { ...m, name: form.name.trim(), price, cost, category: form.category, emoji: form.emoji || "🍽️" } : m));
+      next = menu.map((m) => (m.id === editId ? { ...m, name: form.name.trim(), price, cost, category: form.category, emoji: form.emoji || "🍽️", ...photoFields } : m));
     } else {
-      next = [...menu, { id: `item-${Date.now()}`, name: form.name.trim(), price, cost, category: form.category, emoji: form.emoji || "🍽️" }];
+      next = [...menu, { id: `item-${Date.now()}`, name: form.name.trim(), price, cost, category: form.category, emoji: form.emoji || "🍽️", ...photoFields }];
     }
     setMenu(next); saveMenu(next);
-    setForm({ name: "", price: "", cost: "", category: "Snacks", emoji: "🍽️" }); setEditId(null);
+    setForm({ name: "", price: "", cost: "", category: "Snacks", emoji: "🍽️" }); setEditId(null); setMPhotos([]);
   }
   function del(id: string) { const next = menu.filter((m) => m.id !== id); setMenu(next); saveMenu(next); }
-  function edit(m: MenuItem) { setEditId(m.id); setForm({ name: m.name, price: String(m.price), cost: m.cost ? String(m.cost) : "", category: m.category, emoji: m.emoji }); }
+  function edit(m: MenuItem) { setEditId(m.id); setForm({ name: m.name, price: String(m.price), cost: m.cost ? String(m.cost) : "", category: m.category, emoji: m.emoji }); setMPhotos(itemPhotos(m)); }
 
   // ── 🎁 Deals (combo offers) ──────────────────────────────────────────
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -944,7 +959,7 @@ function OwnerScreen() {
       setDealMsg(`✓ Deal "${dealForm.name.trim()}" update ho gayi`);
     } else {
       next = [...deals, { id: `deal-${Date.now()}`, name: dealForm.name.trim(), price, items: dealPickedItems, active: true }];
-      setDealMsg(`✓ Deal "${dealForm.name.trim()}" ban gayi — Canteen POS, Online Order aur Menu Board par live hai`);
+      setDealMsg(`✓ Deal "${dealForm.name.trim()}" ban gayi — Canteen POS, Online Orders aur Menu Board par live hai`);
     }
     setDeals(next); saveDeals(next);
     setDealForm({ name: "", price: "" }); setDealPicks({}); setDealEditId(null);
@@ -995,11 +1010,12 @@ function OwnerScreen() {
     // stored but stays INACTIVE by the offerActive rule (board + till keep
     // charging retail) — the form hint says exactly that.
     const offerPrice = parseInt(gForm.offerPrice, 10) || undefined;
-    const base = { name: gForm.name.trim(), brand: gForm.brand.trim() || null, sku: gForm.sku.trim(), barcode: gForm.barcode.trim() || undefined, retailPrice: retail, wholesalePrice: wholesale, wholesaleMinQty: wsMin > 0 ? wsMin : null, stock, unit: gForm.unit, emoji: gForm.emoji || "🛒", headId, subId, image: gForm.image.trim() || undefined, boardOffer: gForm.boardOffer || undefined, offerPrice, trackSerial: gForm.trackSerial || undefined, packings: packings.length ? packings : undefined };
+    const gPhotosClean = cleanPhotoList(gPhotos);
+    const base = { name: gForm.name.trim(), brand: gForm.brand.trim() || null, sku: gForm.sku.trim(), barcode: gForm.barcode.trim() || undefined, retailPrice: retail, wholesalePrice: wholesale, wholesaleMinQty: wsMin > 0 ? wsMin : null, stock, unit: gForm.unit, emoji: gForm.emoji || "🛒", headId, subId, image: gPhotosClean[0] ?? undefined, images: gPhotosClean.length ? gPhotosClean : undefined, boardOffer: gForm.boardOffer || undefined, offerPrice, trackSerial: gForm.trackSerial || undefined, packings: packings.length ? packings : undefined };
     if (gEditId) next = grocery.map((g) => (g.id === gEditId ? { ...g, ...base } : g));
     else next = [...grocery, { id: `g-${Date.now()}`, ...base }];
     setGrocery(next); saveGrocery(next);
-    setGForm({ name: "", brand: "", sku: "", barcode: "", retail: "", wholesale: "", wsMin: "", stock: "", unit: "piece", emoji: "🛒", headId, subId, image: "", boardOffer: false, offerPrice: "", trackSerial: false }); setGPackings([]); setGEditId(null);
+    setGForm({ name: "", brand: "", sku: "", barcode: "", retail: "", wholesale: "", wsMin: "", stock: "", unit: "piece", emoji: "🛒", headId, subId, image: "", boardOffer: false, offerPrice: "", trackSerial: false }); setGPackings([]); setGEditId(null); setGPhotos([]);
   }
   function delG(id: string) { const next = grocery.filter((g) => g.id !== id); setGrocery(next); saveGrocery(next); }
   // Menu Board Offers quick-toggle — same flag the product form's checkbox
@@ -1012,9 +1028,10 @@ function OwnerScreen() {
     setGEditId(g.id);
     setGForm({ name: g.name, brand: g.brand ?? "", sku: g.sku, barcode: g.barcode ?? "", retail: String(g.retailPrice), wholesale: String(g.wholesalePrice), wsMin: g.wholesaleMinQty ? String(g.wholesaleMinQty) : "", stock: String(g.stock), unit: g.unit, emoji: g.emoji, headId: g.headId, subId: g.subId, image: g.image ?? "", boardOffer: g.boardOffer ?? false, offerPrice: g.offerPrice !== undefined ? String(g.offerPrice) : "", trackSerial: g.trackSerial ?? false });
     setGPackings((g.packings ?? []).map((p) => ({ label: p.label, retail: String(p.retailPrice), wholesale: String(p.wholesalePrice), barcode: p.barcode ?? "", containsQty: p.containsQty ? String(p.containsQty) : "", wsMin: p.wholesaleMinQty ? String(p.wholesaleMinQty) : "" })));
+    setGPhotos(itemPhotos(g));
   }
   function resetGForm() {
-    setGEditId(null); setGPackings([]);
+    setGEditId(null); setGPackings([]); setGPhotos([]);
     setGForm({ name: "", brand: "", sku: "", barcode: "", retail: "", wholesale: "", wsMin: "", stock: "", unit: "piece", emoji: "🛒", headId: heads[0]?.id ?? "", subId: subs.find((s) => s.headId === heads[0]?.id)?.id ?? "", image: "", boardOffer: false, offerPrice: "", trackSerial: false });
   }
 
@@ -1142,15 +1159,15 @@ function OwnerScreen() {
   // settings hamesha).
   const ownerTabs: { id: typeof ownerTab; label: string }[] = [
     { id: "overview", label: "📊 Overview" },
-    ...(shop.hasCanteen ? [{ id: "menu" as const, label: "🍽️ Canteen Menu" }] : []),
-    ...(retailOn ? [{ id: "grocery" as const, label: "🛒 Grocery" }] : []),
-    { id: "udhaar", label: "💰 Udhaar Khata" },
-    { id: "pnl", label: "📈 Munafa Nuqsan" },
-    ...(retailOn ? [{ id: "heads" as const, label: "🗂️ Heads" }, { id: "labels" as const, label: "🏷️ Labels" }] : []),
+    ...(shop.hasCanteen ? [{ id: "menu" as const, label: "🍽️ Menu" }] : []),
+    ...(retailOn ? [{ id: "grocery" as const, label: "🛒 Products" }] : []),
+    { id: "udhaar", label: "💰 Credit" },
+    { id: "pnl", label: "📈 Profit & Loss" },
+    ...(retailOn ? [{ id: "heads" as const, label: "🗂️ Categories" }, { id: "labels" as const, label: "🏷️ Labels" }] : []),
     { id: "devices", label: "🖨️ Printers & Devices" },
     { id: "staff", label: "🔐 Staff" },
     { id: "settings", label: "⚙️ Settings" },
-    ...(shop.hasCanteen ? [{ id: "tables" as const, label: "🪑 Tables QR" }] : []),
+    ...(shop.hasCanteen ? [{ id: "tables" as const, label: "🪑 Table QR" }] : []),
   ];
   // Khula tab setup change se chhup jaye to Overview par wapas.
   useEffect(() => {
@@ -1186,7 +1203,7 @@ function OwnerScreen() {
         {/* Owner section tabs — sticky sub-navigation; sirf selected
             section render hota hai, poora dashboard ek lambi scroll nahi.
             Default: Overview. */}
-        <div className="sticky top-0 z-30 rounded-2xl border border-orange-100 bg-white shadow-sm p-1.5 flex flex-wrap gap-1" data-testid="owner-tabs" role="tablist" aria-label="Owner Dashboard sections">
+        <div className="sticky top-0 z-30 rounded-2xl border border-orange-100 bg-white shadow-sm p-1.5 flex flex-wrap gap-1" data-testid="owner-tabs" role="tablist" aria-label="Dashboard sections">
           {ownerTabs.map((t) => (
             <button key={t.id} role="tab" aria-selected={ownerTab === t.id} data-testid={`owner-tab-${t.id}`} onClick={() => setOwnerTab(t.id)}
               className="rounded-xl px-3 py-2 text-sm font-extrabold transition hover:bg-orange-50"
@@ -1206,10 +1223,11 @@ function OwnerScreen() {
           <span className="font-extrabold">📊 Today — {new Date().toLocaleDateString()}</span>
           {shop.hasCanteen && <span>🍽️ Canteen Sales: <b style={{ color: "#F97316" }}>Rs {canteenSales.toLocaleString()}</b></span>}
           {retailOn && <span>🛒 Grocery Sales: <b style={{ color: "#16A34A" }}>Rs {grocerySales.toLocaleString()}</b></span>}
+          {rentalsOn(shop) && <span data-testid="overview-rental-income">👰 Aaj Kiraya Aamdani: <b style={{ color: "#7E22CE" }}>Rs {rentalIncomeOn(rentalBookings, new Date().toLocaleDateString("en-CA")).toLocaleString()}</b> <span className="text-stone-400">(wasool shuda)</span></span>}
           <span>Combined: <b>Rs {totalSales.toLocaleString()}</b></span>
           <span>🏪 Counter: <b>Rs {counterSales.toLocaleString()}</b></span>
-          <span>📦 Low Stock: <b style={{ color: lowStockCount > 0 ? "#DC2626" : "#16A34A" }}>{lowStockCount} items</b> <span className="text-stone-400">(Stock tab mein tafseel)</span></span>
-          <span>📱 Online Orders: <b style={{ color: "#1976D2" }}>Rs {onlineOrderSales.toLocaleString()}</b> ({onlineOrders.length}){shop.hasCanteen && <> — 🍔 Online-Canteen <b>Rs {onlineCanteenSales.toLocaleString()}</b></>}{retailOn && <> · 🛒 Online-Grocery <b>Rs {onlineGrocerySales.toLocaleString()}</b></>}</span>
+          <span>📦 Low Stock: <b style={{ color: lowStockCount > 0 ? "#DC2626" : "#16A34A" }}>{lowStockCount} items</b> <span className="text-stone-400">(Inventory tab mein tafseel)</span></span>
+          <span>📱 Online Orders: <b style={{ color: "#1976D2" }}>Rs {onlineOrderSales.toLocaleString()}</b> ({onlineOrders.length}){shop.hasCanteen && <> — 🍔 Online-Canteen <b>Rs {onlineCanteenSales.toLocaleString()}</b></>}{retailOn && <> · 🛒 Online-{modeWord} <b>Rs {onlineGrocerySales.toLocaleString()}</b></>}</span>
         </div>
         {/* ⏰ Expiry Qareeb — sirf Medical Store setup mein (Stock screen
             wali hi list; yahan sirf tab nazar ata hai jab kuch qareeb ho
@@ -1273,7 +1291,7 @@ function OwnerScreen() {
               {todays.map((o) => (
                 <li key={o.id}>
                   <button onClick={() => setViewOrder(o)} className="w-full flex justify-between items-center text-sm border-b border-dashed border-stone-200 py-1.5 hover:bg-orange-50 rounded px-1 text-left">
-                    <span><b>{billNoOf(o)}</b> · {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {o.mode === "grocery" ? "🛒 Grocery" : "🍽️ Canteen"}{o.source === "online" ? (o.orderType === "dine-in" ? ` · 🍽️ DINE-IN Table ${o.tableNo} (${o.customerName})` : o.placeLabel ? ` · 🌐 Online — ${o.customerName} — ${o.placeLabel}` : ` · 🥡 Takeaway (${o.customerName})`) : ""} · {o.payment}{o.udhaarName ? ` (${o.udhaarName})` : ""}
+                    <span><b>{billNoOf(o)}</b> · {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {o.mode === "grocery" ? modeChip : "🍽️ Canteen"}{o.source === "online" ? (o.orderType === "dine-in" ? ` · 🍽️ DINE-IN Table ${o.tableNo} (${o.customerName})` : o.placeLabel ? ` · 🌐 Online — ${o.customerName} — ${o.placeLabel}` : ` · 🥡 Takeaway (${o.customerName})`) : ""} · {o.payment}{o.udhaarName ? ` (${o.udhaarName})` : ""}
                       <span className="ml-1 text-[10px] font-black rounded-full px-2 py-0.5 text-white" style={{ background: o.status === "ready" ? "#16A34A" : "#F59E0B" }}>{o.status.toUpperCase()}</span>
                       {o.paymentStatus === "proof_pending" && <span className="ml-1 text-[10px] font-black rounded-full px-2 py-0.5 text-white" style={{ background: "#D97706" }}>⏳ TASDEEQ BAQI</span>}
                       {o.paymentStatus === "confirmed" && <span className="ml-1 text-[10px] font-black rounded-full px-2 py-0.5 text-white" style={{ background: "#16A34A" }}>✅ PAYMENT CONFIRM</span>}
@@ -1335,7 +1353,12 @@ function OwnerScreen() {
               </select>
             </label>
             <button onClick={saveItem} className="rounded-xl px-5 py-2.5 font-extrabold text-white" style={{ background: "#16A34A" }}>{editId ? "Save Edit" : "+ Add Item"}</button>
-            {editId && <button onClick={() => { setEditId(null); setForm({ name: "", price: "", cost: "", category: "Snacks", emoji: "🍽️" }); }} className="rounded-xl px-4 py-2.5 font-bold bg-stone-100">Cancel</button>}
+            {editId && <button onClick={() => { setEditId(null); setForm({ name: "", price: "", cost: "", category: "Snacks", emoji: "🍽️" }); setMPhotos([]); }} className="rounded-xl px-4 py-2.5 font-bold bg-stone-100">Cancel</button>}
+          </div>
+          <div className="mb-4 max-w-[560px]">
+            <MultiPhotoField photos={mPhotos} onChange={setMPhotos} testidPrefix="menu-photo"
+              label="ITEM KI PHOTOS (MAX 16 — GOL GHOOM KAR LI GAYI ANGLES)"
+              hint="Pehli photo MAIN photo hai (lists/POS mein wohi dikhti hai). 2 ya zyada photos hon to Menu Board par item ghumta hua (angles badal badal kar) nazar ata hai — 8 ya zyada photos hon to bilkul 360° ghumta hua lagta hai. Photo recipe: item ko ek jagah rakhein, barabar roshni rakhein, phone ko ek hi doori par rakh kar aahista aahista gol ghoom kar 12–16 tasveerein lein." />
           </div>
           <div className="space-y-1" data-testid="menu-list">
             {menu.map((m) => (
@@ -1423,7 +1446,7 @@ function OwnerScreen() {
           <div className="flex justify-end mb-2">
             <GuidelineButton entry="owner-grocery" />
           </div>
-          <h2 className="font-extrabold mb-1">🛒 Grocery Products Management</h2>
+          <h2 className="font-extrabold mb-1">🛒 Products Management</h2>
           <p className="text-sm mb-3 font-bold" style={{ color: "#F59E0B" }}>⚠️ Current products are SAMPLE — replace with the real grocery list, SKUs &amp; prices.</p>
           <div className="flex flex-wrap items-end gap-2 mb-4">
             <label className="block flex-1 min-w-[150px]">
@@ -1456,7 +1479,7 @@ function OwnerScreen() {
             </label>
             <label className="block w-20">
               <span className="block text-[11px] font-bold uppercase tracking-wide text-stone-500 mb-0.5">Stock Qty</span>
-              <input value={gForm.stock} readOnly placeholder="Stock" inputMode="decimal" className="w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none bg-stone-100 text-stone-500" title="Stock yahan se change NAHI hota — Stock tab se manage karein (Phase 2: stock sirf orders/entries se move hota hai)" aria-label="Stock (Stock tab se manage hota hai)" />
+              <input value={gForm.stock} readOnly placeholder="Stock" inputMode="decimal" className="w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none bg-stone-100 text-stone-500" title="Stock yahan se change NAHI hota — Inventory tab se manage karein (Phase 2: stock sirf orders/entries se move hota hai)" aria-label="Stock (Inventory tab se manage hota hai)" />
             </label>
             <label className="block">
               <span className="block text-[11px] font-bold uppercase tracking-wide text-stone-500 mb-0.5">Unit</span>
@@ -1483,10 +1506,11 @@ function OwnerScreen() {
               <span className="block text-[11px] font-bold uppercase tracking-wide text-stone-500 mb-0.5">Emoji</span>
               <input value={gForm.emoji} onChange={(e) => setGForm({ ...gForm, emoji: e.target.value })} className="w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 text-center outline-none focus:border-orange-500" />
             </label>
-            <label className="block flex-1 min-w-[220px]">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-stone-500 mb-0.5">Image URL (optional)</span>
-              <input value={gForm.image} onChange={(e) => setGForm({ ...gForm, image: e.target.value })} placeholder="🖼️ Image URL (optional — na ho to sub-head/head ki picture lagegi)" className="w-full rounded-xl border-2 border-stone-200 px-3 py-2.5 outline-none focus:border-orange-500" aria-label="Product image URL" />
-            </label>
+            <div className="flex-1 min-w-[220px] max-w-[560px]">
+              <MultiPhotoField photos={gPhotos} onChange={setGPhotos} testidPrefix="grocery-photo"
+                label="PRODUCT KI PHOTOS (MAX 16 — GOL GHOOM KAR LI GAYI ANGLES)"
+                hint="Pehli photo MAIN photo hai (lists/POS mein wohi dikhti hai; koi photo na ho to sub-head/head ki picture lagegi). 2 ya zyada photos hon to Products Board par product ghumta hua (angles badal badal kar) nazar ata hai — 8 ya zyada photos hon to bilkul 360° ghumta hua lagta hai." />
+            </div>
             <label className="flex items-center gap-2.5 rounded-xl border-2 border-orange-200 bg-orange-50 px-3.5 py-2.5 cursor-pointer" data-testid="board-offer-toggle">
               <input type="checkbox" checked={gForm.boardOffer} onChange={(e) => setGForm({ ...gForm, boardOffer: e.target.checked })} className="w-5 h-5 shrink-0 accent-orange-500" />
               <span className="font-bold text-sm">📺 Menu Board ki Offers slide mein dikhayein</span>
@@ -1699,7 +1723,7 @@ function OwnerScreen() {
           <div className="flex justify-end mb-2">
             <GuidelineButton entry="owner-heads" />
           </div>
-          <div className="font-extrabold mb-1">🗂️ Grocery Heads — apna head khud banayein</div>
+          <div className="font-extrabold mb-1">🗂️ Categories — apna head khud banayein</div>
           <p className="text-xs text-stone-500 mb-2">Structure: <b>Main Head → Sub Head → Product</b> — head / sub-head tab delete hoga jab us mein <b>0 products</b> hon; pehle products ko Edit karke shift karein. Sub-heads dekhne ke liye head ke ▶ par click karein.</p>
           <div className="space-y-1 mb-3">
             {heads.map((h) => {
@@ -1884,7 +1908,7 @@ function OwnerScreen() {
             <GuidelineButton entry="owner-settings" />
           </div>
           <h2 className="font-extrabold mb-1">🏷️ Shop Settings — Names</h2>
-          <p className="text-sm text-stone-500 mb-3">Set the real names here — they update <b>everywhere</b>: top header, bill headers, table QR cards and the Online Order page. No code editing needed.</p>
+          <p className="text-sm text-stone-500 mb-3">Set the real names here — they update <b>everywhere</b>: top header, bill headers, table QR cards and the Online Orders page. No code editing needed.</p>
           {/* Shop Status — closed-shop popup switch + contact number (Talha, 14 Nov 2026) */}
           <div className="mb-4 rounded-2xl border-2 p-3" style={shopForm.shopOpen ? { borderColor: "#BBF7D0", background: "#F0FDF4" } : { borderColor: "#FECACA", background: "#FEF2F2" }}>
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -1902,6 +1926,30 @@ function OwnerScreen() {
               <input value={shopForm.closedContactNumber} onChange={(e) => { setShopForm({ ...shopForm, closedContactNumber: e.target.value }); setShopSaved(false); }} inputMode="tel"
                 className="mt-1 w-full max-w-md rounded-xl border-2 border-stone-200 px-3 py-2.5 font-bold outline-none focus:border-orange-500 bg-[#F6F9FF]" placeholder="0300-0000000" />
               <span className="block text-xs text-stone-400 mt-1">Band wale popup mein ye number bara bara nazar ayega — 📞 Call aur 💬 WhatsApp button ke sath. Number badal kar neeche <b>Save Settings</b> lazmi dabayein.</span>
+            </label>
+          </div>
+          {/* 👰 Kiraya (Rental) toggle — Shop Status ki tarah FORAN save.
+              ON karte hi staff ko 👰 Kiraya / Rentals tab mil jata hai
+              (jis staff ko tab grant ho); OFF par tab chhup jata hai lekin
+              bookings/items ka data mehfooz rehta hai. Late fine ka rate
+              Save Settings se save hota hai. */}
+          <div className="mb-4 rounded-2xl border-2 p-3" style={shopForm.rentalsEnabled ? { borderColor: "#D8B4FE", background: "#FAF5FF" } : { borderColor: "#E7E5E4", background: "#F5F5F4" }}>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="min-w-[220px] flex-1">
+                <div className="font-extrabold text-base">👰 Kiraya (Rental) Wala Kaam — {shopForm.rentalsEnabled ? "ON hai" : "BAND hai"}</div>
+                <p className="text-sm text-stone-500">Dresses rent par dene ka kaam — booking, security deposit, wapsi aur late fine. ON ho to staff tabs mein <b>👰 Kiraya / Rentals</b> tab aa jata hai. Rental template wali dukaan par ye khud ON hota hai.</p>
+              </div>
+              <button data-testid="rentals-toggle" onClick={() => { const next = !shopForm.rentalsEnabled; setShopForm({ ...shopForm, rentalsEnabled: next }); saveShop({ ...loadShop(), rentalsEnabled: next }); }}
+                className="rounded-2xl px-6 py-3.5 font-black text-white text-lg shadow" style={{ background: shopForm.rentalsEnabled ? "#DC2626" : "#7E22CE" }}>
+                {shopForm.rentalsEnabled ? "🔴 Rentals BAND kar dein" : "👰 Rentals ON kar dein"}
+              </button>
+            </div>
+            <label className="block mt-3">
+              <span className="text-xs font-extrabold text-stone-500">⏰ LATE FINE — RS PER DIN (WAPSI LATE HO TO)</span>
+              <input data-testid="rental-fine-input" type="number" min={0} value={shopForm.rentalLateFinePerDay}
+                onChange={(e) => { setShopForm({ ...shopForm, rentalLateFinePerDay: Number(e.target.value) }); setShopSaved(false); }}
+                className="mt-1 w-full max-w-md rounded-xl border-2 border-stone-200 px-3 py-2.5 font-bold outline-none focus:border-orange-500 bg-white" placeholder="500" inputMode="numeric" />
+              <span className="block text-xs text-stone-400 mt-1">Ye rate NAYI bookings par lagega (purani bookings par un ka apna snapshot rate rehta hai). Save Settings dabana na bhoolein.</span>
             </label>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -1962,13 +2010,13 @@ function OwnerScreen() {
               </label>
             </div>
           </div>
-          {/* 🎨 Board ka Rang — display boards (Menu Board + Grocery Board)
+          {/* 🎨 Board ka Rang — display boards (Menu Board + Products Board)
               ka background rang. Chun te hi FORAN save ho jata hai (Save
               Settings ka intezar nahi) — boards agle loop se naye rang
               mein. Rang ki roshni se boards apna text contrast khud
               badal lete hain: halka rang → dark text, gehra → white. */}
           <div className="mt-4 pt-3 border-t border-dashed border-stone-200" data-testid="board-color-block">
-            <div className="font-extrabold mb-1">🎨 Board ka Rang <span className="text-xs font-bold text-stone-400">(Menu Board + Grocery Board screens)</span></div>
+            <div className="font-extrabold mb-1">🎨 Board ka Rang <span className="text-xs font-bold text-stone-400">(Menu Board + Products Board screens)</span></div>
             <p className="text-sm text-stone-500 mb-3">Display screens ka background rang chunein — preset par click karte hi ya apna rang chun kar picker band karte hi <b>foran lag jata hai</b>. Halka rang ho to board par dark text khud aa jata hai, gehra rang ho to white text.</p>
             <div className="flex items-center gap-2 flex-wrap">
               {BOARD_COLOR_PRESETS.map((p) => {
@@ -2002,7 +2050,7 @@ function OwnerScreen() {
             <Link href="/setup" data-testid="business-setup-change" className="inline-block rounded-xl px-5 py-2.5 font-extrabold text-white" style={{ background: "#0F172A" }}>🔁 Tabdeel karein</Link>
           </div>
           <div className="mt-3 flex items-center gap-3">
-            <button onClick={() => { saveShop({ ...loadShop(), collegeName: shopForm.collegeName.trim(), canteenName: shopForm.canteenName.trim() || "College Canteen", groceryName: shopForm.groceryName.trim() || "Campus Grocery Store", jazzcashNumber: shopForm.jazzcashNumber.trim() || SHOP_DEFAULTS.jazzcashNumber, easypaisaNumber: shopForm.easypaisaNumber.trim() || SHOP_DEFAULTS.easypaisaNumber, raastInfo: shopForm.raastInfo.trim() || SHOP_DEFAULTS.raastInfo, wholesaleMinPieces: shopForm.wholesaleMinPieces, wholesaleMinKg: shopForm.wholesaleMinKg, closedContactNumber: shopForm.closedContactNumber.trim() || SHOP_DEFAULTS.closedContactNumber, shopOpen: shopForm.shopOpen, tableCount: shopForm.tableCount }); setShopSaved(true); }}
+            <button onClick={() => { saveShop({ ...loadShop(), collegeName: shopForm.collegeName.trim(), canteenName: shopForm.canteenName.trim() || "College Canteen", groceryName: shopForm.groceryName.trim() || "Campus Grocery Store", jazzcashNumber: shopForm.jazzcashNumber.trim() || SHOP_DEFAULTS.jazzcashNumber, easypaisaNumber: shopForm.easypaisaNumber.trim() || SHOP_DEFAULTS.easypaisaNumber, raastInfo: shopForm.raastInfo.trim() || SHOP_DEFAULTS.raastInfo, wholesaleMinPieces: shopForm.wholesaleMinPieces, wholesaleMinKg: shopForm.wholesaleMinKg, closedContactNumber: shopForm.closedContactNumber.trim() || SHOP_DEFAULTS.closedContactNumber, shopOpen: shopForm.shopOpen, rentalsEnabled: shopForm.rentalsEnabled, rentalLateFinePerDay: Number.isFinite(shopForm.rentalLateFinePerDay) && shopForm.rentalLateFinePerDay >= 0 ? Math.round(shopForm.rentalLateFinePerDay) : SHOP_DEFAULTS.rentalLateFinePerDay, tableCount: shopForm.tableCount }); setShopSaved(true); }}
               className="rounded-xl px-5 py-2.5 font-extrabold text-white" style={{ background: "#16A34A" }}>💾 Save Settings</button>
             {shopSaved && <span className="font-bold" style={{ color: "#16A34A" }}>✓ Saved — names + payment numbers updated everywhere.</span>}
           </div>
@@ -2019,7 +2067,7 @@ function OwnerScreen() {
             <button onClick={() => { document.body.classList.add("print-tables"); window.print(); setTimeout(() => document.body.classList.remove("print-tables"), 500); }}
               className="rounded-xl px-4 py-2 font-extrabold text-white no-print" style={{ background: "#0F172A" }}>🖨️ Print Table Cards</button>
           </div>
-          <p className="text-sm text-stone-500 mb-3">Every table has its OWN QR. The customer scans it → {shop.canteenName} ordering opens with that table already filled (they can change it). A general canteen QR (no table) can also be printed from the Online Order link: <b>{origin}/online</b></p>
+          <p className="text-sm text-stone-500 mb-3">Every table has its OWN QR. The customer scans it → {shop.canteenName} ordering opens with that table already filled (they can change it). A general canteen QR (no table) can also be printed from the Online Orders link: <b>{origin}/online</b></p>
           {/* Table count — kitni tables hain (1..100). Cards + online flow isi count se chalte hain. */}
           <div className="flex flex-wrap items-end gap-2 mb-4 rounded-2xl border-2 border-orange-100 bg-[#FFFBF5] p-3 no-print">
             <label className="block">
@@ -2068,7 +2116,7 @@ function OwnerScreen() {
   );
 }
 
-// Staff side — role-gated: only staff whose tabs include Owner Dashboard
+// Staff side — role-gated: only staff whose tabs include Dashboard
 // (the owner, or someone the owner ticked) can open this page. The old
 // standalone PIN gate is gone — the owner PIN is now the staff login PIN.
 export default function OwnerPage() {
