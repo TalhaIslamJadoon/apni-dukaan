@@ -155,6 +155,39 @@ export async function computePnL(from: string, to: string): Promise<PnLReport> {
   );
   grocery.wastage = Number(wast?.amt ?? 0);
 
+  // Rental aamdani (Kiraya) — grocery column mein, lagat ke baghair
+  // (Phase 1 parity). CASH-BASIS: advance apni advance_date par, baqaya
+  // balance_date par, late fine + damage settled_date par (wapsi par woh
+  // wasool hote hain ya security se kat te hain). Cancelled booking ka
+  // koi event nahi. Security DEPOSIT kabhi aamdani nahi — woh amanat
+  // hai. Dress ki khareed lagat yahan NAHI ati: woh owner Kharchay mein
+  // alag se likhta hai, is liye rows lagatKnown=true, lagat=0.
+  const rentRows = await q<any>(
+    `SELECT b.item_id, i.legacy_id AS item_legacy, b.item_name,
+            b.advance_paid_paisa, b.advance_date,
+            b.balance_paid_paisa, b.balance_date,
+            b.late_fine_paisa, b.damage_charges_paisa, b.settled_date, b.status
+     FROM rental_bookings b JOIN rental_items i ON i.id = b.item_id
+     WHERE b.status <> 'cancelled'`
+  );
+  const inRange = (d: unknown): boolean => {
+    if (d === null || d === undefined) return false;
+    const s = typeof d === "string" ? d.slice(0, 10) : new Date(d as string).toISOString().slice(0, 10);
+    return s >= from && s <= to;
+  };
+  for (const r of rentRows) {
+    let amt = 0;
+    if (Number(r.advance_paid_paisa) > 0 && inRange(r.advance_date)) amt += Number(r.advance_paid_paisa);
+    if (Number(r.balance_paid_paisa) > 0 && inRange(r.balance_date)) amt += Number(r.balance_paid_paisa);
+    if (r.status === "completed" && inRange(r.settled_date)) amt += Number(r.late_fine_paisa) + Number(r.damage_charges_paisa);
+    if (amt <= 0) continue;
+    grocery.bikri += amt;
+    const key = `rental:${r.item_legacy ?? r.item_id}`;
+    const row = itemMap.get(key) ?? { key, name: `👰 Kiraya — ${r.item_name}`, shop: "grocery" as const, qty: 0, bikri: 0, lagat: 0, lagatKnown: true };
+    row.qty += 1; row.bikri += amt;
+    itemMap.set(key, row);
+  }
+
   // Expenses — shop columns; "both" counts ONLY in the combined column.
   const expRows = await q<any>(
     "SELECT shop, COALESCE(SUM(amount_paisa),0) AS amt FROM expenses WHERE expense_date >= $1::date AND expense_date <= $2::date GROUP BY shop",

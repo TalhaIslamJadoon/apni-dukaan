@@ -21,7 +21,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import type { PoolClient } from "pg";
 import { paisa } from "../db";
-import { templateOf, type TemplateHead, type TemplateProduct } from "../templates-data";
+import { templateOf, RENTAL_SEED_ITEMS, type TemplateHead, type TemplateProduct } from "../templates-data";
 import { shopIdByKind } from "../dto";
 
 const slugifyTpl = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "item";
@@ -155,6 +155,31 @@ export async function applyRetailTemplate(
   const t = templateOf(retailType);
   if (!t) return { applied: false, reason: "UNKNOWN_TEMPLATE" };
   const cur = (await c.query("SELECT template_key FROM system_settings WHERE id = true")).rows[0];
+  if (retailType === "clothing" && cur?.template_key !== "clothing") {
+    // Kapron ki Dukaan (clothing) PEHLI dafa lag rahi hai: rental wala
+    // kaam auto-ON + demo dresses seed (Talha, 18 Nov 2026: rental koi
+    // alag type NAHI — kapray wali dukaan ke andar hi hai). Dresses ka
+    // guard un ka apna hai (rental_items bilkul khali hon tab hi) —
+    // catalogue guard se alag, kyunke dresses grocery data nahi hain aur
+    // owner ke items kabhi overwrite nahi hone chahiye. Type pehle se
+    // clothing ho to rentals_enabled ko haath NAHI lagta — phir Owner
+    // Settings ka toggle hi malik hai (warna dukaan rentals band hi na
+    // kar sake). Purani "rental" type wali databases: rentals_enabled
+    // pehle se ON hoga, toggle se hi chalta rahega.
+    await c.query("UPDATE system_settings SET rentals_enabled = true, updated_at = now() WHERE id = true");
+    const cnt = (await c.query("SELECT COUNT(*)::int AS n FROM rental_items")).rows[0];
+    if (Number(cnt?.n ?? 0) === 0) {
+      for (const d of RENTAL_SEED_ITEMS) {
+        await c.query(
+          `INSERT INTO rental_items (legacy_id, name, category, total_qty, size, color, rent_per_day_paisa, security_deposit_paisa, emoji, offer_rent_per_day_paisa, board_offer, image_url, image_urls, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'available') ON CONFLICT (legacy_id) DO NOTHING`,
+          [d.legacy, d.name, d.category ?? null, d.totalQty ?? 1, d.size ?? null, d.color ?? null, paisa(d.rentPerDay), paisa(d.securityDeposit), d.emoji,
+           d.offerRentPerDay ? paisa(d.offerRentPerDay) : null, d.boardOffer === true,
+           d.image ?? (d.images?.[0] ?? null), JSON.stringify(d.images ?? (d.image ? [d.image] : []))]
+        );
+      }
+    }
+  }
   if (cur?.template_key === retailType) return { applied: false, reason: "ALREADY_APPLIED" };
   if (!(await catalogueSeedable(c))) {
     // Data maujood hai — type sirf VIEW badalta hai, catalogue nahi. The

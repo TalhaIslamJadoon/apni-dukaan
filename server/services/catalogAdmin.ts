@@ -5,7 +5,7 @@
 import { tx, q, one, ApiError, paisa, rupees } from "../db";
 import { emit } from "../events";
 import { setStockAbsolute } from "./inventory";
-import { shopIdByKind } from "../dto";
+import { shopIdByKind, imgList } from "../dto";
 import type { StaffPrincipal } from "../auth";
 
 async function changed(shopId: string | null) {
@@ -22,13 +22,16 @@ async function markCatalogueCustomized() {
 // ── Canteen menu ─────────────────────────────────────────────────────────────
 export async function upsertMenuItem(input: {
   id?: string; name: string; price: number; category: string; emoji: string;
-  image?: string; sku?: string; stock?: number; lowStock?: number;
+  image?: string; images?: string[]; sku?: string; stock?: number; lowStock?: number;
   cost?: number | null; // Lagat (Rs) for P&L — null/undefined = not filled
 }, staff: StaffPrincipal): Promise<Record<string, unknown>> {
   const shopId = await shopIdByKind("canteen");
   const cat = await one<any>("SELECT id FROM canteen_categories WHERE shop_id = $1 AND name = $2", [shopId, input.category]);
   if (!cat) throw new ApiError(400, "BAD_CATEGORY", "Category nahi mili");
   const costPaisa = input.cost !== undefined && input.cost !== null && input.cost > 0 ? paisa(input.cost) : null;
+  // Multi-photo: images[] (max 16, saaf) — pehli = main (image_url bhi usi se).
+  const images = imgList(input.images, input.image ?? null);
+  const imageUrl = images[0] ?? null;
   let itemId: string;
   if (input.id) {
     const ex = await one<any>("SELECT id FROM menu_items WHERE legacy_id = $1 OR id::text = $1", [input.id]);
@@ -36,15 +39,15 @@ export async function upsertMenuItem(input: {
     itemId = ex.id;
     await q(
       `UPDATE menu_items SET name=$2, price_paisa=$3, category_id=$4, emoji=$5, image_url=$6, sku=$7,
-         low_stock_qty=$8, cost_paisa=$9, is_active=true, updated_at=now(), version=version+1 WHERE id=$1`,
-      [itemId, input.name, paisa(input.price), cat.id, input.emoji, input.image ?? null, input.sku ?? null, input.lowStock ?? 5, costPaisa]
+         low_stock_qty=$8, cost_paisa=$9, image_urls=$10, is_active=true, updated_at=now(), version=version+1 WHERE id=$1`,
+      [itemId, input.name, paisa(input.price), cat.id, input.emoji, imageUrl, input.sku ?? null, input.lowStock ?? 5, costPaisa, JSON.stringify(images)]
     );
   } else {
     const legacy = `item-${Date.now().toString(36)}`;
     const ins = await q<{ id: string }>(
-      `INSERT INTO menu_items (legacy_id, shop_id, category_id, name, price_paisa, emoji, image_url, sku, low_stock_qty, cost_paisa)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-      [legacy, shopId, cat.id, input.name, paisa(input.price), input.emoji, input.image ?? null, input.sku ?? null, input.lowStock ?? 5, costPaisa]
+      `INSERT INTO menu_items (legacy_id, shop_id, category_id, name, price_paisa, emoji, image_url, sku, low_stock_qty, cost_paisa, image_urls)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+      [legacy, shopId, cat.id, input.name, paisa(input.price), input.emoji, imageUrl, input.sku ?? null, input.lowStock ?? 5, costPaisa, JSON.stringify(images)]
     );
     itemId = ins[0].id;
     await q("INSERT INTO inventory_balances (shop_id, menu_item_id, quantity_on_hand) VALUES ($1,$2,0)", [shopId, itemId]);
@@ -154,6 +157,7 @@ export interface ProductInput {
   trackSerial?: boolean; // mobile shops: bikri par har unit ka IMEI/serial lazmi
   emoji: string;
   image?: string;
+  images?: string[]; // multi photos (max 16) — pehli = main; boards ka photo-spin inhi par banta hai
   packings?: { label: string; retailPrice: number; wholesalePrice: number; barcode?: string; wholesaleMinQty?: number; containsQty?: number }[];
 }
 
@@ -162,6 +166,9 @@ export async function upsertProduct(input: ProductInput, staff: StaffPrincipal):
   const sub = await one<any>("SELECT id FROM grocery_sub_heads WHERE legacy_id = $1 OR id::text = $1", [input.subId]);
   if (!sub) throw new ApiError(400, "BAD_SUBHEAD", "Product kisi valid Sub-Head ke baghair save nahi ho sakta");
   const shopId = await shopIdByKind("grocery");
+  // Multi-photo: images[] (max 16, saaf) — pehli = main (image_url bhi usi se).
+  const images = imgList(input.images, input.image ?? null);
+  const imageUrl = images[0] ?? null;
   let productId: string;
   if (input.id) {
     const ex = await one<any>("SELECT id FROM grocery_products WHERE legacy_id = $1 OR id::text = $1", [input.id]);
@@ -170,20 +177,20 @@ export async function upsertProduct(input: ProductInput, staff: StaffPrincipal):
     await q(
       `UPDATE grocery_products SET name=$2, brand=$3, sub_head_id=$4, sku=$5, barcode=$6, unit=$7,
          retail_price_paisa=$8, wholesale_price_paisa=$9, low_stock_qty=$10, emoji=$11, image_url=$12,
-         wholesale_min_qty=$13, board_offer=$14, offer_price_paisa=$15, track_serial=$16, is_active=true, updated_at=now(), version=version+1 WHERE id=$1`,
+         wholesale_min_qty=$13, board_offer=$14, offer_price_paisa=$15, track_serial=$16, image_urls=$17, is_active=true, updated_at=now(), version=version+1 WHERE id=$1`,
       [productId, input.name, input.brand ?? null, sub.id, input.sku, input.barcode ?? null, input.unit,
-       paisa(input.retailPrice), paisa(input.wholesalePrice), input.lowStock ?? (input.unit === "kg" ? 2 : 5), input.emoji, input.image ?? null,
+       paisa(input.retailPrice), paisa(input.wholesalePrice), input.lowStock ?? (input.unit === "kg" ? 2 : 5), input.emoji, imageUrl,
        input.wholesaleMinQty ?? null, input.boardOffer ?? false,
-       input.offerPrice && input.offerPrice > 0 ? paisa(input.offerPrice) : null, input.trackSerial ?? false]
+       input.offerPrice && input.offerPrice > 0 ? paisa(input.offerPrice) : null, input.trackSerial ?? false, JSON.stringify(images)]
     );
   } else {
     const legacy = `p-${input.sku}`;
     const ins = await q<{ id: string }>(
-      `INSERT INTO grocery_products (legacy_id, sub_head_id, name, brand, sku, barcode, unit, retail_price_paisa, wholesale_price_paisa, wholesale_min_qty, low_stock_qty, emoji, image_url, board_offer, offer_price_paisa, track_serial)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
+      `INSERT INTO grocery_products (legacy_id, sub_head_id, name, brand, sku, barcode, unit, retail_price_paisa, wholesale_price_paisa, wholesale_min_qty, low_stock_qty, emoji, image_url, board_offer, offer_price_paisa, track_serial, image_urls)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
       [legacy, sub.id, input.name, input.brand ?? null, input.sku, input.barcode ?? null, input.unit,
-       paisa(input.retailPrice), paisa(input.wholesalePrice), input.wholesaleMinQty ?? null, input.lowStock ?? (input.unit === "kg" ? 2 : 5), input.emoji, input.image ?? null, input.boardOffer ?? false,
-       input.offerPrice && input.offerPrice > 0 ? paisa(input.offerPrice) : null, input.trackSerial ?? false]
+       paisa(input.retailPrice), paisa(input.wholesalePrice), input.wholesaleMinQty ?? null, input.lowStock ?? (input.unit === "kg" ? 2 : 5), input.emoji, imageUrl, input.boardOffer ?? false,
+       input.offerPrice && input.offerPrice > 0 ? paisa(input.offerPrice) : null, input.trackSerial ?? false, JSON.stringify(images)]
     );
     productId = ins[0].id;
     await q("INSERT INTO inventory_balances (shop_id, grocery_product_id, quantity_on_hand) VALUES ($1,$2,0)", [shopId, productId]);

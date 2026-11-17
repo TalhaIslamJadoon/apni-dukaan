@@ -140,7 +140,7 @@ export async function createTestPrintJob(role: PrinterRole, staffId: string) {
   } else {
     payload = {
       test: true,
-      labels: [{ name: "Test Sticker — Canteen POS", price: 0, code: "TEST123456", sku: "TEST", widthMm: 50, heightMm: 30 }],
+      labels: [{ name: "Test Sticker — Apni Dukaan", price: 0, code: "TEST123456", sku: "TEST", widthMm: 50, heightMm: 30 }],
     };
   }
   const jobType = JOB_TYPE_OF[role];
