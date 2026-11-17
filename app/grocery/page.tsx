@@ -429,7 +429,7 @@ function GroceryScreen() {
       <TopBar />
       <OrderAlerts role="grocery" />
       <div className="px-4 py-1.5 text-xs font-bold text-stone-500 bg-orange-100/60 flex justify-between">
-        <span>🛒 GROCERY MODE</span><span className="font-bold" style={{ color: "#F59E0B" }}>SAMPLE products — real list pending</span>
+        <span>🛒 {shop.retailType === "grocery" || shop.retailType === "supermarket" ? "GROCERY MODE" : "SELL MODE"}</span><span className="font-bold" style={{ color: "#F59E0B" }}>SAMPLE products — real list pending</span>
       </div>
 
       <div className="flex flex-1 min-h-0 flex-col lg:flex-row overflow-hidden">
@@ -523,12 +523,12 @@ function GroceryScreen() {
 
           {/* ── Payment tasdeeq baqi — awareness only (read-only): these
               online orders are NOT in the packing queue yet; the owner
-              confirms their payment proof in the Owner Dashboard, then
+              confirms their payment proof in the Dashboard, then
               they enter the queue below with a token. ── */}
           {proofOrders.length > 0 && (
             <section className="mb-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-3" data-testid="pending-proof-strip">
               <h2 className="font-extrabold mb-1" style={{ color: "#92400E" }}>⏳ Payment tasdeeq baqi ({proofOrders.length})</h2>
-              <p className="text-xs font-bold text-stone-500 mb-2">Yeh online orders abhi packing queue mein NAHI aayenge — pehle Owner Dashboard se in ki payment confirm hogi, phir token ke sath queue mein aayenge.</p>
+              <p className="text-xs font-bold text-stone-500 mb-2">Yeh online orders abhi packing queue mein NAHI aayenge — pehle Dashboard se in ki payment confirm hogi, phir token ke sath queue mein aayenge.</p>
               <div className="space-y-1">
                 {proofOrders.map((o) => (
                   <div key={o.id} className="flex flex-wrap gap-x-3 items-center rounded-xl bg-white border border-amber-100 px-3 py-1.5 text-sm">
@@ -813,7 +813,7 @@ function GroceryScreen() {
         <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-3">
           <div className="bg-white rounded-3xl w-full max-w-lg p-5 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-xl font-extrabold">Payment — Grocery</h3>
+              <h3 className="text-xl font-extrabold">Payment — Sell</h3>
               <button onClick={() => setPayOpen(false)} className="text-2xl font-bold text-stone-400">✕</button>
             </div>
             <div className="text-center text-3xl font-black mb-2" style={{ color: "#F97316" }}>{money(grand)}</div>
@@ -874,7 +874,7 @@ function GroceryScreen() {
                 <label className="font-bold block mb-1">Customer name (khata):</label>
                 <input value={udhaarName} onChange={(e) => setUdhaarName(e.target.value)} placeholder="e.g. Haji Sahib — Mohalla customer"
                   className="w-full rounded-xl border-2 border-stone-200 px-4 py-3 text-lg outline-none focus:border-amber-500" />
-                <p className="text-xs text-stone-400 mt-1">This sale will be recorded against this customer in the Owner Dashboard.</p>
+                <p className="text-xs text-stone-400 mt-1">This sale will be recorded against this customer in the Dashboard.</p>
               </div>
             )}
             {(method === "JazzCash" || method === "Easypaisa") && (
@@ -911,8 +911,8 @@ function GroceryScreen() {
         <div className="fixed inset-0 z-50 overflow-y-auto p-4" style={{ background: "#0F172A" }}>
           <div className="max-w-md mx-auto py-4">
             <div className="text-center text-white mb-3">
-              <span className="text-xl font-bold" style={{ color: "#16A34A" }}>✅ Grocery Sale Done!</span>
-              <span className="block text-sm text-stone-400">Stock updated · Sale added to Owner Dashboard 📊</span>
+              <span className="text-xl font-bold" style={{ color: "#16A34A" }}>✅ Sale Done!</span>
+              <span className="block text-sm text-stone-400">Stock updated · Sale added to Dashboard 📊</span>
             </div>
             <Receipt order={done} />
             <div className="flex gap-2 mt-4 no-print">
