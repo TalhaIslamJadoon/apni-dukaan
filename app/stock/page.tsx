@@ -18,7 +18,7 @@ import { apiGet } from "@/lib/api";
 // purchase rate + supplier) and WASTAGE entries (qty + reason) — for BOTH
 // inventories, reading the SAME store state the POS screens sell from, so
 // numbers agree everywhere. Selling prices are READ-ONLY here: price
-// changes are the owner's job (Owner Dashboard), never the stock keeper's.
+// changes are the owner's job (Dashboard), never the stock keeper's.
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Inv = "canteen" | "grocery";
@@ -155,7 +155,7 @@ function StockScreen() {
   const expiryWarnings = medical ? expiringProducts(grocery, entries) : [];
 
   // ── Barcode scanner (hardware HID + page-level burst listening) ────────
-  // Same scan discipline as Grocery POS: one lookup order — a variant
+  // Same scan discipline as Sell: one lookup order — a variant
   // packing's own EAN first, then the product barcode, then SKU/PLU. The
   // catalogue here is the server-hydrated one, so the stock keeper resolves
   // exactly the products the counter sells. A scan only SELECTS a product;
@@ -169,7 +169,7 @@ function StockScreen() {
   const scannerTestOpenRef = useRef(false);
   scannerTestOpenRef.current = scannerTestOpen;
   // Camera scanning (getUserMedia + built-in BarcodeDetector, Chrome/Android)
-  // — Grocery POS wali hi implementation: phone/tablet ka camera hi scanner
+  // — Sell wali hi implementation: phone/tablet ka camera hi scanner
   // ban jata hai, alag barcode scanner kharidna lazmi nahi.
   const [camOpen, setCamOpen] = useState(false);
   const [camMsg, setCamMsg] = useState("");
@@ -187,7 +187,7 @@ function StockScreen() {
   }, [scanToast]);
 
   // USB/Bluetooth scanners "type" the code very fast and finish with Enter.
-  // Like Grocery POS, bursts are captured only when NO field has focus —
+  // Like Sell, bursts are captured only when NO field has focus —
   // typing in quantity/rate/supplier/search is never hijacked.
   useEffect(() => {
     let buf = "";
@@ -211,7 +211,7 @@ function StockScreen() {
   }, []);
 
   // Camera scanning (getUserMedia + built-in BarcodeDetector, Chrome/Android)
-  // — Grocery POS se mirror ki hui implementation. Detected code wohi
+  // — Sell se mirror ki hui implementation. Detected code wohi
   // scanSelect path leta hai jo physical scanner leta hai (packing EAN →
   // product barcode → SKU), taake ek scan ka ek hi asar ho. Scanner Test
   // panel khula ho to camera bhi khamosh rehta hai — test wala scan product
@@ -265,7 +265,7 @@ function StockScreen() {
   function openCamera() { setCamMsg(""); setCamOpen(true); }
   function closeCamera() { stopCameraTracks(); setCamOpen(false); setCamMsg(""); scanRef.current?.focus(); }
 
-  // Tiny WebAudio beep — same pattern as Grocery POS (success = short high
+  // Tiny WebAudio beep — same pattern as Sell (success = short high
   // blip, not-found = low buzz). Wrapped so audio can never break an entry.
   function beep(ok: boolean) {
     try {
@@ -423,7 +423,7 @@ function StockScreen() {
                 style={inv === "canteen" ? { background: "#F97316", color: "#fff" } : { background: "#fff", color: "#44403C" }}>🍽️ Canteen Stock</button>
             )}
             <button onClick={() => { setInv("grocery"); setSelId(null); setScanContext(null); setMsg(null); }} className="px-6 py-3 font-extrabold"
-              style={inv === "grocery" ? { background: "#F97316", color: "#fff" } : { background: "#fff", color: "#44403C" }}>🛒 Grocery Stock</button>
+              style={inv === "grocery" ? { background: "#F97316", color: "#fff" } : { background: "#fff", color: "#44403C" }}>🛒 {shop.retailType === "grocery" || shop.retailType === "supermarket" ? "Grocery Stock" : "Dukaan Stock"}</button>
           </div>
           {lowCount > 0 && (
             <span className="rounded-full px-3.5 py-1.5 text-sm font-black text-white" style={{ background: "#DC2626" }}>
