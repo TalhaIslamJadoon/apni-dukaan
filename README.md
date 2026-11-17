@@ -1,4 +1,4 @@
-# POS System — Canteen + Grocery (Prototype)
+# Apni Dukaan — POS System (Canteen, Grocery, Rental aur har qisam ki dukaan ke liye)
 
 One POS system with **two modes in separate tabs**, built to Talha's approved
 spec (14 Nov 2026). Same billing / payment / stock / report engine and the
@@ -17,10 +17,10 @@ header text and table-QR cards all follow.
 | Tab | Route | Screen |
 |---|---|---|
 | 🍽️ **Canteen POS** | `/` | Canteen cashier (description below) |
-| 🛒 **Grocery POS** | `/grocery` | Grocery cashier (description below) |
+| 🛒 **Sell** | `/grocery` | Grocery cashier (description below) |
 | 👨‍🍳 **Kitchen** | `/kitchen` | Canteen tokens only |
 | 📦 **Stock** | `/stock` | Stock keeper's backend entries (description below) |
-| 📊 **Owner Dashboard** | `/owner` | Combined reports for both modes |
+| 📊 **Dashboard** | `/owner` | Combined reports for both modes |
 | 📱 **Online Order** | `/online` | Customer-facing ordering (description below) |
 
 **Tabs are role-based** — a staff member only ever sees the tab(s) the
@@ -49,16 +49,16 @@ tab(s); the **owner assigns the roles**.
   |---|---|---|
   | 👑 Owner | **1234** | ALL tabs |
   | 🍽️ Canteen Wala | **1111** | Canteen POS only |
-  | 🛒 Grocery Wala | **2222** | Grocery POS only |
+  | 🛒 Grocery Wala | **2222** | Sell only |
   | 👨‍🍳 Kitchen Wala | **3333** | Kitchen only |
   | 📦 Stock Wala | **4444** | Stock only |
 
-- **Owner Dashboard → 🔐 Staff Access** is where the owner manages this:
+- **Dashboard → 🔐 Staff Access** is where the owner manages this:
   **add** a staff member (name + 4-digit PIN + tick tabs), **edit** name /
   PIN / tabs, **remove** a member, and **change the owner's own PIN**
   (Edit the Owner row). One person may hold **multiple tabs** (e.g. a
   trusted person gets Canteen + Grocery). Safety: the **owner account
-  can never be removed and can never lose the Owner Dashboard tab** —
+  can never be removed and can never lose the Dashboard tab** —
   the shop can never lock itself out; `loadStaff()` also self-heals a
   missing owner.
 - **`/online` stays public** — it is the customer page (table QR, remote
@@ -108,7 +108,7 @@ Rs 100 / 500 / 1000 buttons, Exact, automatic change (baqaya). Udhaar: customer
 name for khata. Completing creates a sequential **Token Number**, shows a
 success/token screen, and sends the order to Kitchen.
 
-**🛒 Grocery POS (`/grocery`)** — Same bill-panel pattern, grocery style:
+**🛒 Sell (`/grocery`)** — Same bill-panel pattern, grocery style:
 - **Search box** + **Barcode / SKU scan field** — see "Barcode scanner"
   below (try barcode `8961000003001` or SKU `1001`)
 - Product grid with SKU, price and **live stock** on every card
@@ -119,7 +119,7 @@ success/token screen, and sends the order to Kitchen.
 - On sale, **stock is deducted automatically**; grocery orders are handed
   over at the counter (they do NOT go to Kitchen)
 
-### 🔫 Barcode scanner (Grocery POS)
+### 🔫 Barcode scanner (Sell)
 
 Walk-in grocery customers pick their items themselves; **the bill is
 made at the counter by staff scanning** — that is the flow this supports
@@ -143,7 +143,7 @@ made at the counter by staff scanning** — that is the flow this supports
   ANY input has focus (search box, scan field, udhaar name…) typing is
   left completely alone — the scan field's own submit handles its scans.
 - **Product barcodes:** grocery products carry a **`barcode`** field
-  (editable in Owner Dashboard → Grocery Products). Packed / branded
+  (editable in Dashboard → Grocery Products). Packed / branded
   piece items are seeded with **sample EAN-13-style codes** (`896…` —
   Pakistan's GS1 prefix; samples, not real product codes). **Loose
   per-kg items** (atta, cheeni, chawal, daal) have **no barcode** — they
@@ -172,12 +172,12 @@ The catalogue itself is **Talha's own list** (approved 2026-11-14):
 is `lib/catalog-seed.json` (flattened into the store on first run); the
 same list as plain text lives in **`categories-source.txt`** in the
 project root. All prices and stock figures in the seed are **SAMPLE**
-values — the owner sets the real ones in Owner Dashboard → Grocery
+values — the owner sets the real ones in Dashboard → Grocery
 Products → Edit. Units follow the goods: **per kg** for loose staples
 (aata, rice/chawal, daalain, sugar, dry fruits and similar), **per
 piece** for everything else.
 
-**Filtering — two chip rows.** The **Grocery POS** and the **online
+**Filtering — two chip rows.** The **Sell** and the **online
 grocery view** both show a **head chips row** (🛒 Sab (All) + one chip
 per head with its total product count; chips appear only for heads that
 have at least one product). Selecting a head reveals a **second row**:
@@ -198,7 +198,7 @@ toast shows the label). In this prototype, **stock is tracked per
 PRODUCT, not per packing** — selling any packing decrements the
 product's single stock figure.
 
-**Owner management.** In Owner Dashboard → Grocery Products →
+**Owner management.** In Dashboard → Grocery Products →
 **🗂️ Grocery Heads — apna head khud banayein**, every head is listed
 with its product count and its sub-heads indented underneath (each with
 its own count). The owner can **add a head** (name + emoji from a preset
@@ -221,7 +221,7 @@ sample items) is **replaced wholesale** by this 390-product catalogue —
 the old v1 storage keys simply stop being read. Nothing real was ever
 entered in the demo data, so nothing is lost.
 
-### 🏷️ Barcode label printing (Owner Dashboard) — label printer is REQUIRED hardware
+### 🏷️ Barcode label printing (Dashboard) — label printer is REQUIRED hardware
 
 **Required hardware for the grocery (Talha, 2026-11-14 — mandatory, not
 optional):** a **barcode label printer** (50mm × 30mm sticker labels)
@@ -229,7 +229,7 @@ alongside the counter barcode scanner. Loose and unbranded goods reach
 the shelf with shop-printed stickers, and the counter scans those
 stickers — so the grocery does not run without one.
 
-Owner Dashboard → Grocery Products has a **🏷️ Barcode Labels** panel:
+Dashboard → Grocery Products has a **🏷️ Barcode Labels** panel:
 tick products (checkboxes, filterable by **Head / Sub-Head** or search),
 set **how many stickers per product**, and open the **print sheet** —
 the screen preview is the same grid that prints. A single product's
@@ -249,7 +249,7 @@ label-printer drivers are a Phase 2 item.
 
 Products, sub-heads and main heads all carry an optional **`image`**
 field (URL/path), and the canteen menu items have one too. Tiles and
-cards (Grocery POS, Online, Canteen POS) resolve the picture in this
+cards (Sell, Online, Canteen POS) resolve the picture in this
 order: **product image → its Sub-Head image → its Head image → the
 emoji 3D tile** (the resolver is `groceryImage()` in `lib/store.ts`).
 So one good picture on a head covers its whole range until individual
@@ -310,10 +310,10 @@ adjustable in data) highlighted **amber/red** (KHATAM when 0).
 - Stock is **one shared state**: canteen menu items now carry stock too
   (seeded sample quantities), and **every sale — canteen counter, online
   canteen, grocery counter, online grocery — decrements the same stock**
-  the Stock screen shows. The Owner Dashboard strip shows a **Low Stock
+  the Stock screen shows. The Dashboard strip shows a **Low Stock
   count** across both inventories.
 
-**📊 Owner Dashboard (`/owner`)** — Owner staff login (demo PIN:
+**📊 Dashboard (`/owner`)** — Owner staff login (demo PIN:
 **1234**, see Staff Access above). Combined today's totals with a
 **Canteen vs Grocery sales split**, cash vs online (JazzCash+Easypaisa)
 split, Udhaar total, order count, best sellers, **Bill History**
@@ -333,7 +333,7 @@ splits by where the customer is:**
 Scan QR  →  write NAME + TABLE NUMBER  →  Dine-In / Takeaway  →  order food
 ```
 
-Every table has its **own printed QR** (Owner Dashboard → "Tables & QR",
+Every table has its **own printed QR** (Dashboard → "Tables & QR",
 Tables 1–8, each QR encodes `/online?table=N`; "Print Table Cards" prints
 them ready to stick on tables). Scanning pre-fills that table number +
 Dine-In (both stay editable; the customer can switch to Takeaway). In the
@@ -380,10 +380,10 @@ placed for the other shop). The two shops keep **separate carts**.
 - **Canteen online order** → Kitchen token, Received → Preparing →
   Ready, pickup at the canteen counter (as above).
 - **Grocery online order** → the same grocery product data as the
-  Grocery POS tab (one `loadGrocery()` source), search, per-kg weight
+  Sell tab (one `loadGrocery()` source), search, per-kg weight
   quantities in 0.5 kg steps, stock auto-deducted. It does **NOT** go to
   the Kitchen — it lands in the **"🌐 Online Orders — Packing Queue"**
-  panel inside the **Grocery POS tab**, where staff mark **Start
+  panel inside the **Sell tab**, where staff mark **Start
   Packing → ✓ Ready for Pickup**. The customer's My Orders mirrors the
   status (Received → Packing → Ready for Pickup at the grocery counter).
   Its bill is a normal grocery bill (grocery store name header, shared
@@ -414,11 +414,11 @@ needed.**
 
 Orders from both kinds land in the **same orders data** as counter bills
 (`source: "online"` + type + table/customer/place), get a normal bill
-number + token, and count in the **Owner Dashboard** (Counter vs Online
+number + token, and count in the **Dashboard** (Counter vs Online
 split, with the Online-Canteen / Online-Grocery breakdown). Canteen
 orders appear in **Kitchen** with a clear source label — 🏪 COUNTER ·
 🌐 ONLINE — <place> · 🍽️ DINE-IN — TABLE N · 🥡 TAKEAWAY — while
-grocery orders go to the Grocery POS packing queue instead. The
+grocery orders go to the Sell packing queue instead. The
 customer's screen shows live status (polling the shared state). Pickup
 at the counter / served at the table — **no delivery** in this phase.
 Both shops use ONE data source each, shared with their counter screens
@@ -438,7 +438,7 @@ order confirmed.
   The customer is not physically present, so there is **no cash option**.
   Checkout shows a payment step: the order total, a method selector
   (**JazzCash / Easypaisa / Raast / Bank**), the shop's number for that
-  method (from **Owner Dashboard → Shop Settings** — `jazzcashNumber`,
+  method (from **Dashboard → Shop Settings** — `jazzcashNumber`,
   `easypaisaNumber`, `raastInfo`; seeded with clearly-labelled **demo
   placeholders** `03XX-XXXXXXX (demo)` until Talha sets the real ones), an
   optional **Transaction ID** field, and a **REQUIRED proof-image upload**
@@ -458,12 +458,12 @@ order confirmed.
   `paymentStatus: "proof_pending"`, and **token 0** — the confirmation
   screen tells the customer the order has been received and will be
   confirmed after the proof is verified ("Payment Tasdeeq Baqi").
-- **Fulfilment gating:** the **Kitchen** screen and the **Grocery POS
+- **Fulfilment gating:** the **Kitchen** screen and the **Sell
   packing queue EXCLUDE** `proof_pending` / `rejected` orders
   (`isPaymentCleared()` in `lib/store.ts`). A compact read-only
   **"⏳ Payment tasdeeq baqi (N)"** strip in **Canteen POS** and
-  **Grocery POS** keeps counter staff aware of waiting orders.
-- **Staff verification — Owner Dashboard → "💳 Online Payment
+  **Sell** keeps counter staff aware of waiting orders.
+- **Staff verification — Dashboard → "💳 Online Payment
   Verification":** every `proof_pending` order (both shops) with customer
   name/place, items, total, method, txn id, an **amount-paid vs
   order-total match indicator**, and the proof thumbnail (click → full
@@ -492,13 +492,13 @@ order confirmed.
 
 **Talha's rule: staff must never miss an online order — har online order
 par lazmi notification, voice ke sath.** (`lib/alerts.ts` +
-`components/OrderAlerts.tsx`, mounted on Owner Dashboard, Canteen POS,
-Grocery POS and Kitchen.)
+`components/OrderAlerts.tsx`, mounted on Dashboard, Canteen POS,
+Sell and Kitchen.)
 
 - **Triggers:** (a) a new online order lands as `proof_pending` → the
   **Owner** (verification needed) **and the relevant shop's staff screen**
   get a 💳 proof alert; (b) an order gets **confirmed** → **Kitchen**
-  (canteen) / **Grocery POS** (grocery) get a "naya order" alert; (c)
+  (canteen) / **Sell** (grocery) get a "naya order" alert; (c)
   **table-QR Cash orders** (and counter bills) are payment-cleared on
   placement → **Kitchen** is alerted directly. A `proof_pending` order
   never alerts the Kitchen — its fulfil alert only exists once payment
@@ -545,7 +545,7 @@ shop header ── line ── PAYMENT QR ── line ── bill meta (no / dat
 - **Print**: "Print Bill (80mm)" on the success screen opens a clean
   thermal layout (dashed section dividers, double line around Grand Total)
   via `window.print()` + print CSS — only the bill prints
-- **Bill History**: Owner Dashboard lists today's bills (number, time,
+- **Bill History**: Dashboard lists today's bills (number, time,
   mode, total, payment, status pill). Click any bill to open the full
   receipt again and **reprint** it — same line-split layout
 
@@ -589,7 +589,7 @@ list — prices/stock in the seed are sample values). The EAN-style
 barcodes on packed grocery items are **samples too** (`896…`), and the
 seeded stock quantities (canteen + grocery) are samples for testing the
 Stock screen. **Real prices/stock are set by the owner in the Owner
-Dashboard.** Edit/add/remove in the Owner Dashboard.
+Dashboard.** Edit/add/remove in the Dashboard.
 
 ## 3D / animation touches (lightweight, CSS only)
 
