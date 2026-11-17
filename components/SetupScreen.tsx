@@ -110,7 +110,7 @@ export default function SetupScreen({ onDone }: { onDone?: () => void }) {
         <div className="flex items-center gap-3 px-4 py-3 max-w-4xl mx-auto w-full">
           <div className="text-2xl">🏪</div>
           <div>
-            <div className="text-lg font-extrabold leading-tight">POS System — Business Setup</div>
+            <div className="text-lg font-extrabold leading-tight">Apni Dukaan — Business Setup</div>
             <div className="text-xs opacity-70">{changeMode ? "Apni business type tabdeel karein" : "Pehla setup — 2 minute lageinge"}</div>
           </div>
           {changeMode && (
@@ -135,7 +135,7 @@ export default function SetupScreen({ onDone }: { onDone?: () => void }) {
         )}
 
         <h1 className="text-2xl sm:text-3xl font-black mb-1">Aap ka business kya hai?</h1>
-        <p className="text-stone-500 font-bold text-sm mb-4">Jo chuneinge, system ka andar ka view usi hisaab se ban jayega. Naam, prices aur products baad mein Owner Dashboard se badal sakte hain.</p>
+        <p className="text-stone-500 font-bold text-sm mb-4">Jo chuneinge, system ka andar ka view usi hisaab se ban jayega. Naam, prices aur products baad mein Dashboard se badal sakte hain.</p>
 
         <div className="text-xs font-black tracking-widest text-stone-400 mb-2">STEP 1 — BUSINESS CHUNEIN</div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
@@ -149,7 +149,7 @@ export default function SetupScreen({ onDone }: { onDone?: () => void }) {
             className={cardCls(canteen === false && needsRetail)} style={cardStyle(canteen === false && needsRetail)}>
             <div className="text-5xl mb-2">🛒</div>
             <div className="text-xl font-black">Sirf Dukaan</div>
-            <div className="text-sm font-bold text-stone-500 mt-1">Retail shop — barcode billing, stock, labels, offers aur Grocery Board.</div>
+            <div className="text-sm font-bold text-stone-500 mt-1">Retail shop — barcode billing, stock, labels, offers aur Products Board.</div>
           </button>
           <button onClick={() => choose("both")} data-testid="setup-card-both" aria-pressed={canteen === true && needsRetail}
             className={cardCls(canteen === true && needsRetail)} style={cardStyle(canteen === true && needsRetail)}>
@@ -192,7 +192,7 @@ export default function SetupScreen({ onDone }: { onDone?: () => void }) {
           </p>
         )}
         <p className="text-center text-xs font-bold text-stone-400 mt-3">
-          Demo products har template ke sath ate hain taake system foran chal kar dikhe — asal list Owner Dashboard se apni daalein.
+          Demo products har template ke sath ate hain taake system foran chal kar dikhe — asal list Dashboard se apni daalein.
         </p>
       </main>
     </div>

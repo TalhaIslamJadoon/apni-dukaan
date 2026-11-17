@@ -5,8 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import AIAssistant from "@/components/AIAssistant";
 import { GuidelineButton } from "@/components/Guideline";
-import { TABS_META, hasRetail, setStaffSession, useShop, useStaffSession } from "@/lib/store";
-import { templateOf } from "@/lib/templates";
+import { TABS_META, hasRetail, rentalsOn, setStaffSession, useShop, useStaffSession } from "@/lib/store";
 import { audioArmed, setSoundOn, soundOn } from "@/lib/alerts";
 
 // 🔔 Sound toggle for the staff order alerts (voice + beep). Browsers
@@ -53,16 +52,16 @@ export default function TopBar() {
   // BUSINESS SETUP gating (Talha, 15 Nov 2026): staff ke allowed tabs ke
   // UPAR business filter — jo dukaan setup mein off hai us ke tabs yahan
   // bhi nahi dikhte (canteen tabs sirf hasCanteen par; grocery + stock
-  // tabs sirf retail par). Retail tab ka label dukaan ki qisam ke hisaab
-  // se badalta hai (grocery apna purana "Grocery POS" rakhta hai).
+  // tabs sirf retail par). Retail POS tab ka label functional hai —
+  // grocery par "Sell", baqi templates par "Sell" (neeche rule).
   const retailOn = hasRetail(shop);
-  const tpl = templateOf(shop.retailType);
-  const groceryTabLabel = retailOn && shop.retailType !== "grocery" && tpl
-    ? `${tpl.emoji} ${tpl.label} POS`
-    : undefined;
+  // Retail POS tab ka label TABS_META se aata hai — har dukaan type par
+  // uniform "🛒 Sell" (Talha, 18 Nov 2026 final naming rule: professional
+  // functional naam; dukaan/template ka naam tab label kabhi nahi banta).
   const visibleTabs = member ? TABS_META.filter((t) => member.tabs.includes(t.key)).filter((t) => {
     if (t.key === "canteen" || t.key === "kitchen") return shop.hasCanteen;
     if (t.key === "grocery" || t.key === "stock") return retailOn;
+    if (t.key === "rentals") return rentalsOn(shop); // Kiraya tab sirf jab rental kaam ON ho
     return true;
   }) : [];
   const shopNamesLine = [
@@ -75,6 +74,7 @@ export default function TopBar() {
   const guidelineEntry =
     path === "/" ? "canteen" :
     path === "/grocery" ? "grocery" :
+    path === "/rentals" ? "rentals" :
     path === "/kitchen" ? "kitchen" :
     path === "/stock" ? "stock" :
     null;
@@ -87,7 +87,7 @@ export default function TopBar() {
       <div className="flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 pt-3 pb-2">
         <div className="text-2xl">🏪</div>
         <div className="flex-1 min-w-0 max-sm:basis-[calc(100%-2.75rem)]">
-          <div className="text-lg font-extrabold leading-tight line-clamp-2">{shop.collegeName || "POS System"}</div>
+          <div className="text-lg font-extrabold leading-tight line-clamp-2">{shop.collegeName || "Apni Dukaan"}</div>
           <div className="text-xs opacity-70 line-clamp-2">{shopNamesLine} · SAMPLE data — real lists pending</div>
         </div>
         {guidelineEntry && <GuidelineButton entry={guidelineEntry} variant="topbar" />}
@@ -102,12 +102,22 @@ export default function TopBar() {
                 up, short label below so the header still wraps cleanly. */}
             {[
               ...(shop.hasCanteen ? [
-                { href: "/display", icon: "🍽️", full: "Canteen Order", short: "Canteen", title: "Canteen Order Screen (TV) — canteen tokens: Ordered / Preparing / Taiyar live" },
-                { href: "/menu-board", icon: "🍔", full: "Canteen Menu", short: "Menu", title: "Canteen Menu Board (TV) — canteen menu har 10 second mein khud badalta hai" },
+                { href: "/display", icon: "🍽️", full: "Canteen Orders", short: "Canteen", title: "Canteen Orders Screen (TV) — canteen tokens: Ordered / Preparing / Taiyar live" },
+                { href: "/menu-board", icon: "🍔", full: "Menu Board", short: "Menu", title: "Menu Board (TV) — canteen menu har 10 second mein khud badalta hai" },
+              ] : []),
+              // Screen pills SHOP TYPE ke hisaab se (Talha, 18 Nov 2026):
+              // Grocery Orders (packing) screen sirf grocery/supermarket
+              // dukaanon ki hai — baqi types ke online orders Dashboard /
+              // Online Orders mein aate hain, un ki packing pill nahi.
+              // Products Board har dukaan ki hai (us ke apne sell items).
+              ...((shop.retailType === "grocery" || shop.retailType === "supermarket") ? [
+                { href: "/display-grocery", icon: "🛒", full: "Grocery Orders", short: "Grocery", title: "Grocery Orders Screen (TV) — online grocery tokens: Ordered / Packing / Taiyar live" },
               ] : []),
               ...(retailOn ? [
-                { href: "/display-grocery", icon: "🛒", full: "Grocery Order", short: "Grocery", title: "Grocery Order Screen (TV) — online grocery tokens: Ordered / Packing / Taiyar live" },
-                { href: "/grocery-board", icon: "🧺", full: "Grocery Board", short: "Board", title: "Grocery Board (TV) — Offers + saari grocery items, har 10 second mein khud badalta hai" },
+                { href: "/grocery-board", icon: "🧺", full: "Products Board", short: "Board", title: "Products Board (TV) — Offers + dukaan ki saari items, har 10 second mein khud badalta hai" },
+              ] : []),
+              ...(rentalsOn(shop) ? [
+                { href: "/rental-board", icon: "👗", full: "Dress Board", short: "Dress", title: "Dress Board (TV) — rent wali dresses + Offers, ghumti hui photos ke sath, har 10 second mein khud badalta hai" },
               ] : []),
             ].map((s) => (
               <a key={s.href} href={s.href} target="_blank" rel="noreferrer" title={s.title}
@@ -140,7 +150,7 @@ export default function TopBar() {
               <Link key={t.href} href={t.href}
                 className="rounded-xl px-5 py-2.5 font-extrabold whitespace-nowrap transition hover:brightness-125"
                 style={active ? { background: "#F97316", color: "#fff", boxShadow: "0 4px 14px rgba(249,115,22,0.45)" } : { background: "rgba(255,255,255,0.10)", color: "#E7E5E4" }}>
-                {t.key === "grocery" && groceryTabLabel ? groceryTabLabel : t.label}
+                {t.label}
               </Link>
             );
           })}

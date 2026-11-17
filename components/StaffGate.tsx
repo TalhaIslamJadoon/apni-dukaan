@@ -60,7 +60,7 @@ export function StaffLogin() {
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="text-2xl">🏪</div>
           <div>
-            <div className="text-lg font-extrabold leading-tight">{shop.collegeName || "POS System"}</div>
+            <div className="text-lg font-extrabold leading-tight">{shop.collegeName || "Apni Dukaan"}</div>
             <div className="text-xs opacity-70">{[shop.hasCanteen ? shop.canteenName : null, hasRetail(shop) ? shop.groceryName : null].filter(Boolean).join(" · ")}</div>
           </div>
         </div>
@@ -101,7 +101,7 @@ export function StaffLogin() {
             {err && <p className="mt-2 text-center text-sm font-bold" style={{ color: "#DC2626" }}>{err}</p>}
             <button onClick={tryLogin} disabled={busy} className="mt-3 w-full rounded-2xl py-4 text-xl font-black text-white active:scale-[0.99] disabled:opacity-60" style={{ background: "#F97316" }}>{busy ? "⏳ Check ho raha hai…" : "🔓 Login"}</button>
             <p className="mt-3 text-center text-xs font-bold text-stone-400">Demo PINs — Owner <b>1234</b> · Canteen <b>1111</b> · Grocery <b>2222</b> · Kitchen <b>3333</b> · Stock <b>4444</b></p>
-            <p className="mt-1 text-center text-xs text-stone-400">Customer hain? Table ka QR scan karein ya <b>Online Order</b> page kholein — customers ko login nahi chahiye.</p>
+            <p className="mt-1 text-center text-xs text-stone-400">Customer hain? Table ka QR scan karein ya <b>Online Orders</b> page kholein — customers ko login nahi chahiye.</p>
           </div>
         </div>
       </main>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { hasRetail, useShop } from "@/lib/store";
+import { hasRetail, rentalsOn, useShop } from "@/lib/store";
 import SetupScreen from "@/components/SetupScreen";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,5 +65,15 @@ export function RetailOnly({ children, what = "Dukaan (Retail)" }: { children: R
   const mounted = useMounted();
   if (!mounted) return splash;
   if (!hasRetail(shop)) return <DisabledSectionNotice what={what} />;
+  return <>{children}</>;
+}
+
+/** Sirf tab render karo jab Kiraya (Rental) wala kaam ON ho — rental
+ *  template se auto-ON hota hai, warna Owner Settings ke toggle se. */
+export function RentalsOnly({ children, what = "Kiraya (Rentals)" }: { children: React.ReactNode; what?: string }) {
+  const shop = useShop();
+  const mounted = useMounted();
+  if (!mounted) return splash;
+  if (!rentalsOn(shop)) return <DisabledSectionNotice what={what} />;
   return <>{children}</>;
 }
