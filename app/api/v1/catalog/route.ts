@@ -1,5 +1,6 @@
 import { handler, ok } from "@/server/http";
-import { fetchMenuDTOs, fetchGroceryDTOs, fetchDealDTOs } from "@/server/dto";
+import { fetchMenuDTOs, fetchGroceryDTOs, fetchDealDTOs, shopSettingsDTO } from "@/server/dto";
+import { listRentalItems } from "@/server/services/rentals";
 import { getStaff } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
@@ -17,5 +18,10 @@ export const GET = handler(async (req) => {
     for (const m of menu as any[]) m.stock = m.stock > 0 ? 1 : 0;
     for (const g of grocery.items as any[]) g.stock = g.stock > 0 ? 1 : 0;
   }
-  return ok({ menu, heads: grocery.heads, subs: grocery.subs, items: grocery.items, deals });
+  // Rental items board/public-safe hain (sirf dress ki maloomat + booked
+  // qty count; customer data kabhi nahi) — rentals ON ho to shamil karo
+  // taake Dress Board baghair login ke chal sake.
+  const settings = await shopSettingsDTO();
+  const rentals = settings.rentalsEnabled ? await listRentalItems() : [];
+  return ok({ menu, heads: grocery.heads, subs: grocery.subs, items: grocery.items, deals, rentals });
 });
