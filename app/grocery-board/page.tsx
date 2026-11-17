@@ -25,8 +25,10 @@
 // The board measures the screen and fits as many readable cards as the
 // screen holds (cols by width, rows by height), recomputed on resize. A
 // head with more products than one slide holds is split into parts.
-// PHOTOS: product → sub-head → head fallback chain (groceryImage), emoji
-// art when there is no photo (or it fails to load).
+// PHOTOS: product ki apni photos PhotoCycle par ghumti hain (rental
+// board wala system — 8+ = tez 900ms spin, 2–7 = 2.5s turntable, 1 =
+// Ken Burns); apni photo na ho to product → sub-head → head fallback
+// chain (groceryImage) ki single photo, emoji art jab kuch bhi na ho.
 // BOARD THEME (Talha, 16 Nov 2026 — "Munch O Clock" wali photo dekh kar,
 // phir usi din ki tabdeeli: rang hard-coded NAHI): board ka background
 // rang OWNER chunta hai (Owner → Settings → 🎨 Board ka Rang; default
@@ -42,9 +44,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   GroceryHead, GroceryItem, GrocerySubHead,
-  effectiveRetail, groceryImage, loadGrocery, loadGroceryHeads, loadGrocerySubHeads, offerActive, useShop,
+  effectiveRetail, groceryImage, itemPhotos, loadGrocery, loadGroceryHeads, loadGrocerySubHeads, offerActive, useShop,
 } from "@/lib/store";
 import { RetailOnly } from "@/components/BusinessGate";
+import PhotoCycle from "@/components/PhotoCycle";
 
 const OFFERS_TITLE = "🎉 Aaj ki Offers — Grocery";
 
@@ -59,6 +62,7 @@ interface BoardItem {
   oldPrice?: number; // offers slide only: retail struck through above the offer price
   priceSuffix?: string; // "/kg" for loose items
   image?: string;
+  photos?: string[]; // product ki apni photos (multi ho to card ghumta hai); apni photo na ho to fallback chain ki single photo
   emoji: string;
   chip: string; // corner label (sub-head name, or "🎉 Offer")
   chipBg: string;
@@ -131,13 +135,21 @@ function buildSlides(grocery: GroceryItem[], heads: GroceryHead[], subs: Grocery
   // Offers cards (offersMode) price at effectiveRetail: an ACTIVE offer
   // price replaces the representative retail, which is then kept as
   // oldPrice for the struck-through display. Head slides keep plain retail.
-  const toCard = (g: GroceryItem, chip: string, chipBg: string, cardBg: string, offersMode = false): BoardItem => ({
-    id: g.id, name: g.name, sub: packingLine(g),
-    price: offersMode ? effectiveRetail(g) : g.retailPrice,
-    oldPrice: offersMode && offerActive(g) ? g.retailPrice : undefined,
-    priceSuffix: g.unit === "kg" ? "/kg" : undefined,
-    image: groceryImage(g, heads, subs), emoji: g.emoji, chip, chipBg, cardBg,
-  });
+  const toCard = (g: GroceryItem, chip: string, chipBg: string, cardBg: string, offersMode = false): BoardItem => {
+    // Photo-spin sirf product ki APNI photos par: images[] hon to wohi
+    // ghumti hain; apni photo bilkul na ho to fallback chain (sub → head)
+    // ki ek photo Ken Burns par rehti hai — kisi aur product ki photo
+    // spin mein nahi milti.
+    const own = itemPhotos(g);
+    const fallback = groceryImage(g, heads, subs);
+    return {
+      id: g.id, name: g.name, sub: packingLine(g),
+      price: offersMode ? effectiveRetail(g) : g.retailPrice,
+      oldPrice: offersMode && offerActive(g) ? g.retailPrice : undefined,
+      priceSuffix: g.unit === "kg" ? "/kg" : undefined,
+      image: fallback, photos: own.length ? own : (fallback ? [fallback] : []), emoji: g.emoji, chip, chipBg, cardBg,
+    };
+  };
 
   // Offers FIRST — only when at least one product is flagged.
   const offers = grocery.filter((g) => g.boardOffer === true);
@@ -166,21 +178,11 @@ function buildSlides(grocery: GroceryItem[], heads: GroceryHead[], subs: Grocery
 }
 
 function ItemCard({ item, theme }: { item: BoardItem; theme: BoardTheme }) {
-  const [imgOk, setImgOk] = useState(true);
-  const showImg = Boolean(item.image) && imgOk;
   return (
     <div className="rounded-3xl overflow-hidden bg-white flex flex-col min-h-0"
       style={{ boxShadow: theme.cardShadow }}>
       <div className="relative min-h-0" style={{ background: item.cardBg, flex: "0 1 58%" }}>
-        {showImg ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.image} alt={item.name} onError={() => setImgOk(false)}
-            className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center" style={{ fontSize: "clamp(3.5rem, 7vw, 7.5rem)" }}>
-            {item.emoji}
-          </div>
-        )}
+        <PhotoCycle photos={item.photos ?? (item.image ? [item.image] : [])} name={item.name} emoji={item.emoji} />
         <span className="absolute top-3 left-3 rounded-full px-3 py-1 font-black text-white"
           style={{ background: item.chipBg, fontSize: "clamp(0.7rem, 1.1vw, 1rem)" }}>
           {item.chip}
@@ -453,7 +455,7 @@ function GroceryBoard() {
 // dukaan business setup mein ON ho — warna polite notice.
 export default function GroceryBoardPage() {
   return (
-    <RetailOnly what="Grocery Board">
+    <RetailOnly what="Products Board">
       <GroceryBoard />
     </RetailOnly>
   );
