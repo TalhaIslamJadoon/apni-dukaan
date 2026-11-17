@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Canteen POS — Phase 1",
-  description: "Canteen Point of Sale prototype (Phase 1, sample menu)",
+  title: "Apni Dukaan — Har Dukaan ka POS",
+  description: "Apni Dukaan — canteen, grocery, kapray/rental aur har qisam ki dukaan ke liye mukammal POS system",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
