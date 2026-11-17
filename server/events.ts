@@ -8,7 +8,8 @@ import type { PoolClient } from "pg";
 export type EventType =
   | "order.created" | "order.status_changed" | "order.payment_changed"
   | "catalog.changed" | "stock.changed" | "dashboard.changed"
-  | "table_session.changed" | "print_job.changed" | "settings.changed" | "staff.changed";
+  | "table_session.changed" | "print_job.changed" | "settings.changed" | "staff.changed"
+  | "rentals.changed";
 
 export async function emit(
   c: PoolClient,

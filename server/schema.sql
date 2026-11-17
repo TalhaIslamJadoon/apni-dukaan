@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS system_settings (
   shop_open boolean NOT NULL DEFAULT true,  -- closed-shop popup switch (owner toggle)
   closed_contact_number text NOT NULL DEFAULT '0300-0000000 (demo)',  -- number shown in the closed popup
   board_color text NOT NULL DEFAULT '#FFC61A',  -- display boards ka background rang (owner-selected, 16 Nov 2026)
+  rentals_enabled boolean NOT NULL DEFAULT false,  -- Kiraya (dress rental) wala kaam ON/OFF (17 Nov 2026)
+  rental_late_fine_per_day_paisa integer NOT NULL DEFAULT 50000,  -- late wapsi fine Rs 500/din (paisa mein)
   table_count integer NOT NULL DEFAULT 8,  -- dining tables 1..N (owner-adjustable, 1..100)
   -- Business Setup (SALE version, 15 Nov 2026): fresh CREATE gets
   -- setup_done=false so the /setup wizard runs on first open; databases
@@ -52,6 +54,8 @@ INSERT INTO system_settings (id) VALUES (true) ON CONFLICT (id) DO NOTHING;
 ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS shop_open boolean NOT NULL DEFAULT true;
 ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS closed_contact_number text NOT NULL DEFAULT '0300-0000000 (demo)';
 ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS board_color text NOT NULL DEFAULT '#FFC61A';
+ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS rentals_enabled boolean NOT NULL DEFAULT false;
+ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS rental_late_fine_per_day_paisa integer NOT NULL DEFAULT 50000;
 ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS table_count integer NOT NULL DEFAULT 8;
 -- Business Setup fields on pre-existing databases: setup_done defaults
 -- TRUE here (opposite of the fresh CREATE) — an install that already has
@@ -124,7 +128,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS staff_one_active_owner
 
 CREATE TABLE IF NOT EXISTS staff_tab_grants (
   staff_user_id uuid NOT NULL REFERENCES staff_users(id) ON DELETE CASCADE,
-  tab_key text NOT NULL CHECK (tab_key IN ('canteen','grocery','kitchen','stock','owner','online')),
+  tab_key text NOT NULL CHECK (tab_key IN ('canteen','grocery','rentals','kitchen','stock','owner','online')),
   granted_by_staff_id uuid REFERENCES staff_users(id),
   granted_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (staff_user_id, tab_key)
@@ -196,6 +200,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
   price_paisa integer NOT NULL CHECK (price_paisa >= 0),
   emoji text NOT NULL DEFAULT '🍽️',
   image_url text,
+  image_urls jsonb NOT NULL DEFAULT '[]'::jsonb,  -- multi photos (max 16); pehli = main — boards ka photo-spin (rental wala system)
   sku text,
   low_stock_qty numeric(12,3) NOT NULL DEFAULT 5,
   sort_order integer NOT NULL DEFAULT 0,
@@ -253,6 +258,7 @@ CREATE TABLE IF NOT EXISTS grocery_products (
   offer_price_paisa integer CHECK (offer_price_paisa IS NULL OR offer_price_paisa > 0),  -- REAL offer price (Phase 1 offerPrice): active only when board_offer AND 0 < offer < retail_price_paisa; replaces the BASE retail price (and the one representative packing priced at it) at retail only — wholesale never
   emoji text NOT NULL DEFAULT '🛒',
   image_url text,
+  image_urls jsonb NOT NULL DEFAULT '[]'::jsonb,  -- multi photos (max 16); pehli = main — boards ka photo-spin (rental wala system)
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -749,3 +755,88 @@ CREATE TABLE IF NOT EXISTS verification_codes (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS verification_codes_lookup ON verification_codes (customer_id, channel, created_at DESC);
+
+-- ── Kiraya / Rentals (17 Nov 2026) ──────────────────────────────────────────
+-- Har dress EK unique piece (rental_items) — grocery packings se alag
+-- entity. Booking par paisa: advance + pickup baqaya + wapsi settlement
+-- (late fine / damage, security deposit se katoti). Money hamesha paisa
+-- mein. advance_date / balance_date / settled_date = woh business dates
+-- jin par woh paisa wasool hua — P&L ki cash-basis rental aamdani inhi
+-- se banti hai (Phase 1 rentalMoneyEvents parity).
+CREATE TABLE IF NOT EXISTS rental_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  legacy_id text UNIQUE,
+  name text NOT NULL,
+  size text,
+  color text,
+  rent_per_day_paisa integer NOT NULL DEFAULT 0,
+  security_deposit_paisa integer NOT NULL DEFAULT 0,
+  offer_rent_per_day_paisa integer,  -- offer wala roz ka kiraya (NULL = koi offer nahi)
+  board_offer boolean NOT NULL DEFAULT false,  -- board-offer flag (grocery offerPrice parity)
+  emoji text NOT NULL DEFAULT '👗',
+  image_url text,
+  image_urls jsonb NOT NULL DEFAULT '[]'::jsonb,  -- multi photos (max 4); pehli = main
+  status text NOT NULL DEFAULT 'available' CHECK (status IN ('available','booked','out','cleaning','inactive')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS rental_bookings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  legacy_id text UNIQUE,
+  booking_no text NOT NULL,
+  item_id uuid NOT NULL REFERENCES rental_items(id),
+  item_name text NOT NULL,
+  customer_name text NOT NULL,
+  customer_mobile text NOT NULL,
+  customer_cnic text,
+  pickup_date date NOT NULL,
+  return_date date NOT NULL,
+  days integer NOT NULL DEFAULT 1,
+  rent_per_day_paisa integer NOT NULL DEFAULT 0,
+  list_rent_per_day_paisa integer,  -- offer lagi ho to dress ka ASAL roz ka kiraya (snapshot)
+  rent_total_paisa integer NOT NULL DEFAULT 0,
+  security_deposit_paisa integer NOT NULL DEFAULT 0,
+  security_kind text NOT NULL DEFAULT 'Cash' CHECK (security_kind IN ('Cash','CNIC','Cheque')),
+  advance_paid_paisa integer NOT NULL DEFAULT 0,
+  balance_paid_paisa integer NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'booked' CHECK (status IN ('booked','out','completed','cancelled')),
+  advance_date date,
+  balance_date date,
+  settled_date date,
+  picked_up_at timestamptz,
+  returned_at timestamptz,
+  actual_return_date date,
+  late_days integer NOT NULL DEFAULT 0,
+  late_fine_per_day_paisa integer NOT NULL DEFAULT 0,
+  late_fine_paisa integer NOT NULL DEFAULT 0,
+  damage_charges_paisa integer NOT NULL DEFAULT 0,
+  damage_note text,
+  return_condition text CHECK (return_condition IS NULL OR return_condition IN ('theek','damage','cleaning')),
+  security_deducted_paisa integer NOT NULL DEFAULT 0,
+  security_refunded_paisa integer NOT NULL DEFAULT 0,
+  extra_due_paisa integer NOT NULL DEFAULT 0,
+  created_by_staff_id uuid REFERENCES staff_users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS rental_bookings_status ON rental_bookings (status, return_date);
+CREATE INDEX IF NOT EXISTS rental_bookings_item ON rental_bookings (item_id);
+-- Rental offers + multi-photo columns on pre-existing databases (idempotent).
+ALTER TABLE rental_items ADD COLUMN IF NOT EXISTS offer_rent_per_day_paisa integer;
+ALTER TABLE rental_items ADD COLUMN IF NOT EXISTS board_offer boolean NOT NULL DEFAULT false;
+ALTER TABLE rental_items ADD COLUMN IF NOT EXISTS image_urls jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE rental_bookings ADD COLUMN IF NOT EXISTS list_rent_per_day_paisa integer;
+-- Rental categories + quantities on pre-existing databases (idempotent).
+ALTER TABLE rental_items ADD COLUMN IF NOT EXISTS category text;
+ALTER TABLE rental_items ADD COLUMN IF NOT EXISTS total_qty integer NOT NULL DEFAULT 1;
+ALTER TABLE rental_bookings ADD COLUMN IF NOT EXISTS qty integer NOT NULL DEFAULT 1;
+-- Multi-photo (photo-spin) columns on pre-existing databases (idempotent):
+-- canteen menu items + grocery products bhi ab rental items ki tarah
+-- images[] rakhte hain — boards ka "ghumta hua" view inhi par banta hai.
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_urls jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE grocery_products ADD COLUMN IF NOT EXISTS image_urls jsonb NOT NULL DEFAULT '[]'::jsonb;
+-- Rentals tab grant: purani databases par tab_key CHECK mein 'rentals'
+-- shamil karo (idempotent — constraint dobara banana safe hai).
+ALTER TABLE staff_tab_grants DROP CONSTRAINT IF EXISTS staff_tab_grants_tab_key_check;
+ALTER TABLE staff_tab_grants ADD CONSTRAINT staff_tab_grants_tab_key_check
+  CHECK (tab_key IN ('canteen','grocery','rentals','kitchen','stock','owner','online'));

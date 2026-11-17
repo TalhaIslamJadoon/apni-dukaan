@@ -109,7 +109,7 @@ export const RETAIL_TEMPLATES: RetailTemplate[] = [
     ],
   },
   {
-    key: "clothing", label: "Kapron ki Dukaan", emoji: "👕", defaultShopName: "Clothing Shop",
+    key: "clothing", label: "Kapron ki Dukaan", emoji: "👕", defaultShopName: "Kapron ki Dukaan",
     heads: [
       { name: "Mardana", emoji: "👔", subs: ["Shalwar Kameez", "Shirt & T-Shirt", "Pant & Jeans"] },
       { name: "Khawateen", emoji: "🧕", subs: ["Suit", "Kurti"] },
@@ -312,3 +312,45 @@ export function templateOf(key: string | null | undefined): RetailTemplate | und
   if (!key) return undefined;
   return RETAIL_TEMPLATES.find((t) => t.key === key);
 }
+
+// ── Rental seed dresses (Kiraya template) ───────────────────────────────────
+// Har dress EK unique piece hai — ye grocery products NAHI hain;
+// services/templates.ts inhein rental_items mein seed karta hai (sirf jab
+// rental_items bilkul khali hon). Client copy: lib/store.ts ki
+// RENTAL_ITEMS_SEED — dono ko sync rakhein. Do dresses par demo OFFERS
+// lage hain (grocery offers wala hi rule: boardOffer ON + 0 < offer <
+// asal kiraya tab hi offer active hoti hai).
+export interface RentalSeedItem {
+  legacy: string; name: string; category?: string; totalQty: number; size?: string; color?: string;
+  rentPerDay: number; securityDeposit: number; emoji: string;
+  offerRentPerDay?: number; boardOffer?: boolean; image?: string; images?: string[];
+}
+export const RENTAL_SEED_ITEMS: RentalSeedItem[] = [
+  { legacy: "rent-1", name: "Laal Bridal Lehenga", category: "Baraat", totalQty: 1, size: "M", color: "Laal", rentPerDay: 5000, securityDeposit: 30000, emoji: "👰", image: "/images/rentals/rent-1.jpg", images: ["/images/rentals/rent-1.jpg", "/images/rentals/rent-1-2.jpg", "/images/rentals/rent-1-3.jpg", "/images/rentals/rent-1-4.jpg"] },
+  { legacy: "rent-2", name: "Mehroon Bridal Lehenga", category: "Baraat", totalQty: 1, size: "L", color: "Mehroon", rentPerDay: 6500, securityDeposit: 40000, emoji: "👰", image: "/images/rentals/rent-2.jpg" },
+  { legacy: "rent-3", name: "Cream Sherwani", category: "Baraat", totalQty: 1, size: "L", color: "Cream", rentPerDay: 3500, securityDeposit: 20000, emoji: "🤵", image: "/images/rentals/rent-3.jpg" },
+  { legacy: "rent-4", name: "Peach Walima Maxi", category: "Walima", totalQty: 1, size: "M", color: "Peach", rentPerDay: 3500, securityDeposit: 20000, emoji: "👗", image: "/images/rentals/rent-4.jpg", images: ["/images/rentals/rent-4.jpg", "/images/rentals/rent-4-2.jpg", "/images/rentals/rent-4-3.jpg", "/images/rentals/rent-4-4.jpg"] },
+  { legacy: "rent-5", name: "Golden Walima Gown", category: "Walima", totalQty: 1, size: "M", color: "Golden", rentPerDay: 4000, securityDeposit: 25000, emoji: "👗", offerRentPerDay: 3200, boardOffer: true, image: "/images/rentals/rent-5.jpg" },
+  { legacy: "rent-6", name: "Kaala Prince Coat", category: "Walima", totalQty: 1, size: "M", color: "Kaala", rentPerDay: 2500, securityDeposit: 15000, emoji: "🧥", image: "/images/rentals/rent-6.jpg" },
+  { legacy: "rent-7", name: "Peeli Mehndi Dress", category: "Mehndi", totalQty: 1, size: "S", color: "Peela / Hara", rentPerDay: 2000, securityDeposit: 10000, emoji: "💛", image: "/images/rentals/rent-7.jpg" },
+  { legacy: "rent-8", name: "Hara Mehndi Lehenga", category: "Mehndi", totalQty: 1, size: "M", color: "Hara / Narangi", rentPerDay: 2800, securityDeposit: 15000, emoji: "🧡", image: "/images/rentals/rent-8.jpg" },
+  { legacy: "rent-9", name: "Safed Kurta Waistcoat", category: "Mehndi", totalQty: 1, size: "L", color: "Safed", rentPerDay: 1800, securityDeposit: 8000, emoji: "👔", image: "/images/rentals/rent-9.jpg" },
+  { legacy: "rent-10", name: "Sarson Dholki Suit", category: "Dholki", totalQty: 1, size: "M", color: "Sarson", rentPerDay: 1500, securityDeposit: 8000, emoji: "🌼", image: "/images/rentals/rent-10.jpg" },
+  { legacy: "rent-11", name: "Peeli Dholki Dress", category: "Dholki", totalQty: 1, size: "S", color: "Peela", rentPerDay: 1600, securityDeposit: 8000, emoji: "💛", image: "/images/rentals/rent-11.jpg" },
+  { legacy: "rent-12", name: "Peela Mayoun Suit", category: "Mayoun", totalQty: 1, size: "M", color: "Peela", rentPerDay: 1200, securityDeposit: 6000, emoji: "🌻", image: "/images/rentals/rent-12.jpg" },
+  { legacy: "rent-13", name: "Gulabi Sharara Set", category: "Bridal", totalQty: 1, size: "M", color: "Gulabi", rentPerDay: 3000, securityDeposit: 18000, emoji: "🌸", image: "/images/rentals/rent-13.jpg" },
+  { legacy: "rent-14", name: "Safed Bridal Gown", category: "Bridal", totalQty: 1, size: "M", color: "Safed", rentPerDay: 4500, securityDeposit: 25000, emoji: "👰", image: "/images/rentals/rent-14.jpg" },
+  { legacy: "rent-15", name: "Golden Sherwani", category: "Groom", totalQty: 1, size: "L", color: "Golden", rentPerDay: 4000, securityDeposit: 22000, emoji: "🤵", image: "/images/rentals/rent-15.jpg" },
+  { legacy: "rent-16", name: "Dulha Sherwani Set", category: "Groom", totalQty: 1, size: "L", color: "Kaala / Golden", rentPerDay: 5500, securityDeposit: 30000, emoji: "🤵", image: "/images/rentals/rent-16.jpg" },
+  { legacy: "rent-17", name: "Neeli Party Gown", category: "Party/Event", totalQty: 1, size: "M", color: "Neela", rentPerDay: 2500, securityDeposit: 15000, emoji: "👗", offerRentPerDay: 1999, boardOffer: true, image: "/images/rentals/rent-17.jpg" },
+  { legacy: "rent-18", name: "Kaali Party Frock", category: "Party/Event", totalQty: 1, size: "S", color: "Kaala", rentPerDay: 1800, securityDeposit: 10000, emoji: "🖤", image: "/images/rentals/rent-18.jpg" },
+  { legacy: "rent-19", name: "Gulabi Kids Frock", category: "Kids", totalQty: 1, size: "Bache (6–8 saal)", color: "Gulabi", rentPerDay: 800, securityDeposit: 5000, emoji: "🎀", image: "/images/rentals/rent-19.jpg" },
+  { legacy: "rent-20", name: "Kids Cream Sherwani", category: "Kids", totalQty: 1, size: "Bache (5–7 saal)", color: "Cream", rentPerDay: 1000, securityDeposit: 6000, emoji: "🤵", image: "/images/rentals/rent-20.jpg" },
+  { legacy: "rent-21", name: "Sajawat Dholki", category: "Sajawat / Decor", totalQty: 6, color: "Multicolor", rentPerDay: 500, securityDeposit: 3000, emoji: "🪘", image: "/images/rentals/rent-21.jpg" },
+  { legacy: "rent-22", name: "Genda Phool Sajawat", category: "Sajawat / Decor", totalQty: 4, color: "Peela / Narangi", rentPerDay: 800, securityDeposit: 4000, emoji: "🌼", image: "/images/rentals/rent-22.jpg" },
+  { legacy: "rent-23", name: "String Lights", category: "Lights", totalQty: 20, color: "Warm White", rentPerDay: 300, securityDeposit: 2000, emoji: "💡", image: "/images/rentals/rent-23.jpg" },
+  { legacy: "rent-24", name: "Stage Light", category: "Lights", totalQty: 8, color: "RGB", rentPerDay: 700, securityDeposit: 5000, emoji: "🔦", image: "/images/rentals/rent-24.jpg" },
+  { legacy: "rent-25", name: "Shadi Mubarak Neon Sign", category: "Sign Boards", totalQty: 2, color: "Gulabi Neon", rentPerDay: 1500, securityDeposit: 8000, emoji: "✨", image: "/images/rentals/rent-25.jpg" },
+  { legacy: "rent-26", name: "Mehndi Board", category: "Sign Boards", totalQty: 3, color: "Hara", rentPerDay: 600, securityDeposit: 3000, emoji: "🪧", image: "/images/rentals/rent-26.jpg" },
+  { legacy: "rent-27", name: "Welcome Board", category: "Sign Boards", totalQty: 2, color: "Safed / Golden", rentPerDay: 700, securityDeposit: 3000, emoji: "🪧", image: "/images/rentals/rent-27.jpg" },
+];

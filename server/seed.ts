@@ -52,7 +52,7 @@ interface SeedPacking { label: string; retailPrice: number; wholesalePrice: numb
 interface SeedProduct {
   id: string; name: string; sku: string; barcode?: string;
   retailPrice: number; wholesalePrice: number; stock: number;
-  unit: "piece" | "kg"; emoji: string; image?: string;
+  unit: "piece" | "kg"; emoji: string; image?: string; images?: string[];
   brand?: string; variant?: string; wholesaleMinQty?: number;
   packings?: SeedPacking[];
 }
@@ -120,11 +120,12 @@ async function seedMenu(c: PoolClient, shopId: string): Promise<number> {
   for (let i = 0; i < SAMPLE_MENU.length; i++) {
     const m = SAMPLE_MENU[i];
     const r = await c.query(
-      `INSERT INTO menu_items (legacy_id, shop_id, category_id, name, price_paisa, emoji, image_url, sku, low_stock_qty, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      `INSERT INTO menu_items (legacy_id, shop_id, category_id, name, price_paisa, emoji, image_url, sku, low_stock_qty, sort_order, image_urls)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        ON CONFLICT (legacy_id) DO UPDATE SET name = EXCLUDED.name, price_paisa = EXCLUDED.price_paisa,
-         emoji = EXCLUDED.emoji, image_url = EXCLUDED.image_url RETURNING id`,
-      [m.id, shopId, catIds[m.category], m.name, paisa(m.price), m.emoji, m.image ?? null, m.sku ?? null, m.lowStock ?? 5, i]
+         emoji = EXCLUDED.emoji, image_url = EXCLUDED.image_url, image_urls = EXCLUDED.image_urls RETURNING id`,
+      [m.id, shopId, catIds[m.category], m.name, paisa(m.price), m.emoji, m.image ?? null, m.sku ?? null, m.lowStock ?? 5, i,
+       JSON.stringify(m.images?.length ? m.images : (m.image ? [m.image] : []))]
     );
     await seedBalance(c, shopId, { menuItemId: r.rows[0].id }, m.stock ?? 50);
     n++;
@@ -224,15 +225,17 @@ async function seedGrocery(c: PoolClient, shopId: string): Promise<{ heads: numb
         const p = g.first;
         const pr = await c.query(
           `INSERT INTO grocery_products (legacy_id, sub_head_id, name, brand, sku, barcode, unit,
-             retail_price_paisa, wholesale_price_paisa, wholesale_min_qty, low_stock_qty, emoji, image_url, board_offer, offer_price_paisa)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+             retail_price_paisa, wholesale_price_paisa, wholesale_min_qty, low_stock_qty, emoji, image_url, board_offer, offer_price_paisa, image_urls)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
            ON CONFLICT (legacy_id) DO UPDATE SET name = EXCLUDED.name, brand = EXCLUDED.brand,
              retail_price_paisa = EXCLUDED.retail_price_paisa, wholesale_price_paisa = EXCLUDED.wholesale_price_paisa,
-             image_url = EXCLUDED.image_url, board_offer = EXCLUDED.board_offer, offer_price_paisa = EXCLUDED.offer_price_paisa RETURNING id`,
+             image_url = EXCLUDED.image_url, board_offer = EXCLUDED.board_offer, offer_price_paisa = EXCLUDED.offer_price_paisa,
+             image_urls = EXCLUDED.image_urls RETURNING id`,
           [g.masterLegacy, subId, g.name, g.brand, p.sku, p.barcode ?? null, p.unit,
            paisa(p.retailPrice), paisa(p.wholesalePrice), p.wholesaleMinQty ?? null,
            p.unit === "kg" ? 2 : 5, p.emoji, p.image ?? null, BOARD_OFFER_SKUS.has(p.sku),
-           OFFER_PRICE_BY_SKU[p.sku] ? paisa(OFFER_PRICE_BY_SKU[p.sku]) : null]
+           OFFER_PRICE_BY_SKU[p.sku] ? paisa(OFFER_PRICE_BY_SKU[p.sku]) : null,
+           JSON.stringify(p.images?.length ? p.images : (p.image ? [p.image] : []))]
         );
         const productId = pr.rows[0].id;
         nProducts++;

@@ -5,6 +5,20 @@ import { q, one, rupees } from "./db";
 
 export const lid = (row: { legacy_id?: string | null; id: string }) => row.legacy_id ?? row.id;
 
+/** Multi-photo list (boards ka photo-spin): image_urls jsonb array —
+ *  saaf string entries, max 16; khali ho to purana single image_url
+ *  fallback. Rental items wala hi rule (services/rentals cleanImages). */
+export function imgList(imageUrls: unknown, imageUrl?: string | null): string[] {
+  const arr = Array.isArray(imageUrls) ? imageUrls : [];
+  const out: string[] = [];
+  for (const v of arr) {
+    if (typeof v === "string" && v.trim() && !out.includes(v.trim())) out.push(v.trim());
+    if (out.length >= 16) break;
+  }
+  if (!out.length && typeof imageUrl === "string" && imageUrl) out.push(imageUrl);
+  return out;
+}
+
 export interface ShopSettingsDTO {
   collegeName: string;
   canteenName: string;
@@ -25,6 +39,8 @@ export interface ShopSettingsDTO {
   retailType: string | null;
   setupDone: boolean;
   boardColor: string; // display boards ka background rang (owner-selected)
+  rentalsEnabled: boolean; // Kiraya (dress rental) wala kaam ON/OFF
+  rentalLateFinePerDay: number; // late wapsi fine, Rs per din
 }
 
 export async function shopSettingsDTO(): Promise<ShopSettingsDTO> {
@@ -47,6 +63,8 @@ export async function shopSettingsDTO(): Promise<ShopSettingsDTO> {
     retailType: s?.retail_type ?? "grocery",
     setupDone: s?.setup_done ?? true,
     boardColor: /^#[0-9a-f]{6}$/i.test(s?.board_color ?? "") ? s.board_color : "#FFC61A",
+    rentalsEnabled: s?.rentals_enabled ?? false,
+    rentalLateFinePerDay: Math.max(0, Math.round(Number(s?.rental_late_fine_per_day_paisa ?? 50000) / 100)),
   };
 }
 
@@ -80,6 +98,7 @@ export async function fetchMenuDTOs(includeCost = false): Promise<unknown[]> {
     category: r.category_name,
     emoji: r.emoji,
     ...(r.image_url ? { image: r.image_url } : {}),
+    ...(imgList(r.image_urls, r.image_url).length > 1 ? { images: imgList(r.image_urls, r.image_url) } : {}),
     ...(r.sku ? { sku: r.sku } : {}),
     stock: Number(r.stock),
     lowStock: Number(r.low_stock_qty),
@@ -193,6 +212,7 @@ export async function fetchGroceryDTOs(includeWholesale: boolean): Promise<Groce
         ...(p.track_serial ? { trackSerial: true } : {}),
         emoji: p.emoji,
         ...(p.image_url ? { image: p.image_url } : {}),
+        ...(imgList(p.image_urls, p.image_url).length > 1 ? { images: imgList(p.image_urls, p.image_url) } : {}),
         ...(standard && standard.packings.length ? { packings: standard.packings } : {}),
         ...(vars.length ? { variants: vars } : {}),
       };

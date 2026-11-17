@@ -55,7 +55,7 @@ export async function sendEmailCode(to: string, code: string): Promise<SendResul
     await transport.sendMail({
       from: process.env.SMTP_FROM,
       to,
-      subject: "Canteen POS — Email Confirmation Code",
+      subject: "Apni Dukaan — Email Confirmation Code",
       text: `Aap ka email confirmation code hai: ${code}\n\nYe code 10 minute ke liye valid hai. Agar aap ne account nahi banaya to is email ko nazar-andaz kar dein.\n\n— College Canteen & Campus Grocery Store`,
     });
     return { delivered: true, state: "sent" };
@@ -76,7 +76,7 @@ export async function sendSmsCode(to: string, code: string): Promise<SendResult>
       headers: { "content-type": "application/json", authorization: `Bearer ${process.env.SMS_API_KEY}` },
       body: JSON.stringify({
         to,
-        message: `Canteen POS: aap ka mobile confirmation code hai ${code}. Ye code 10 minute ke liye valid hai.`,
+        message: `Apni Dukaan: aap ka mobile confirmation code hai ${code}. Ye code 10 minute ke liye valid hai.`,
         apiKey: process.env.SMS_API_KEY,
       }),
     });
