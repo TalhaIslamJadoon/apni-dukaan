@@ -24,6 +24,7 @@ export const PATCH = handler(async (req) => {
     tableCount?: number;
     hasCanteen?: boolean; retailType?: string | null; setupDone?: boolean;
     boardColor?: string;
+    rentalsEnabled?: boolean; rentalLateFinePerDay?: number;
   }>(req);
   // Board rang sirf saaf #RRGGBB hex ho to hi save ho — warna purana rang.
   const boardColor = b.boardColor !== undefined && /^#[0-9a-f]{6}$/i.test(b.boardColor.trim())
@@ -49,6 +50,8 @@ export const PATCH = handler(async (req) => {
          retail_type = CASE WHEN $11 THEN $12 ELSE retail_type END,
          setup_done = COALESCE($13, setup_done),
          board_color = COALESCE($14, board_color),
+         rentals_enabled = COALESCE($15, rentals_enabled),
+         rental_late_fine_per_day_paisa = COALESCE($16, rental_late_fine_per_day_paisa),
          updated_at = now() WHERE id = true`,
       [b.collegeName ?? null, b.jazzcashNumber ?? null, b.easypaisaNumber ?? null, b.raastInfo ?? null,
        b.wholesaleMinPieces ?? null, b.wholesaleMinKg ?? null,
@@ -57,7 +60,9 @@ export const PATCH = handler(async (req) => {
        b.hasCanteen === undefined ? null : b.hasCanteen,
        b.retailType !== undefined, b.retailType ?? null,
        b.setupDone === undefined ? null : b.setupDone,
-       boardColor]
+       boardColor,
+       b.rentalsEnabled === undefined ? null : b.rentalsEnabled,
+       b.rentalLateFinePerDay === undefined ? null : Math.max(0, Math.round(Number(b.rentalLateFinePerDay) || 0)) * 100]
     );
     // Business Setup confirm: a retail type was chosen → us template ka
     // seed try karein (guard andar hai: data save ho chuka ho to sirf
