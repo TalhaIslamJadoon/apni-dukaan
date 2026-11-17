@@ -16,7 +16,7 @@
 
 import {
   GroceryItem, Order, PackingOption,
-  loadGrocery, loadGroceryHeads, loadGrocerySubHeads, loadMenu, loadOrders, loadStockEntries, isToday, billNoOf, isPaymentCleared,
+  loadGrocery, loadGroceryHeads, loadGrocerySubHeads, loadMenu, loadOrders, loadStockEntries, isToday, billNoOf, isPaymentCleared, loadShop, hasRetail,
 } from "./store";
 
 // Offer pricing — LOCAL copies of the lib/store.ts helpers. This module is
@@ -108,7 +108,7 @@ function lowStockAnswer(s: Snap, audience: Audience): string {
   if (!gl.length && !ml.length) return "✅ Koi item low stock par nahi hai — sab theek hai.";
   const out: string[] = [];
   if (gl.length) {
-    out.push(`📉 Grocery low stock (${gl.length}):`);
+    out.push(`📉 ${shopKind().groceryType ? "Grocery" : "Dukaan"} low stock (${gl.length}):`);
     gl.slice(0, 12).forEach((g) => out.push(`• ${g.name} — ${qty(g.stock)} ${g.unit === "kg" ? "kg" : "pcs"} bacha (${headName(s, g)})`));
     if (gl.length > 12) out.push(`…aur ${gl.length - 12} items`);
   }
@@ -123,12 +123,28 @@ const RESTRICTED = /wholesale|tholesale|profit|munafa|margin|udhaar|udhar|khata|
 const REFUSAL_STAFF = "🙏 Ye maloomat (wholesale rate / profit / udhaar / sales) sirf Owner ke liye hai — staff ko nahi dikhayi jati.\nMein aapko product ki retail price, stock, packings, ya pending orders bata sakta hoon.";
 const REFUSAL_CUSTOMER = "🙏 Ye hamari internal maloomat hai, customers ko nahi bata sakte.\nMein aapko kisi product ki price, availability, ya aapke apne order ka status bata sakta hoon.";
 
+// Dukaan ki qisam (Talha, 18 Nov 2026): assistant ki suggestions aur
+// headings SHOP TYPE ke hisaab se — clothing/rental dukaan mein koi
+// grocery-specific prompt ya lafz nahi aata.
+function shopKind() {
+  const sh = loadShop();
+  return {
+    hasCanteen: sh.hasCanteen,
+    retail: hasRetail(sh),
+    groceryType: sh.retailType === "grocery" || sh.retailType === "supermarket",
+  };
+}
+
 export function chipsFor(audience: Audience): string[] {
+  const kind = shopKind();
   switch (audience) {
     case "owner": return ["💰 Aaj ki sale kitni hai?", "💳 Tasdeeq baqi orders kitne hain?", "📉 Low stock items", "🏆 Best selling items", "🧾 Pending orders", "📒 Udhaar summary"];
     case "stock": return ["📉 Low stock list", "🚫 Out of stock items", "🕘 Recent stock entries", "🗂️ Kis head mein sab se zyada low hai?"];
     case "kitchen": return ["🎫 Pending tokens kitne hain?", "⏰ Sab se purana pending order", "🍽️ Dine-In vs Takeaway"];
-    case "customer": return ["💸 Rs 500 mein snacks dikhao", "✅ Mera order confirm hua?", "📦 Mera order status", "🔍 Surf Excel ki price?"];
+    case "customer":
+      if (kind.groceryType) return ["💸 Rs 500 mein snacks dikhao", "✅ Mera order confirm hua?", "📦 Mera order status", "🔍 Surf Excel ki price?"];
+      if (kind.retail) return ["💸 Rs 500 ke andar items dikhao", "✅ Mera order confirm hua?", "📦 Mera order status", "🔍 Product dhoondo (naam likhein)"];
+      return ["💸 Rs 500 mein khana dikhao", "✅ Mera order confirm hua?", "📦 Mera order status", "🔍 Product dhoondo (naam likhein)"];
     default: return ["🔍 Product dhoondo (naam likhein)", "📦 Pending orders", "❓ Bill kaise banayein?", "📉 Low stock items"];
   }
 }
@@ -211,7 +227,7 @@ export function answerQuery(raw: string, ctx: AssistantCtx, snapData?: Snap): st
     }
     if (!pool.length) return "💳 Koi order payment tasdeeq ke liye baqi nahi hai — sab clear hain. ✅";
     const lines = pool.slice(0, 6).map((o) => `• ${billNoOf(o)} · ${o.mode === "grocery" ? "🛒 Grocery" : "🍔 Canteen"} · ${o.customerName ?? "—"} · ${rs(o.total)}${o.paymentProof ? ` · ${o.paymentProof.method}` : ""}`);
-    return [`💳 Payment tasdeeq baqi: ${pool.length} order(s) (${scope}) — Owner Dashboard → Online Payment Verification se confirm karein:`, ...lines].join("\n");
+    return [`💳 Payment tasdeeq baqi: ${pool.length} order(s) (${scope}) — Dashboard → Online Payment Verification se confirm karein:`, ...lines].join("\n");
   }
 
   // Stock keeper: head with most low items
@@ -300,7 +316,7 @@ export function answerQuery(raw: string, ctx: AssistantCtx, snapData?: Snap): st
 
   // How-to hints
   if (/(kaise|how|scan|bill bana|madad|help)/.test(q)) {
-    if (a === "customer") return "❓ Madad:\n• Product dhoondne ke liye naam likhein ya budget batayein (e.g. “Rs 500 mein snacks”).\n• Order: shop chunein → items cart mein daalein → Checkout.\n• Apna status: “Mera order status” likhein.";
+    if (a === "customer") return `❓ Madad:\n• Product dhoondne ke liye naam likhein ya budget batayein (e.g. “Rs 500 mein ${shopKind().groceryType ? "snacks" : "items"}”).\n• Order: shop chunein → items cart mein daalein → Checkout.\n• Apna status: “Mera order status” likhein.`;
     return "❓ Quick madad:\n• Bill banana: tile tap karein ya barcode scan karein → Payment → method chunein → Complete.\n• Packing wala product: tile tap par chooser khulta hai — size chunein.\n• Weight items (kg): tile tap = 0.5 kg, bill mein +/− se barhayein.\n• Scan na chale to SKU type karke Enter dabayein.";
   }
 

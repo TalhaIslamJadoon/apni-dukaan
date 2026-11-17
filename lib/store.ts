@@ -25,7 +25,7 @@ import seedData from "./catalog-seed.json";
 
 // ── SHOP SETTINGS (Talha, 14 Nov 2026) ──────────────────────────────────────
 // Shop names are placeholders until the real college/canteen names are
-// known; the owner edits them in Owner Dashboard → Shop Settings and every
+// known; the owner edits them in Dashboard → Shop Settings and every
 // screen + bill follows. Payment numbers shown at checkout live here too.
 export interface ShopSettings {
   collegeName: string;
@@ -47,12 +47,18 @@ export interface ShopSettings {
   retailType: string | null;
   setupDone: boolean;
   // Board ka Rang (Talha, 16 Nov 2026): display boards (Menu Board +
-  // Grocery Board) ka background rang OWNER khud chunta hai (Settings →
+  // Products Board) ka background rang OWNER khud chunta hai (Settings →
   // Board ka Rang). Default photo wala peela #FFC61A. Server par
   // system_settings.board_color mein rehta hai aur public bootstrap se
   // boards tak pohonchta hai (boards no-login screens hain — naam ki
   // tarah). Boards rang ki roshni se contrast khud banate hain.
   boardColor: string;
+  // ── Kiraya / Rentals (Talha, 17 Nov 2026) — Phase 1 parity ──────────
+  // rentalsEnabled: rental template se auto-ON, ya Owner Settings toggle.
+  // rentalLateFinePerDay: late wapsi ka jurmana Rs/din (server par
+  // system_settings.rental_late_fine_per_day_paisa mein paisa mein).
+  rentalsEnabled: boolean;
+  rentalLateFinePerDay: number;
 }
 // Board rang ke tayyar presets (Owner → Settings mein swatches).
 export const BOARD_COLOR_PRESETS: { name: string; hex: string; dark: boolean }[] = [
@@ -82,11 +88,18 @@ export const SHOP_DEFAULTS: ShopSettings = {
   retailType: "grocery",
   setupDone: true,
   boardColor: "#FFC61A",
+  // Rentals default OFF — rental template ya Settings toggle se ON.
+  rentalsEnabled: false,
+  rentalLateFinePerDay: 500,
 };
 
 /** Retail dukaan is setup mein hai ya nahi (retailType null = sirf canteen). */
 export function hasRetail(s: ShopSettings): boolean {
   return typeof s.retailType === "string" && s.retailType.length > 0;
+}
+/** Kiraya (Rental) wala kaam ON hai ya nahi — Rentals tab isi par dikhta hai. */
+export function rentalsOn(s: ShopSettings): boolean {
+  return s.rentalsEnabled === true;
 }
 // Static brand block (receipt header etc.) — unchanged from Phase 1.
 export const SHOP = {
@@ -132,6 +145,7 @@ export interface MenuItem {
   category: Category;
   emoji: string;
   image?: string; // optional real photo (path/URL) — online 3D picture cards render it in the same frame when set; emoji is the offline-safe fallback art
+  images?: string[]; // multi photos (max 16 — gol ghum kar li gayi angles); pehli = main photo. Sirf boards par "ghumta hua" view banta hai — POS/online/lists hamesha MAIN photo hi dikhate hain (rental wala hi system, Talha 18 Nov 2026)
   sku?: string; // optional barcode / SKU — unused by canteen tiles, ready for Grocery Mode
   mode?: BusinessMode; // defaults to BUSINESS_MODE when absent
   stock?: number; // pieces in stock — decremented on every canteen sale (counter + online); managed on the Stock screen
@@ -145,7 +159,7 @@ export type PaymentMethod = "Cash" | "JazzCash" | "Easypaisa" | "Udhaar" | "Onli
 // customer pays the shop's JazzCash / Easypaisa / Raast / Bank number first
 // and uploads a screenshot of the payment as PROOF. The order is created
 // with paymentStatus "proof_pending" and NO token — it does NOT reach the
-// Kitchen / packing queue. Staff verify the proof in the Owner Dashboard;
+// Kitchen / packing queue. Staff verify the proof in the Dashboard;
 // only on Confirm is the token assigned and the order released.
 export type ProofPaymentMethod = "JazzCash" | "Easypaisa" | "Raast" | "Bank";
 export interface OrderPaymentProof {
@@ -323,7 +337,7 @@ export interface GroceryItem {
   stock: number; // base units: pieces (or packs for count products), or kg when unit === "kg"
   unit: "piece" | "kg";
   lowStock?: number; // low-stock threshold (default: 5 pcs / 2 kg) — highlighted on the Stock screen
-  // Owner-controlled: show this product on the Grocery Board's "🎉 Aaj ki
+  // Owner-controlled: show this product on the Products Board's "🎉 Aaj ki
   // Offers" slide (/grocery-board). Optional — records saved before this
   // field existed simply have it missing, which everywhere means false.
   boardOffer?: boolean;
@@ -332,8 +346,8 @@ export interface GroceryItem {
   // hain." ACTIVE only when boardOffer is on AND 0 < offerPrice <
   // retailPrice (see offerActive). It replaces the item's REPRESENTATIVE
   // retail price (this base retailPrice field — which is also the price of
-  // exactly one packing, see offerPackingOf) on the Grocery Board offers
-  // slide, in Grocery POS retail billing and in the /online grocery
+  // exactly one packing, see offerPackingOf) on the Products Board offers
+  // slide, in Sell retail billing and in the /online grocery
   // catalogue/orders (the server re-charges it — client prices are never
   // trusted). Other packings keep their own prices; wholesale is NEVER
   // touched. Optional — missing/0 means "no offer price".
@@ -345,6 +359,7 @@ export interface GroceryItem {
   trackSerial?: boolean;
   emoji: string;
   image?: string; // optional real photo — same 3D picture-card frame as the canteen items when set
+  images?: string[]; // multi photos (max 16 — gol ghum kar li gayi angles); pehli = main photo. Sirf Products Board par "ghumta hua" view banta hai — POS/online/lists hamesha MAIN photo hi dikhate hain (rental wala hi system, Talha 18 Nov 2026)
   // Sizes of the product's Standard variant (Talha's rule: a size is a
   // PACKING of one product, never a separate item). A sold packing bills as
   // `Name (Label)` at the packing's own price.
@@ -373,7 +388,7 @@ export interface GrocerySubHead {
 interface CatalogProduct {
   id: string; name: string; sku: string; barcode?: string;
   retailPrice: number; wholesalePrice: number; stock: number;
-  unit: "piece" | "kg"; emoji: string; packings?: PackingOption[]; image?: string;
+  unit: "piece" | "kg"; emoji: string; packings?: PackingOption[]; image?: string; images?: string[];
 }
 interface CatalogSub { id: string; name: string; image?: string; products: CatalogProduct[]; }
 interface CatalogHead { id: string; name: string; emoji: string; image?: string; subs: CatalogSub[]; }
@@ -483,14 +498,15 @@ export function groceryImage(item: GroceryItem, heads: GroceryHead[], subs: Groc
 // grants live on the server and are enforced there too — a role receives
 // 403 from endpoints outside its tabs. Credentials are hashed server-side;
 // the list endpoint never returns PIN material (pin is "" in DTOs).
-export type TabKey = "canteen" | "grocery" | "kitchen" | "stock" | "owner" | "online";
+export type TabKey = "canteen" | "grocery" | "rentals" | "kitchen" | "stock" | "owner" | "online";
 export const TABS_META: { key: TabKey; href: string; label: string; short: string; emoji: string }[] = [
   { key: "canteen", href: "/", label: "🍽️ Canteen POS", short: "Canteen", emoji: "🍽️" },
-  { key: "grocery", href: "/grocery", label: "🛒 Grocery POS", short: "Grocery", emoji: "🛒" },
+  { key: "grocery", href: "/grocery", label: "🛒 Sell", short: "Sell", emoji: "🛒" },
+  { key: "rentals", href: "/rentals", label: "👰 Rentals", short: "Rentals", emoji: "👰" },
   { key: "kitchen", href: "/kitchen", label: "👨‍🍳 Kitchen", short: "Kitchen", emoji: "👨‍🍳" },
-  { key: "stock", href: "/stock", label: "📦 Stock", short: "Stock", emoji: "📦" },
-  { key: "owner", href: "/owner", label: "📊 Owner Dashboard", short: "Owner", emoji: "📊" },
-  { key: "online", href: "/online", label: "📱 Online Order", short: "Online Order", emoji: "📱" },
+  { key: "stock", href: "/stock", label: "📦 Inventory", short: "Inventory", emoji: "📦" },
+  { key: "owner", href: "/owner", label: "📊 Dashboard", short: "Dashboard", emoji: "📊" },
+  { key: "online", href: "/online", label: "📱 Online Orders", short: "Online Orders", emoji: "📱" },
 ];
 export function tabForPath(path: string): TabKey | null {
   const t = TABS_META.find((x) => x.href === path);
@@ -514,7 +530,7 @@ export interface StaffMember {
 
 export const OWNER_PIN = "1234";
 export const STAFF_SEED: StaffMember[] = [
-  { id: "staff-owner", name: "Owner", pin: "1234", tabs: ["canteen", "grocery", "kitchen", "stock", "owner", "online"], isOwner: true },
+  { id: "staff-owner", name: "Owner", pin: "1234", tabs: ["canteen", "grocery", "rentals", "kitchen", "stock", "owner", "online"], isOwner: true },
   { id: "staff-canteen", name: "Canteen Wala", pin: "1111", tabs: ["canteen"] },
   { id: "staff-grocery", name: "Grocery Wala", pin: "2222", tabs: ["grocery"] },
   { id: "staff-kitchen", name: "Kitchen Wala", pin: "3333", tabs: ["kitchen"] },
@@ -653,6 +669,210 @@ export function expiringProducts(
   return out.sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
+// ── KIRAYA / RENTALS — types (Phase 1 parity, Talha 17 Nov 2026) ───────────
+// Rental ITEM grocery product NAHI hai: har dress EK unique piece hai
+// jis ki apni status hai. Booking ka paisa: advance (booking par) +
+// baqaya (pickup par) + settlement (wapsi par late fine/damage, security
+// se katoti). Deposit amanat hai — aamdani sirf wasool shuda kiraya +
+// fine + damage, cash-basis (rentalMoneyEvents), jo P&L (server) aur
+// Owner Overview mein ginta hai.
+export type RentalItemStatus = "available" | "booked" | "out" | "cleaning" | "inactive";
+// Rental CATEGORIES — shadi ke functions + aam event samaan (preset list;
+// owner form mein nayi category free-text bhi likh sakta hai).
+export const RENTAL_CATEGORIES = [
+  "Baraat", "Walima", "Mehndi", "Dholki", "Mayoun", "Bridal", "Groom",
+  "Party/Event", "Kids", "Sajawat / Decor", "Lights", "Sign Boards",
+] as const;
+export const RENTAL_CATEGORY_EMOJI: Record<string, string> = {
+  "Baraat": "💍", "Walima": "🌙", "Mehndi": "🌿", "Dholki": "🪘", "Mayoun": "🌼",
+  "Bridal": "👰", "Groom": "🤵", "Party/Event": "🎉", "Kids": "🎀",
+  "Sajawat / Decor": "🌸", "Lights": "💡", "Sign Boards": "🪧",
+};
+export function rentalCategoryEmoji(cat?: string): string {
+  return (cat && RENTAL_CATEGORY_EMOJI[cat]) || "👗";
+}
+export interface RentalItem {
+  id: string;
+  name: string;
+  category?: string; // shadi ka function / qisam (Baraat, Walima, Lights…)
+  totalQty: number; // kul pieces (dresses 1; lights waghera zyada)
+  bookedQty?: number; // server-computed: active bookings ki kul qty (board/availability ke liye)
+  size?: string;
+  color?: string;
+  rentPerDay: number;
+  securityDeposit: number;
+  emoji: string;
+  image?: string;
+  images?: string[]; // multi photos (max 16); pehli = main photo
+  status: RentalItemStatus;
+  // OFFER (grocery offerPrice parity): active sirf jab boardOffer ON ho
+  // AUR 0 < offerRentPerDay < rentPerDay. Booking effective kiraye par.
+  offerRentPerDay?: number;
+  boardOffer?: boolean;
+}
+export const RENTAL_ITEM_STATUSES: RentalItemStatus[] = ["available", "booked", "out", "cleaning", "inactive"];
+export const RENTAL_STATUS_META: Record<RentalItemStatus, { label: string; bg: string; fg: string }> = {
+  available: { label: "✅ Available — Khali Hai", bg: "#DCFCE7", fg: "#166534" },
+  booked: { label: "📅 Booked", bg: "#FEF3C7", fg: "#92400E" },
+  out: { label: "👰 Bahar Gayi Hui", bg: "#DBEAFE", fg: "#1D4ED8" },
+  cleaning: { label: "🧺 Dry-Clean / Repair", bg: "#F3E8FF", fg: "#7E22CE" },
+  inactive: { label: "🚫 Band (Inactive)", bg: "#E7E5E4", fg: "#57534E" },
+};
+export type RentalBookingStatus = "booked" | "out" | "completed" | "cancelled";
+export type SecurityKind = "Cash" | "CNIC" | "Cheque";
+export const SECURITY_KINDS: SecurityKind[] = ["Cash", "CNIC", "Cheque"];
+export type ReturnCondition = "theek" | "damage" | "cleaning";
+export interface RentalBooking {
+  id: string;
+  bookingNo: string;
+  itemId: string;
+  itemName: string;
+  qty: number; // book hue pieces (dress = 1)
+  customerName: string;
+  customerMobile: string;
+  customerCnic?: string;
+  pickupDate: string;
+  returnDate: string;
+  days: number;
+  rentPerDay: number; // CHARGE hua roz ka kiraya (offer lagi ho to offer wala)
+  listRentPerDay?: number; // offer lagi ho to asal roz ka kiraya (snapshot)
+  rentTotal: number;
+  securityDeposit: number;
+  securityKind: SecurityKind;
+  advancePaid: number;
+  balancePaid: number;
+  status: RentalBookingStatus;
+  pickedUpAt?: string;
+  returnedAt?: string;
+  actualReturnDate?: string;
+  lateDays?: number;
+  lateFinePerDay: number;
+  lateFine?: number;
+  damageCharges?: number;
+  damageNote?: string;
+  returnCondition?: ReturnCondition;
+  securityDeducted?: number;
+  securityRefunded?: number;
+  extraDue?: number;
+  createdAt: string;
+  by?: string;
+}
+// Demo dresses — server templates-data.ts ki RENTAL_SEED_ITEMS se sync
+// rakhein (wahan se DB mein seed hoti hain); ye copy sirf reference hai.
+export const RENTAL_ITEMS_SEED: RentalItem[] = [
+  // ── Baraat ──
+  { id: "rent-1", name: "Laal Bridal Lehenga", category: "Baraat", totalQty: 1, size: "M", color: "Laal", rentPerDay: 5000, securityDeposit: 30000, emoji: "👰", image: "/images/rentals/rent-1.jpg", images: ["/images/rentals/rent-1.jpg", "/images/rentals/rent-1-2.jpg", "/images/rentals/rent-1-3.jpg", "/images/rentals/rent-1-4.jpg"], status: "available" },
+  { id: "rent-2", name: "Mehroon Bridal Lehenga", category: "Baraat", totalQty: 1, size: "L", color: "Mehroon", rentPerDay: 6500, securityDeposit: 40000, emoji: "👰", image: "/images/rentals/rent-2.jpg", status: "available" },
+  { id: "rent-3", name: "Cream Sherwani", category: "Baraat", totalQty: 1, size: "L", color: "Cream", rentPerDay: 3500, securityDeposit: 20000, emoji: "🤵", image: "/images/rentals/rent-3.jpg", status: "available" },
+  // ── Walima ──
+  { id: "rent-4", name: "Peach Walima Maxi", category: "Walima", totalQty: 1, size: "M", color: "Peach", rentPerDay: 3500, securityDeposit: 20000, emoji: "👗", image: "/images/rentals/rent-4.jpg", images: ["/images/rentals/rent-4.jpg", "/images/rentals/rent-4-2.jpg", "/images/rentals/rent-4-3.jpg", "/images/rentals/rent-4-4.jpg"], status: "available" },
+  { id: "rent-5", name: "Golden Walima Gown", category: "Walima", totalQty: 1, size: "M", color: "Golden", rentPerDay: 4000, securityDeposit: 25000, emoji: "👗", offerRentPerDay: 3200, boardOffer: true, image: "/images/rentals/rent-5.jpg", status: "available" },
+  { id: "rent-6", name: "Kaala Prince Coat", category: "Walima", totalQty: 1, size: "M", color: "Kaala", rentPerDay: 2500, securityDeposit: 15000, emoji: "🧥", image: "/images/rentals/rent-6.jpg", status: "available" },
+  // ── Mehndi ──
+  { id: "rent-7", name: "Peeli Mehndi Dress", category: "Mehndi", totalQty: 1, size: "S", color: "Peela / Hara", rentPerDay: 2000, securityDeposit: 10000, emoji: "💛", image: "/images/rentals/rent-7.jpg", status: "available" },
+  { id: "rent-8", name: "Hara Mehndi Lehenga", category: "Mehndi", totalQty: 1, size: "M", color: "Hara / Narangi", rentPerDay: 2800, securityDeposit: 15000, emoji: "🧡", image: "/images/rentals/rent-8.jpg", status: "available" },
+  { id: "rent-9", name: "Safed Kurta Waistcoat", category: "Mehndi", totalQty: 1, size: "L", color: "Safed", rentPerDay: 1800, securityDeposit: 8000, emoji: "👔", image: "/images/rentals/rent-9.jpg", status: "available" },
+  // ── Dholki ──
+  { id: "rent-10", name: "Sarson Dholki Suit", category: "Dholki", totalQty: 1, size: "M", color: "Sarson", rentPerDay: 1500, securityDeposit: 8000, emoji: "🌼", image: "/images/rentals/rent-10.jpg", status: "available" },
+  { id: "rent-11", name: "Peeli Dholki Dress", category: "Dholki", totalQty: 1, size: "S", color: "Peela", rentPerDay: 1600, securityDeposit: 8000, emoji: "💛", image: "/images/rentals/rent-11.jpg", status: "available" },
+  // ── Mayoun ──
+  { id: "rent-12", name: "Peela Mayoun Suit", category: "Mayoun", totalQty: 1, size: "M", color: "Peela", rentPerDay: 1200, securityDeposit: 6000, emoji: "🌻", image: "/images/rentals/rent-12.jpg", status: "available" },
+  // ── Bridal (dulhan sets) ──
+  { id: "rent-13", name: "Gulabi Sharara Set", category: "Bridal", totalQty: 1, size: "M", color: "Gulabi", rentPerDay: 3000, securityDeposit: 18000, emoji: "🌸", image: "/images/rentals/rent-13.jpg", status: "available" },
+  { id: "rent-14", name: "Safed Bridal Gown", category: "Bridal", totalQty: 1, size: "M", color: "Safed", rentPerDay: 4500, securityDeposit: 25000, emoji: "👰", image: "/images/rentals/rent-14.jpg", status: "available" },
+  // ── Groom (dulha) ──
+  { id: "rent-15", name: "Golden Sherwani", category: "Groom", totalQty: 1, size: "L", color: "Golden", rentPerDay: 4000, securityDeposit: 22000, emoji: "🤵", image: "/images/rentals/rent-15.jpg", status: "available" },
+  { id: "rent-16", name: "Dulha Sherwani Set", category: "Groom", totalQty: 1, size: "L", color: "Kaala / Golden", rentPerDay: 5500, securityDeposit: 30000, emoji: "🤵", image: "/images/rentals/rent-16.jpg", status: "available" },
+  // ── Party / Event ──
+  { id: "rent-17", name: "Neeli Party Gown", category: "Party/Event", totalQty: 1, size: "M", color: "Neela", rentPerDay: 2500, securityDeposit: 15000, emoji: "👗", offerRentPerDay: 1999, boardOffer: true, image: "/images/rentals/rent-17.jpg", status: "available" },
+  { id: "rent-18", name: "Kaali Party Frock", category: "Party/Event", totalQty: 1, size: "S", color: "Kaala", rentPerDay: 1800, securityDeposit: 10000, emoji: "🖤", image: "/images/rentals/rent-18.jpg", status: "available" },
+  // ── Kids ──
+  { id: "rent-19", name: "Gulabi Kids Frock", category: "Kids", totalQty: 1, size: "Bache (6–8 saal)", color: "Gulabi", rentPerDay: 800, securityDeposit: 5000, emoji: "🎀", image: "/images/rentals/rent-19.jpg", status: "available" },
+  { id: "rent-20", name: "Kids Cream Sherwani", category: "Kids", totalQty: 1, size: "Bache (5–7 saal)", color: "Cream", rentPerDay: 1000, securityDeposit: 6000, emoji: "🤵", image: "/images/rentals/rent-20.jpg", status: "available" },
+  // ── Sajawat / Decor ──
+  { id: "rent-21", name: "Sajawat Dholki", category: "Sajawat / Decor", totalQty: 6, color: "Multicolor", rentPerDay: 500, securityDeposit: 3000, emoji: "🪘", image: "/images/rentals/rent-21.jpg", status: "available" },
+  { id: "rent-22", name: "Genda Phool Sajawat", category: "Sajawat / Decor", totalQty: 4, color: "Peela / Narangi", rentPerDay: 800, securityDeposit: 4000, emoji: "🌼", image: "/images/rentals/rent-22.jpg", status: "available" },
+  // ── Lights ──
+  { id: "rent-23", name: "String Lights", category: "Lights", totalQty: 20, color: "Warm White", rentPerDay: 300, securityDeposit: 2000, emoji: "💡", image: "/images/rentals/rent-23.jpg", status: "available" },
+  { id: "rent-24", name: "Stage Light", category: "Lights", totalQty: 8, color: "RGB", rentPerDay: 700, securityDeposit: 5000, emoji: "🔦", image: "/images/rentals/rent-24.jpg", status: "available" },
+  // ── Sign Boards ──
+  { id: "rent-25", name: "Shadi Mubarak Neon Sign", category: "Sign Boards", totalQty: 2, color: "Gulabi Neon", rentPerDay: 1500, securityDeposit: 8000, emoji: "✨", image: "/images/rentals/rent-25.jpg", status: "available" },
+  { id: "rent-26", name: "Mehndi Board", category: "Sign Boards", totalQty: 3, color: "Hara", rentPerDay: 600, securityDeposit: 3000, emoji: "🪧", image: "/images/rentals/rent-26.jpg", status: "available" },
+  { id: "rent-27", name: "Welcome Board", category: "Sign Boards", totalQty: 2, color: "Safed / Golden", rentPerDay: 700, securityDeposit: 3000, emoji: "🪧", image: "/images/rentals/rent-27.jpg", status: "available" },
+];
+export function rentalDaysBetween(pickup: string, ret: string): number {
+  const a = Date.parse(`${pickup}T00:00:00`);
+  const b = Date.parse(`${ret}T00:00:00`);
+  if (isNaN(a) || isNaN(b)) return 0;
+  return Math.round((b - a) / 86400000);
+}
+/** Dress ki offer ACTIVE hai? Grocery ke offerActive wala exact rule:
+ *  board-offer flag ON ho AUR 0 < offerRentPerDay < rentPerDay. */
+export function rentalOfferActive(i: RentalItem): boolean {
+  return i.boardOffer === true && typeof i.offerRentPerDay === "number"
+    && i.offerRentPerDay > 0 && i.offerRentPerDay < i.rentPerDay;
+}
+/** Booking jis kiraye par banti hai — offer active ho to offer wala,
+ *  warna asal kiraya. (Grocery ke effectiveRetail ka rental version.) */
+export function effectiveRentPerDay(i: RentalItem): number {
+  return rentalOfferActive(i) ? (i.offerRentPerDay as number) : i.rentPerDay;
+}
+/** Dress ki photos (multi-photo, board ke "ghumta hua" view ke liye) —
+ *  images[] ho to wohi, warna purana single image, warna khali (emoji). */
+export function rentalPhotos(i: RentalItem): string[] {
+  if (Array.isArray(i.images) && i.images.length) return i.images.filter((u) => typeof u === "string" && u);
+  return i.image ? [i.image] : [];
+}
+/** Kisi bhi cheez (menu item / grocery product) ki photos — rentalPhotos
+ *  wala hi rule, generic: images[] ho to wohi, warna single image, warna
+ *  khali (emoji). Boards ka PhotoCycle inhi par ghumta hai. */
+export function itemPhotos(x: { image?: string; images?: string[] }): string[] {
+  if (Array.isArray(x.images) && x.images.length) return x.images.filter((u) => typeof u === "string" && u);
+  return x.image ? [x.image] : [];
+}
+/** Ek item ke kitne piece active bookings (booked + out) mein gaye hue hain. */
+export function rentalBookedQty(bookings: RentalBooking[], itemId: string): number {
+  return bookings
+    .filter((b) => b.itemId === itemId && (b.status === "booked" || b.status === "out"))
+    .reduce((s, b) => s + (b.qty || 1), 0);
+}
+/** Abhi kitne piece available hain — bookings diye hon to un se hisaab,
+ *  warna item par ayi server ki bookedQty se (board/public view). */
+export function rentalAvailableQty(item: RentalItem, bookings?: RentalBooking[]): number {
+  const used = bookings ? rentalBookedQty(bookings, item.id) : (item.bookedQty ?? 0);
+  return Math.max(0, (item.totalQty || 1) - used);
+}
+export function nextBookingNo(bookings: RentalBooking[]): string {
+  let max = 0;
+  for (const b of bookings) {
+    const m = b.bookingNo?.match(/(\d+)$/);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `R-${String(max + 1).padStart(4, "0")}`;
+}
+export function bookingRentBalance(b: RentalBooking): number {
+  return Math.max(0, b.rentTotal - b.advancePaid - b.balancePaid);
+}
+export function isBookingOverdue(b: RentalBooking, today: string = todayKey()): boolean {
+  return b.status === "out" && b.returnDate < today;
+}
+export interface RentalMoneyEvent { date: string; amount: number; kind: "advance" | "balance" | "fine" | "damage"; bookingId: string }
+export function rentalMoneyEvents(b: RentalBooking): RentalMoneyEvent[] {
+  if (b.status === "cancelled") return [];
+  const ev: RentalMoneyEvent[] = [];
+  if (b.advancePaid > 0) ev.push({ date: b.createdAt.slice(0, 10), amount: b.advancePaid, kind: "advance", bookingId: b.id });
+  if (b.balancePaid > 0) ev.push({ date: (b.pickedUpAt ?? b.createdAt).slice(0, 10), amount: b.balancePaid, kind: "balance", bookingId: b.id });
+  if (b.status === "completed") {
+    const d = (b.actualReturnDate ?? b.returnedAt ?? b.createdAt).slice(0, 10);
+    if ((b.lateFine ?? 0) > 0) ev.push({ date: d, amount: b.lateFine as number, kind: "fine", bookingId: b.id });
+    if ((b.damageCharges ?? 0) > 0) ev.push({ date: d, amount: b.damageCharges as number, kind: "damage", bookingId: b.id });
+  }
+  return ev;
+}
+export function rentalIncomeOn(bookings: RentalBooking[], dateISO: string): number {
+  return bookings.reduce((s, b) => s + rentalMoneyEvents(b).filter((e) => e.date === dateISO).reduce((x, e) => x + e.amount, 0), 0);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FACADE CORE — cache, shadow, hydration, realtime, write queue
 // ─────────────────────────────────────────────────────────────────────────────
@@ -667,6 +887,8 @@ const cache = {
   subs: clone(GROCERY_SUBHEADS_SEED) as GrocerySubHead[],
   deals: clone(SAMPLE_DEALS) as Deal[],
   expenses: [] as Expense[],
+  rentalItems: [] as RentalItem[],
+  rentalBookings: [] as RentalBooking[],
   staffList: clone(STAFF_SEED) as StaffMember[],
   staffMember: null as StaffMember | null,
   entries: [] as StockEntry[],
@@ -680,6 +902,8 @@ const shadow = {
   subs: [] as GrocerySubHead[],
   deals: [] as Deal[],
   expenses: [] as Expense[],
+  rentalItems: [] as RentalItem[],
+  rentalBookings: [] as RentalBooking[],
   staffList: [] as StaffMember[],
   entries: [] as StockEntry[],
   orders: new Map<string, Order>(), // keyed by the CACHE (local) order id
@@ -749,12 +973,13 @@ async function refreshShop() {
 }
 async function refreshCatalog() {
   try {
-    const r = await apiGet<{ menu: MenuItem[]; heads: GroceryHead[]; subs: GrocerySubHead[]; items: GroceryItem[]; deals?: Deal[] }>("/catalog");
+    const r = await apiGet<{ menu: MenuItem[]; heads: GroceryHead[]; subs: GrocerySubHead[]; items: GroceryItem[]; deals?: Deal[]; rentals?: RentalItem[] }>("/catalog");
     cache.menu = r.menu; shadow.menu = clone(r.menu);
     cache.heads = r.heads; shadow.heads = clone(r.heads);
     cache.subs = r.subs; shadow.subs = clone(r.subs);
     cache.grocery = r.items; shadow.grocery = clone(r.items);
     if (r.deals) { cache.deals = r.deals; shadow.deals = clone(r.deals); }
+    if (r.rentals) { cache.rentalItems = r.rentals; shadow.rentalItems = clone(r.rentals); }
     fire("pos-catalog-changed");
   } catch { /* keep cache */ }
 }
@@ -765,6 +990,16 @@ async function refreshExpenses() {
     shadow.expenses = clone(r.expenses);
     fire("expenses-changed");
   } catch { /* owner tab grant required — ignore */ }
+}
+async function refreshRentals() {
+  try {
+    const r = await apiGet<{ items: RentalItem[]; bookings: RentalBooking[] }>("/staff/rentals");
+    cache.rentalItems = r.items;
+    shadow.rentalItems = clone(r.items);
+    cache.rentalBookings = r.bookings;
+    shadow.rentalBookings = clone(r.bookings);
+    fire("rentals-changed");
+  } catch { /* rentals tab grant required — ignore */ }
 }
 async function refreshStaffList() {
   try {
@@ -812,7 +1047,12 @@ function withOwnerGuard(list: StaffMember[]): StaffMember[] {
   if (!list.some((s) => s.isOwner && s.tabs.includes("owner"))) {
     return [...list, { ...STAFF_SEED[0], tabs: [...STAFF_SEED[0].tabs] }];
   }
-  return list;
+  // Owner hamesha SAARE tabs rakhta hai — purani grant list mein naya tab
+  // (rentals) missing ho to client par shamil kar do (server grants seed
+  // se update hote hain; ye sirf display-side safety hai).
+  return list.map((s) => (s.isOwner
+    ? { ...s, tabs: Array.from(new Set<TabKey>([...s.tabs, ...TABS_META.map((t) => t.key)])) }
+    : s));
 }
 function mergeServerOrders(list: Order[]) {
   for (const dto of list) {
@@ -880,6 +1120,7 @@ function handleRealtime(type: string) {
   if (type.startsWith("catalog.") || type.startsWith("stock.")) { void refreshCatalog(); void refreshEntries(); }
   if (type === "settings.changed") void refreshShop();
   if (type === "staff.changed") { void refreshStaffList(); void refreshMe(); }
+  if (type.startsWith("rentals.")) void refreshRentals();
 }
 function ensureStarted() {
   if (started || typeof window === "undefined") return;
@@ -893,6 +1134,7 @@ function ensureStarted() {
     await refreshOrders();
     await refreshEntries();
     await refreshExpenses();
+    await refreshRentals();
   })();
   // Realtime: SSE (snapshot already loaded via REST above). The browser
   // auto-reconnects with Last-Event-ID; the server replays missed events.
@@ -1032,7 +1274,7 @@ export function loadMenu(): MenuItem[] {
 function menuPayload(m: MenuItem) {
   return {
     name: m.name, price: m.price, category: m.category, emoji: m.emoji,
-    image: m.image ?? null, sku: m.sku ?? null, lowStock: m.lowStock ?? 5,
+    image: m.image ?? null, images: itemPhotos(m), sku: m.sku ?? null, lowStock: m.lowStock ?? 5,
     cost: m.cost ?? null, // Lagat (P&L) — null = nahi bhari
     // NOTE: stock is deliberately NOT sent — stock moves only through
     // orders / stock entries / payment transitions (exactly-once rule).
@@ -1040,7 +1282,8 @@ function menuPayload(m: MenuItem) {
 }
 function menuChanged(a: MenuItem, b: MenuItem): boolean {
   return a.name !== b.name || a.price !== b.price || a.category !== b.category || a.emoji !== b.emoji
-    || (a.image ?? "") !== (b.image ?? "") || (a.sku ?? "") !== (b.sku ?? "") || (a.lowStock ?? 5) !== (b.lowStock ?? 5)
+    || (a.image ?? "") !== (b.image ?? "") || JSON.stringify(itemPhotos(a)) !== JSON.stringify(itemPhotos(b))
+    || (a.sku ?? "") !== (b.sku ?? "") || (a.lowStock ?? 5) !== (b.lowStock ?? 5)
     || (a.cost ?? null) !== (b.cost ?? null);
 }
 export function saveMenu(menu: MenuItem[]): void {
@@ -1280,6 +1523,7 @@ function productPayload(it: GroceryItem) {
     trackSerial: it.trackSerial ?? false,
     emoji: it.emoji,
     image: it.image ?? null,
+    images: itemPhotos(it),
     // Packings of the Standard variant (label, prices, own barcode,
     // containsQty sealed packs, per-packing wholesale minimum).
     packings: (it.packings ?? []).map((k) => ({
@@ -1297,7 +1541,7 @@ function productChanged(a: GroceryItem, b: GroceryItem): boolean {
   const proj = (x: GroceryItem) => JSON.stringify({
     name: x.name, brand: x.brand ?? null, subId: x.subId, sku: x.sku, barcode: x.barcode ?? null,
     retailPrice: x.retailPrice, wholesalePrice: x.wholesalePrice, wholesaleMinQty: x.wholesaleMinQty ?? null,
-    unit: x.unit, lowStock: x.lowStock ?? null, boardOffer: x.boardOffer ?? false, offerPrice: x.offerPrice ?? null, trackSerial: x.trackSerial ?? false, emoji: x.emoji, image: x.image ?? null,
+    unit: x.unit, lowStock: x.lowStock ?? null, boardOffer: x.boardOffer ?? false, offerPrice: x.offerPrice ?? null, trackSerial: x.trackSerial ?? false, emoji: x.emoji, image: x.image ?? null, images: itemPhotos(x),
     packings: (x.packings ?? []).map((k) => [k.label, k.retailPrice, k.wholesalePrice, k.barcode ?? null, k.containsQty ?? null, k.wholesaleMinQty ?? null]),
   });
   return proj(a) !== proj(b);
@@ -1492,5 +1736,90 @@ export function saveExpenses(expenses: Expense[]): void {
       }
       await refreshExpenses();
     } catch (e) { syncFail("expenses save", e); }
+  });
+}
+
+// ── KIRAYA / RENTALS — server-backed (staff bookings + owner items) ─────────
+// Items ka CRUD OWNER routes se hota hai (sirf owner dress add/edit kar
+// sakta hai); bookings STAFF routes se (rentals tab wale staff). Booking
+// save par server usi transaction mein dress ki status bhi sync karta
+// hai (booked → out → available/cleaning), is liye items ka alag save
+// sirf owner ki direct tabdeeli (rate/status waghera) ke liye hai.
+export function loadRentalItems(): RentalItem[] {
+  ensureStarted();
+  return [...cache.rentalItems];
+}
+export function loadRentalBookings(): RentalBooking[] {
+  ensureStarted();
+  return [...cache.rentalBookings];
+}
+
+const rentalItemPayload = (i: RentalItem) => ({
+  name: i.name, category: i.category, totalQty: i.totalQty, size: i.size, color: i.color, rentPerDay: i.rentPerDay,
+  securityDeposit: i.securityDeposit, emoji: i.emoji, image: i.image, images: i.images,
+  offerRentPerDay: i.offerRentPerDay, boardOffer: i.boardOffer, status: i.status,
+});
+const rentalBookingPayload = (b: RentalBooking) => ({
+  itemId: b.itemId, itemName: b.itemName, qty: b.qty || 1, customerName: b.customerName,
+  customerMobile: b.customerMobile, customerCnic: b.customerCnic,
+  pickupDate: b.pickupDate, returnDate: b.returnDate, days: b.days,
+  rentPerDay: b.rentPerDay, listRentPerDay: b.listRentPerDay, rentTotal: b.rentTotal,
+  securityDeposit: b.securityDeposit, securityKind: b.securityKind,
+  advancePaid: b.advancePaid, balancePaid: b.balancePaid, status: b.status,
+  pickedUpAt: b.pickedUpAt, returnedAt: b.returnedAt, actualReturnDate: b.actualReturnDate,
+  lateDays: b.lateDays, lateFinePerDay: b.lateFinePerDay, lateFine: b.lateFine,
+  damageCharges: b.damageCharges, damageNote: b.damageNote, returnCondition: b.returnCondition,
+  securityDeducted: b.securityDeducted, securityRefunded: b.securityRefunded, extraDue: b.extraDue,
+});
+
+export function saveRentalItems(items: RentalItem[]): void {
+  cache.rentalItems = [...items];
+  fire("rentals-changed");
+  void enqueue(async () => {
+    try {
+      const shById = new Map(shadow.rentalItems.map((i) => [i.id, i]));
+      const seen = new Set<string>();
+      for (const it of items) {
+        const sid = aliasGet(it.id);
+        seen.add(sid);
+        const sh = shById.get(sid);
+        if (!sh) {
+          const r = await apiPost<{ item: RentalItem }>("/owner/rental-items", { id: it.id, ...rentalItemPayload(it) });
+          if (r.item?.id) aliasSet(it.id, r.item.id);
+        } else if (JSON.stringify(rentalItemPayload(sh)) !== JSON.stringify(rentalItemPayload(it))) {
+          await apiPatch(`/owner/rental-items/${sid}`, rentalItemPayload(it));
+        }
+      }
+      for (const sh of shadow.rentalItems) {
+        if (!seen.has(sh.id)) await apiDelete(`/owner/rental-items/${sh.id}`).catch(() => undefined);
+      }
+      await refreshRentals();
+    } catch (e) { syncFail("rental items save", e); }
+  });
+}
+
+export function saveRentalBookings(bookings: RentalBooking[]): void {
+  cache.rentalBookings = [...bookings];
+  fire("rentals-changed");
+  void enqueue(async () => {
+    try {
+      const shById = new Map(shadow.rentalBookings.map((b) => [b.id, b]));
+      const seen = new Set<string>();
+      for (const b of bookings) {
+        const sid = aliasGet(b.id);
+        seen.add(sid);
+        const sh = shById.get(sid);
+        if (!sh) {
+          const r = await apiPost<{ booking: RentalBooking }>("/staff/rentals/bookings", { id: b.id, ...rentalBookingPayload(b) });
+          if (r.booking?.id) aliasSet(b.id, r.booking.id);
+        } else if (JSON.stringify(rentalBookingPayload(sh)) !== JSON.stringify(rentalBookingPayload(b))) {
+          await apiPatch(`/staff/rentals/bookings/${sid}`, rentalBookingPayload(b));
+        }
+      }
+      for (const sh of shadow.rentalBookings) {
+        if (!seen.has(sh.id)) await apiDelete(`/staff/rentals/bookings/${sh.id}`).catch(() => undefined);
+      }
+      await refreshRentals();
+    } catch (e) { syncFail("rental bookings save", e); }
   });
 }

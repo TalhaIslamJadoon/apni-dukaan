@@ -1,6 +1,7 @@
 export type GuidelineKey =
   | "canteen"
   | "grocery"
+  | "rentals"
   | "kitchen"
   | "stock"
   | "online"
@@ -26,6 +27,7 @@ export interface GuidelineEntry {
 export const GUIDELINE_KEYS: GuidelineKey[] = [
   "canteen",
   "grocery",
+  "rentals",
   "kitchen",
   "stock",
   "online",
@@ -63,7 +65,7 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
   },
 
   grocery: {
-    title: "🛒 Grocery POS — Counter Sale",
+    title: "🛒 Sell — Counter Sale",
     steps: [
       "Apne naam aur PIN se login karein; scan box par focus rehne dein, taake scanner ki entry seedha bill mein jaye.",
       "Bill shuru karne se pehle Current Bill ke Bill Price Type mein 🏷️ Retail ya 📦 Wholesale chunein — prices isi ke hisaab se badalti hain.",
@@ -81,6 +83,32 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
     ],
   },
 
+  rentals: {
+    title: "👰 Kiraya / Rentals — Dress Rent Par Dena",
+    steps: [
+      "Apne naam aur PIN se login karein; 👰 Kiraya / Rentals tab kholein. Ye tab sirf tab dikhta hai jab rental wala kaam ON ho (Kapron ki Dukaan setup, ya Owner Settings ka toggle).",
+      "Nayi booking: ➕ Nayi Booking dabayein, pehle AVAILABLE dress chunein — booked/bahar gayi dress par nayi booking nahi banti.",
+      "Customer ka NAAM aur MOBILE lazmi likhein (baghair mobile booking save nahi hoti); CNIC ho to likh dein, na ho to khali chalega.",
+      "Lene ki tareekh aur Wapsi ki tareekh chunein — din aur kul kiraya (roz ka kiraya × din) khud ban jata hai; discount dena ho to kul kiraya khud badal sakte hain.",
+      "Security deposit check karein aur select karein ke security kis par rakhi: Cash, CNIC ya Cheque. Advance jo mila woh likhein — baqaya khud nikal ayega.",
+      "Booking save hote hi dress BOOKED ho jati hai aur booking slip (parchi) print kar sakte hain — customer ko lazmi dein.",
+      "Customer dress lene aye to booking par 📦 Pickup dabayein aur baqaya wasool karke darj karein — dress BAHAR GAYI (Out) ho jayegi.",
+      "Wapsi par ↩️ Wapsi dabayein: asal wapsi ki tareekh se late din aur jurmana (roz ka fine × late din) khud ajata hai; dress ki halat chunein — Theek, Damage (charges + note likhein) ya Dry-Clean Bhej Diya.",
+      "Security ka hisaab screen par khud banta hai: jama security − (late fine + damage) = wapas ki gayi rakam. Charges deposit se zyada hon to woh rakam customer se wasool karke hi wapsi mukammal karein.",
+      "Wapsi mukammal hote hi dress wapas AVAILABLE ho jati hai — Dry-Clean wali dress CLEANING mein jati hai; saaf ho kar aye to Dresses list se usey Available kar dein.",
+      "Upar ke filters se dekhein: Aaj Wapsi Wale (aaj jin ki wapsi hai) aur 🔴 Late (jo dress waqt par wapas nahi ayi — woh laal numayan dikhti hai).",
+    ],
+    tips: [
+      "Dhyaan dein: Security deposit AAMDANI nahi hai — woh amanat hai aur wapas hota hai. Aamdani sirf wasool shuda kiraya, late fine aur damage charges hain; yehi 📈 Profit & Loss aur Owner Overview mein ginte hain.",
+      "Dress ki KHARID qeemat kiraye ki lagat mein nahi ginti — dress khareedi ho to us ki qeemat Dashboard → 📈 Profit & Loss → Kharchay mein alag se kharcha likhein.",
+      "Nayi dress sirf Owner add/edit kar sakta hai (Dresses wale hisse mein); dress ka roz ka kiraya ya deposit badalne se purani bookings ka hisaab NAHI badalta — woh booking ke waqt wala hi rehta hai.",
+      "Late fine ka roz ka rate Owner Settings se badalta hai (default Rs 500/din) — nayi bookings par naya rate, purani par purana snapshot.",
+      "Har dress/item par CATEGORY (function) lazmi lagayein — Baraat, Walima, Mehndi, Dholki, Mayoun, Bridal, Groom, Party/Event, Kids — ya Sajawat / Decor, Lights, Sign Boards. Dress Board par har category ki alag slide banti hai (masalan 💍 Baraat Collection) aur Rentals screen par category chips se filter hota hai. Nayi category chahiye to item form mein ✏️ Nayi Category Likhein se apna naam bhi likh sakte hain.",
+      "Jo cheez tadaad mein hai (string lights, sajawat dholki, sign boards) us ki KUL TADAAD item form ke Total Qty mein likhein. Booking utne hi piece ki bane gi jitne bache hon ge — card par Available X / Y saaf nazar ata hai, aur zyada qty ki booking system khud rok deta hai. Dresses aksar 1 hi piece hoti hain, un ka Total Qty 1 hi rakhein.",
+      "Dress Board par dress GHUMTI hui dikhane ke liye: dress ki zyada tasveerein lagayein to board par ghumti hui nazar ayegi. Recipe — dress ko mannequin/stand par pehnayein, barabar roshni rakhein, phone ko ek hi doori par rakh kar aahista aahista gol ghoom kar 12–16 tasveerein lein — board par dress bilkul ghumta hua lagega. Photos Dresses wale hisse mein dress Edit karke lagti hain (max 16).",
+    ],
+  },
+
   kitchen: {
     title: "👨‍🍳 Kitchen — Tokens Tayyar Karna",
     steps: [
@@ -92,13 +120,13 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
       "Ready today wali list se token dobara check karke counter/table par bhejein.",
     ],
     tips: [
-      "Dhyaan dein: Grocery orders Kitchen nahi aate — woh Grocery POS ki packing queue mein jate hain.",
+      "Dhyaan dein: Grocery orders Kitchen nahi aate — woh Sell ki packing queue mein jate hain.",
       "Payment proof pending online order yahan nazar nahi ayega; Owner confirm karega to token ke sath khud aa jayega.",
     ],
   },
 
   stock: {
-    title: "📦 Stock — Scan / Stock IN aur Wastage",
+    title: "📦 Inventory — Scan / Stock IN aur Wastage",
     steps: [
       "Apne naam aur PIN se login karein; pehle 🍽️ Canteen Stock ya 🛒 Grocery Stock chunein.",
       "Stock IN ke liye green ➕ Stock IN (kharid) chunein; Wastage ke liye red 🗑️ Wastage (zaya) chunein.",
@@ -114,12 +142,12 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
     ],
     tips: [
       "Dhyaan dein: Scan par '✕ Product nahi mila' aye to woh product system mein hai hi nahi — pehle Owner ko Dashboard se add karna hoga; stock wala banda naya product nahi bana sakta.",
-      "Wastage mojooda stock se zyada nahi ho sakti; ghalat quantity save karne se pehle dobara gin lein. Selling price yahan sirf dikhti hai — rate ya product ki detail badalna Owner Dashboard ka kaam hai.",
+      "Wastage mojooda stock se zyada nahi ho sakti; ghalat quantity save karne se pehle dobara gin lein. Selling price yahan sirf dikhti hai — rate ya product ki detail badalna Dashboard ka kaam hai.",
     ],
   },
 
   online: {
-    title: "📱 Online Order — Customer Guide",
+    title: "📱 Online Orders — Customer Guide",
     steps: [
       "Table par hon to table ka QR scan karein ya I am at a Table chunein; hostel/office se hon to Order Online — Hostel / Office chunein.",
       "Table flow mein apna Name aur sahi Table Number likhein, phir 🍽️ Dine-In ya 🥡 Takeaway chunein — is flow mein account nahi chahiye.",
@@ -139,9 +167,9 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
   },
 
   "owner-overview": {
-    title: "📊 Owner Overview — Sale, Bills aur Tasdeeq",
+    title: "📊 Dashboard Overview — Sale, Bills aur Tasdeeq",
     steps: [
-      "Owner PIN se login karke Owner Dashboard ke 📊 Overview tab par ayen; upar Today strip mein Canteen, Grocery, Counter, Online aur Low Stock ka khulasa dekhein.",
+      "Owner PIN se login karke Dashboard ke 📊 Overview tab par ayen; upar Today strip mein Canteen, Grocery, Counter, Online aur Low Stock ka khulasa dekhein.",
       "KPI cards mein Today's Total Sales, Orders Today, Cash, Online (JazzCash + Easypaisa) aur Udhaar (Khata) check karein.",
       "Overview tab par ⏳ badge ho to 💳 Online Payment Verification mein pending orders pehle check karein.",
       "Har verify card par customer, items, total, Method aur Txn ID dekhein; proof ki chhoti picture par click karke 🔍 Bara dekhein.",
@@ -152,35 +180,37 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
     ],
     tips: [
       "Dhyaan dein: ⚠️ AMOUNT MATCH NAHI wali warning par Confirm bilkul na karein — pehle asal payment verify karein.",
-      "Overview sirf aaj ka khulasa dikhata hai; Low Stock ki tafseel ke liye Stock tab dekhein.",
+      "Overview sirf aaj ka khulasa dikhata hai; Low Stock ki tafseel ke liye Inventory tab dekhein.",
     ],
   },
 
   "owner-menu": {
-    title: "🍽️ Owner — Canteen Item ADD / UPDATE",
+    title: "🍽️ Dashboard — Menu Item ADD / UPDATE",
     steps: [
-      "Owner Dashboard ke 🍽️ Canteen Menu tab par ayen — upar item form aur neeche menu table hai.",
+      "Dashboard ke 🍽️ Canteen Menu tab par ayen — upar item form aur neeche menu table hai.",
       "ADD karna: form ke labeled boxes bharein — ITEM NAME, PRICE RS, EMOJI aur CATEGORY — phir green + Add Item dabayein; item table aur Canteen POS dono par aa jayega.",
       "UPDATE karna: neeche table mein sahi item ki row se Edit dabayein.",
       "Edit dabate hi wahi item upar form mein bhar jayega; sirf jo box badalna hai — naam, price, emoji ya category — usi ko change karein.",
       "UPDATE save karna: green Save Edit dabayein. Agar irada badal jaye to Cancel dabayein, baghair save kiye wapas aa jayenge.",
+      "PHOTOS lagana: form ke neeche ITEM KI PHOTOS wale hisse mein 16 tak photos lag sakti hain (URL likhein ya 📷 Photo Upload Karein) — pehli photo MAIN photo hai jo har jagah dikhti hai. 2 ya zyada photos hon to Menu Board par item ghumta hua nazar ata hai; 8 ya zyada hon to bilkul 360° ghumta hua lagta hai. Photo recipe: item ko ek jagah rakhein, barabar roshni rakhein, phone ko ek hi doori par rakh kar aahista aahista gol ghoom kar 12–16 tasveerein lein.",
       "DELETE karna: item ki row ka red ✕ dabayein — ye kaam soch kar karein, delete ke baad item POS par nahi rahega.",
       "Table ke Stock column mein mojooda stock dekhein; roz ki stock entry kabhi yahan se na karein.",
       "DEAL banana (🎁 Deals section, isi tab mein neeche): DEAL NAME aur DEAL PRICE RS likhein, phir neeche picker mein har item ki qty rakhein jo ek deal mein jayegi (0 = deal mein nahi). Neeche readout mein kul qeemat, deal price aur bachat live dikhta hai — phir green + Add Deal dabayein.",
       "Deal UPDATE karna: Deals list mein us deal ki Edit dabayein — naam, price aur picker ki qty form mein bhar jayengi; badal kar Save Edit dabayein. Deal band karna ho to usi row ka Active wala button Off kar dein — deal POS, Online aur Menu Board teeno se ghayab ho jayegi, delete karne ki zaroorat nahi.",
     ],
     tips: [
-      "Dhyaan dein: Canteen rates aur item details yahin Edit se badalte hain; Stock IN / Wastage ki asal entry Stock tab se hoti hai taake entries log banay rahe.",
+      "Dhyaan dein: Canteen rates aur item details yahin Edit se badalte hain; Stock IN / Wastage ki asal entry Inventory tab se hoti hai taake entries log banay rahe.",
       "Current menu sample hai — asal dukaan ka menu aur rates pehle yahin se set karein.",
     ],
   },
 
   "owner-grocery": {
-    title: "🛒 Owner — Grocery Product ADD / UPDATE",
+    title: "🛒 Dashboard — Product ADD / UPDATE",
     steps: [
-      "Owner Dashboard ke 🛒 Grocery tab par ayen — upar product form, neeche search/filter wali products table aur pagination hai.",
-      "ADD karna: labeled boxes bharein — PRODUCT NAME, BRAND / COMPANY (e.g. Sunsilk), SKU, EAN BARCODE (packed item ho to), RETAIL PRICE RS, WHOLESALE PRICE RS, WHOLESALE MIN QTY (khali = shop default), UNIT (per piece ya per kg), MAIN HEAD, SUB-HEAD, EMOJI aur IMAGE URL (optional).",
-      "STOCK QTY wala box is form mein band (read-only) hai — stock yahan se NAHI badalta; naya product 0 stock ke sath banta hai, phir Stock tab se Stock IN karein.",
+      "Dashboard ke 🛒 Grocery tab par ayen — upar product form, neeche search/filter wali products table aur pagination hai.",
+      "ADD karna: labeled boxes bharein — PRODUCT NAME, BRAND / COMPANY (e.g. Sunsilk), SKU, EAN BARCODE (packed item ho to), RETAIL PRICE RS, WHOLESALE PRICE RS, WHOLESALE MIN QTY (khali = shop default), UNIT (per piece ya per kg), MAIN HEAD, SUB-HEAD aur EMOJI.",
+      "PHOTOS lagana: form mein PRODUCT KI PHOTOS wale hisse mein 16 tak photos lag sakti hain (URL likhein ya 📷 Photo Upload Karein) — pehli photo MAIN photo hai jo har jagah dikhti hai; koi photo na ho to sub-head/head ki picture lag jati hai. 2 ya zyada photos hon to Products Board par product ghumta hua nazar ata hai; 8 ya zyada hon to bilkul 360° ghumta hua lagta hai. Photo recipe: product ko ek jagah rakhein, barabar roshni rakhein, phone ko ek hi doori par rakh kar aahista aahista gol ghoom kar 12–16 tasveerein lein.",
+      "STOCK QTY wala box is form mein band (read-only) hai — stock yahan se NAHI badalta; naya product 0 stock ke sath banta hai, phir Inventory tab se Stock IN karein.",
       "Size add karna ho to 📦 Packings mein + Packing dabayein; har row mein PACKING SIZE, RETAIL PRICE RS, WHOLESALE PRICE RS, BARCODE, CONTAINS (PACKS) aur WS MIN (PACKS) likhein. Ghalat row ka red ✕ dabayein; koi size na ho to Packings khali chhor dein.",
       "Phir green + Add Product dabayein; product table mein aa jayega. List lambi ho to search, Head/Sub-Head filter aur Prev / Next se dhoondein.",
       "UPDATE karna: product ki row se Edit dabayein — poora form usi product se bhar jayega, Packings bhi wapas aa jayengi.",
@@ -191,14 +221,14 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
     tips: [
       "Dhyaan dein: Packing alag product nahi hoti — 500g / 1kg / 2kg usi product ke sizes hain; CONTAINS batata hai ke dabbe mein kitne sealed packs hain, stock unhi base packs mein ginta hai.",
       "Company alag = product alag (Sunsilk alag, Pantene alag); ek hi company ke flavours usi product ke VARIANTS hain. Product tabhi sahi bane ga jab us ka Main Head aur Sub-Head pehle Heads tab mein mojood ho.",
-      "Rates/details hamesha Edit se badalte hain; roz ki Stock IN aur Wastage hamesha Stock tab se hoti hai — wahan barcode scan se entry sab se tez hai.",
+      "Rates/details hamesha Edit se badalte hain; roz ki Stock IN aur Wastage hamesha Inventory tab se hoti hai — wahan barcode scan se entry sab se tez hai.",
     ],
   },
 
   "owner-udhaar": {
-    title: "💰 Owner — Udhaar Khata aur Wasooli",
+    title: "💰 Dashboard — Credit (Udhaar) aur Wasooli",
     steps: [
-      "Owner Dashboard ke 💰 Udhaar Khata tab par ayen; upar Kul Baqaya — Sab Khaatay mein tamam customers ka total baqaya nazar ata hai.",
+      "Dashboard ke 💰 Credit tab par ayen; upar Kul Baqaya — Sab Khaatay mein tamam customers ka total baqaya nazar ata hai.",
       "Khata kholna: list mein customer ki row dabayein (Naam, ID/Mobile, Kul Udhaar, Wasool aur Baqaya wali row). Naam, Student/Staff ID ya mobile likh kar 🔍 search se khata jaldi bhi dhoonda ja sakta hai.",
       "Khaata khulte hi neeche 📜 Khata Ledger mein har entry tareekh ke sath ati hai — 🧾 Udhaar Charge (Bill number ke sath), 💰 Wasooli (method ke sath), har entry ke baad wala Baqaya aur Darj Kiya (kis ne darj ki).",
       "Wasooli darj karna: 💰 Wasooli Darj Karein wale hisse mein RAQAM (Rs) likhein — aadhi wasooli ho to sirf utni hi raqam likhein jitni asal mili hai.",
@@ -213,9 +243,9 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
   },
 
   "owner-heads": {
-    title: "🗂️ Owner — Heads aur Sub-Heads",
+    title: "🗂️ Dashboard — Categories (Heads aur Sub-Heads)",
     steps: [
-      "Owner Dashboard ke 🗂️ Heads tab par ayen; structure hamesha Main Head → Sub Head → Product hoti hai.",
+      "Dashboard ke 🗂️ Heads tab par ayen; structure hamesha Main Head → Sub Head → Product hoti hai.",
       "Naya Main Head add karna: head ka naam likhein, emoji chunein, image ho to Head Image URL likhein aur + Add Head dabayein.",
       "Naya Sub-Head add karna: pehle sahi Main Head chunein, sub-head ka naam likhein, image ho to URL likhein aur + Add Sub-Head dabayein.",
       "Head ki tafseel dekhna ho to us ki row ka ▶ dabayein; andar us ke sub-heads aur har ek ki product count nazar ayegi.",
@@ -230,9 +260,9 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
   },
 
   "owner-labels": {
-    title: "🏷️ Owner — Barcode Stickers Print Karna",
+    title: "🏷️ Dashboard — Barcode Stickers Print Karna",
     steps: [
-      "Owner Dashboard ke 🏷️ Labels tab par ayen; ek product ka sticker Grocery table ki row ke 🏷️ Label button se bhi khul sakta hai.",
+      "Dashboard ke 🏷️ Labels tab par ayen; ek product ka sticker Grocery table ki row ke 🏷️ Label button se bhi khul sakta hai.",
       "Search, Head aur Sub-Head filter se products shortlist karein.",
       "Har product ke checkbox ko tick karein; ☑️ Visible sab select se screen par nazar ane wale sab select aur ✕ Clear se sab clear ho jate hain.",
       "Select shuda product ke samne Stickers wale box mein tadaad likhein — jitni likhein ge, print sheet mein utne stickers banenge.",
@@ -247,13 +277,13 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
   },
 
   "owner-staff": {
-    title: "🔐 Owner — Staff Access aur PIN",
+    title: "🔐 Dashboard — Staff Access aur PIN",
     steps: [
-      "Owner Dashboard ke 🔐 Staff tab par ayen; list mein har banday ka naam, masked PIN aur us ke tabs ke chips nazar ayenge.",
+      "Dashboard ke 🔐 Staff tab par ayen; list mein har banday ka naam, masked PIN aur us ke tabs ke chips nazar ayenge.",
       "Naya staff ADD karna: Naam likhein, theek 4 digits ka PIN likhein aur sirf wohi tabs tick karein jo us ke kaam ke hain.",
       "Phir + Add Staff dabayein; naya banda apne naam wale card aur naye PIN se login karega — PIN server par check hota hai, kisi ek device par nahi.",
       "UPDATE karna: staff ki row se Edit dabayein; form bhar jayega. Naam, PIN ya tabs badlein aur Save Access dabayein; Cancel se koi change save nahi hoga.",
-      "Ek banday ko kai tabs mil sakte hain, masalan Canteen + Grocery; Owner ke Owner Dashboard wala tab hamesha locked rehta hai.",
+      "Ek banday ko kai tabs mil sakte hain, masalan Canteen + Grocery; Owner ke Dashboard wala tab hamesha locked rehta hai.",
       "Apna Owner PIN badalna ho to Owner wali row ko Edit karein aur Save Access dabayein.",
       "Staff hatana ho to us ki row se Remove dabayein aur confirm karein — us ka login band ho jayega. Owner ko remove nahi kiya ja sakta.",
     ],
@@ -264,9 +294,9 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
   },
 
   "owner-settings": {
-    title: "⚙️ Owner — Shop Settings",
+    title: "⚙️ Dashboard — Shop Settings",
     steps: [
-      "Owner Dashboard ke ⚙️ Settings tab par sab se upar Shop Status dekhein: 🟢 Shop KHULI hai ya 🔴 Shop BAND hai.",
+      "Dashboard ke ⚙️ Settings tab par sab se upar Shop Status dekhein: 🟢 Shop KHULI hai ya 🔴 Shop BAND hai.",
       "Shop band karna ho to 🔴 Shop BAND kar dein dabayein; ye switch foran server par save hota hai aur /online par Closed popup aa jata hai. Dobara kholna ho to 🟢 Shop KHOL dein dabayein.",
       "Closed popup ka number badalna: CONTACT NUMBER (BAND HONE PAR) box mein asal number likhein — ye wala change neeche 💾 Save Settings dabane se save hota hai.",
       "COLLEGE NAME, CANTEEN NAME aur GROCERY STORE NAME bharein; ye naam header, bills, online page aur table QR cards par khud update ho jate hain.",
@@ -301,9 +331,9 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
   },
 
   "owner-tables": {
-    title: "🪑 Owner — Tables aur QR Cards",
+    title: "🪑 Dashboard — Table QR Cards",
     steps: [
-      "Owner Dashboard ke 🪑 Tables QR tab par ayen; 🪑 Kul Tables ke samne abhi saved tadaad dekhein.",
+      "Dashboard ke 🪑 Table QR tab par ayen; 🪑 Kul Tables ke samne abhi saved tadaad dekhein.",
       "Tadaad badalna: − ya + dabayein, ya box mein 1 se 100 tak number likhein — abhi ye sirf draft hai.",
       "✔ Apply dabayein aur '✓ Saved — ab N tables active hain' wala message dekhein; server par tables isi tadaad ke hisaab se active ho jati hain aur neeche bilkul utne hi table QR cards bante hain.",
       "🖨️ Print Table Cards dabayein, cards print karein aur har card ko usi number wali table par chipkayein.",
@@ -323,7 +353,7 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
       "Ye system pehli dafa chale to sab se pehle Business Setup ata hai: Step 1 mein 🍔 Sirf Canteen, 🛒 Sirf Dukaan ya 🏪 Dono chunein.",
       "Dukaan ho to Step 2 mein us ki qisam chunein — Grocery, Supermarket, Medical Store, Mobile Shop, Shoes, Kapre, Bakery waghera (14 qisamein). Har qisam ke sath us trade ke Heads aur kuch demo products khud aa jate hain taake system foran chal kar dikhe.",
       "Andar ka view isi choice se banta hai: jo dukaan off hai us ki tabs, Owner sections aur TV screens nahi dikhtein — direct link kholo to 'Ye Hissa On Nahi Hai' wala polite notice ata hai.",
-      "Baad mein type badalna ho: Owner Dashboard → ⚙️ Settings → 🏪 Business Setup → 🔁 Tabdeel karein. Wahan maujooda choice pehle se selected hoti hai aur warning bhi likhi hoti hai.",
+      "Baad mein type badalna ho: Dashboard → ⚙️ Settings → 🏪 Business Setup → 🔁 Tabdeel karein. Wahan maujooda choice pehle se selected hoti hai aur warning bhi likhi hoti hai.",
       "Type badalne se KOI data delete nahi hota — purane products, orders, bills aur hisaab mehfooz rehte hain; sirf nazar ane wale hisse badalte hain. Wapas purani type par ao to sab kuch waisa hi milega.",
       "Nayi qisam ka demo catalogue sirf TAB seed hota hai jab product list bilkul khali ho (fresh install) — data maujood ho to seeding kabhi nahi hoti, kuch overwrite nahi hota.",
       "Dukaan ka naam setup par template wala aam naam (masalan 'Medical Store') lagta hai agar naam abhi default ho — asal naam Settings mein CANTEEN/GROCERY NAME se apna likh dein.",
@@ -331,13 +361,13 @@ export const GUIDELINES: Record<GuidelineKey, GuidelineEntry> = {
     ],
     tips: [
       "Setup ek dafa hi karna hota hai — ghalat type chun li ho to ghabrayen nahi, Settings se kabhi bhi badal sakte hain, data mehfooz rehta hai.",
-      "Demo products sirf sample hain — Owner Dashboard ke Grocery tab se apni asal products, rates aur stock daalein.",
+      "Demo products sirf sample hain — Dashboard ke Grocery tab se apni asal products, rates aur stock daalein.",
       "Medical expiry sirf warning hai: batch-wise hisaab (konsi batch pehle biki) is version mein track nahi hota.",
     ],
   },
 
   "owner-pnl": {
-    title: "📈 Owner — Munafa Nuqsan (Profit & Loss)",
+    title: "📈 Dashboard — Profit & Loss",
     steps: [
       "Upar se period chunein — Aaj, Is Hafta, Is Mahina, Pichla Mahina, ya Custom tareekhein (From–To) rakhein. Saare hisaab usi period ke hain.",
       "Summary table parhein: Kul Bikri − Lagat = Gross Munafa; phir Kharchay aur Wastage Nuqsan minus hokar aakhir mein Khaals Munafa (Net) ata hai. Har dukaan ka column alag hai aur teesra Dono Mila Kar hai.",

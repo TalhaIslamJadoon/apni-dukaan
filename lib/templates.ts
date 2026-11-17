@@ -19,7 +19,7 @@ export const RETAIL_TEMPLATES: RetailTemplateMeta[] = [
   { key: "supermarket", label: "Supermarket", emoji: "🏬", defaultShopName: "Super Market" },
   { key: "general", label: "General Store", emoji: "🏪", defaultShopName: "General Store" },
   { key: "shoes", label: "Shoes Shop", emoji: "👞", defaultShopName: "Shoes Shop" },
-  { key: "clothing", label: "Kapron ki Dukaan", emoji: "👕", defaultShopName: "Clothing Shop" },
+  { key: "clothing", label: "Kapron ki Dukaan", emoji: "👕", defaultShopName: "Kapron ki Dukaan" },
   { key: "medical", label: "Medical Store", emoji: "💊", defaultShopName: "Medical Store" },
   { key: "mobile", label: "Mobile & Accessories", emoji: "📱", defaultShopName: "Mobile Shop" },
   { key: "electronics", label: "Electronics", emoji: "🔌", defaultShopName: "Electronics Shop" },
